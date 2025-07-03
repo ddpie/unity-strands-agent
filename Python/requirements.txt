@@ -1,0 +1,19 @@
+# Unity AI Agent Python依赖
+# Strands Agent SDK - 核心AI功能
+strands-agents>=0.1.0
+
+# Strands Agent Tools - 扩展功能
+strands-agents-tools>=0.1.7
+
+# AWS SDK for Bedrock访问
+boto3>=1.28.0
+
+# 异步支持
+aiofiles>=23.0.0
+asyncio>=3.4.3
+
+# 日志和调试
+colorlog>=6.7.0
+
+# JSON处理
+orjson>=3.9.0

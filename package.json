@@ -1,0 +1,25 @@
+{
+  "name": "com.unity.ai-agent",
+  "version": "1.0.0",
+  "displayName": "Unity AI Agent 智能助手",
+  "description": "基于Strands Agent SDK的Unity AI智能助手插件",
+  "unity": "2022.3",
+  "license": "MIT",
+  "author": {
+    "name": "Unity AI Agent Team",
+    "email": "support@unityaiagent.com"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "assistant",
+    "strands",
+    "bedrock",
+    "python",
+    "智能助手",
+    "中文"
+  ],
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6"
+  }
+}
