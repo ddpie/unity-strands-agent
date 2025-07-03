@@ -37,8 +37,9 @@ build/
 ehthumbs.db
 Thumbs.db
 
-# Unity Package
+# Unity
 *.unitypackage
+*.meta
 
 # Project specific
 chat_history.json
