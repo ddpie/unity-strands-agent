@@ -132,34 +132,40 @@ namespace UnityAIAgent.Editor
                             // 获取流式生成器
                             Debug.Log("[Unity] 创建流式生成器");
                             dynamic streamGen = streamingAgent.process_message_stream(message);
+                            Debug.Log("[Unity] 流式生成器创建成功，开始处理流...");
                             
                             // 处理流式数据
+                            int chunkIndex = 0;
                             while (true)
                             {
                                 try
                                 {
+                                    chunkIndex++;
+                                    Debug.Log($"[Unity] 等待第 {chunkIndex} 个chunk...");
                                     dynamic chunk = loop.run_until_complete(streamGen.__anext__());
                                     string chunkStr = chunk.ToString();
+                                    Debug.Log($"[Unity] 收到第 {chunkIndex} 个chunk，长度: {chunkStr.Length}");
                                     
                                     // 解析JSON
                                     var chunkData = JsonUtility.FromJson<StreamChunk>(chunkStr);
+                                    Debug.Log($"[Unity] 解析chunk数据: type={chunkData.type}");
                                     
                                     if (chunkData.type == "chunk")
                                     {
                                         string content = chunkData.content;
                                         Debug.Log($"[Unity] 收到Agent响应块: {content.Substring(0, Math.Min(content.Length, 100))}{(content.Length > 100 ? "..." : "")}");
-                                        UnityMainThreadDispatcher.Enqueue(() => onChunk?.Invoke(content));
+                                        EditorApplication.delayCall += () => onChunk?.Invoke(content);
                                     }
                                     else if (chunkData.type == "complete")
                                     {
                                         Debug.Log("[Unity] Agent流式响应完成");
-                                        UnityMainThreadDispatcher.Enqueue(() => onComplete?.Invoke());
+                                        EditorApplication.delayCall += () => onComplete?.Invoke();
                                         break;
                                     }
                                     else if (chunkData.type == "error")
                                     {
                                         Debug.LogError($"[Unity] Agent响应错误: {chunkData.error}");
-                                        UnityMainThreadDispatcher.Enqueue(() => onError?.Invoke(chunkData.error));
+                                        EditorApplication.delayCall += () => onError?.Invoke(chunkData.error);
                                         break;
                                     }
                                 }
@@ -167,7 +173,7 @@ namespace UnityAIAgent.Editor
                                 {
                                     // 流正常结束
                                     Debug.Log("[Unity] Agent流式响应正常结束");
-                                    UnityMainThreadDispatcher.Enqueue(() => onComplete?.Invoke());
+                                    EditorApplication.delayCall += () => onComplete?.Invoke();
                                     break;
                                 }
                             }
@@ -182,7 +188,7 @@ namespace UnityAIAgent.Editor
             catch (Exception e)
             {
                 Debug.LogError($"流式处理出错: {e.Message}");
-                onError?.Invoke(e.Message);
+                EditorApplication.delayCall += () => onError?.Invoke(e.Message);
             }
         }
 

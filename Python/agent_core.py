@@ -90,6 +90,7 @@ import json
 import logging
 import asyncio
 from typing import Dict, Any, Optional
+from tool_tracker import get_tool_tracker
 
 # 导入Strands Agent工具
 try:
@@ -333,12 +334,64 @@ class UnityAgent:
         try:
             logger.info(f"开始流式处理消息: {message[:50]}...")
             
+            # 获取工具跟踪器
+            tool_tracker = get_tool_tracker()
+            tool_tracker.reset()
+            
+            # 添加超时控制
+            start_time = asyncio.get_event_loop().time()
+            chunk_timeout = 300  # 5分钟总超时
+            last_chunk_time = start_time
+            chunk_interval_timeout = 60  # 60秒无新chunk超时
+            
             # 使用Strands Agent的流式API
+            logger.info("开始调用agent.stream_async()...")
+            chunk_count = 0
+            
             async for chunk in self.agent.stream_async(message):
-                # 过滤并提取纯文本内容
+                chunk_count += 1
+                logger.info(f"收到第 {chunk_count} 个chunk: {str(chunk)[:200]}...")
+                # 检查总超时
+                current_time = asyncio.get_event_loop().time()
+                if current_time - start_time > chunk_timeout:
+                    logger.error(f"流式响应总超时，超过{chunk_timeout}秒")
+                    yield json.dumps({
+                        "type": "error",
+                        "error": f"响应超时：处理时间超过{chunk_timeout}秒",
+                        "done": True
+                    }, ensure_ascii=False)
+                    break
+                
+                # 检查chunk间隔超时
+                if current_time - last_chunk_time > chunk_interval_timeout:
+                    logger.error(f"chunk间隔超时，超过{chunk_interval_timeout}秒无新数据")
+                    yield json.dumps({
+                        "type": "error",
+                        "error": f"响应中断：超过{chunk_interval_timeout}秒无新数据",
+                        "done": True
+                    }, ensure_ascii=False)
+                    break
+                
+                last_chunk_time = current_time
+                
+                # 首先尝试提取工具调用信息
+                if isinstance(chunk, dict) and 'event' in chunk:
+                    logger.info(f"处理工具事件: {chunk['event']}")
+                    tool_info = tool_tracker.process_event(chunk['event'])
+                    if tool_info:
+                        logger.info(f"生成工具信息chunk: {tool_info}")
+                        yield json.dumps({
+                            "type": "chunk",
+                            "content": tool_info,
+                            "done": False
+                        }, ensure_ascii=False)
+                
+                # 然后提取常规文本内容
                 text_content = self._extract_text_from_chunk(chunk)
+                logger.debug(f"提取到文本内容: {text_content}")
                 
                 if text_content:
+                    logger.info(f"生成文本chunk: {text_content}")
                     yield json.dumps({
                         "type": "chunk",
                         "content": text_content,
@@ -346,6 +399,7 @@ class UnityAgent:
                     }, ensure_ascii=False)
             
             # 信号完成
+            logger.info(f"流式处理完成，总共处理了 {chunk_count} 个chunk")
             yield json.dumps({
                 "type": "complete",
                 "content": "",
@@ -361,7 +415,7 @@ class UnityAgent:
             }, ensure_ascii=False)
     
     def _extract_text_from_chunk(self, chunk):
-        """从chunk中提取纯文本内容，过滤掉元数据"""
+        """从chunk中提取纯文本内容，过滤掉元数据，但保留工具调用信息"""
         try:
             # 如果是字符串，直接返回
             if isinstance(chunk, str):
@@ -371,21 +425,46 @@ class UnityAgent:
             if isinstance(chunk, bytes):
                 return chunk.decode('utf-8')
             
-            # 如果是字典，尝试提取文本
+            # 如果是字典，尝试提取文本和工具信息
             if isinstance(chunk, dict):
                 # 跳过元数据事件
                 if any(key in chunk for key in ['init_event_loop', 'start', 'start_event_loop']):
                     return None
                 
-                # 提取contentBlockDelta中的文本
+                # 检测工具调用事件
                 if 'event' in chunk:
                     event = chunk['event']
+                    
+                    # 检测工具使用开始
+                    if 'contentBlockStart' in event:
+                        content_block = event['contentBlockStart']
+                        if content_block.get('contentBlock', {}).get('type') == 'tool_use':
+                            tool_name = content_block['contentBlock'].get('name', '未知工具')
+                            return f"\n🔧 **正在调用工具: {tool_name}**\n"
+                    
+                    # 检测工具使用结束
+                    if 'contentBlockStop' in event:
+                        # 可以添加工具完成标记
+                        return None
+                    
+                    # 提取常规文本内容
                     if 'contentBlockDelta' in event:
                         delta = event['contentBlockDelta']
                         if 'delta' in delta and 'text' in delta['delta']:
                             return delta['delta']['text']
+                    
                     # 跳过其他事件类型
                     return None
+                
+                # 检测工具执行结果
+                if 'tool_result' in chunk:
+                    tool_result = chunk['tool_result']
+                    tool_name = tool_result.get('tool_name', '未知工具')
+                    success = tool_result.get('success', False)
+                    if success:
+                        return f"✅ **工具 {tool_name} 执行成功**\n"
+                    else:
+                        return f"❌ **工具 {tool_name} 执行失败**\n"
                 
                 # 跳过包含复杂元数据的响应
                 if any(key in chunk for key in ['agent', 'event_loop_metrics', 'traces', 'spans']):

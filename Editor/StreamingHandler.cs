@@ -61,8 +61,20 @@ namespace UnityAIAgent.Editor
             finally
             {
                 isStreaming = false;
-                cancellationTokenSource?.Dispose();
-                cancellationTokenSource = null;
+                
+                // 安全地释放CancellationTokenSource
+                if (cancellationTokenSource != null)
+                {
+                    try
+                    {
+                        cancellationTokenSource.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // 忽略已释放的异常
+                    }
+                    cancellationTokenSource = null;
+                }
             }
         }
         
@@ -73,8 +85,15 @@ namespace UnityAIAgent.Editor
         {
             if (isStreaming && cancellationTokenSource != null)
             {
-                cancellationTokenSource.Cancel();
-                Debug.Log("正在停止流式处理...");
+                try
+                {
+                    cancellationTokenSource.Cancel();
+                    Debug.Log("正在停止流式处理...");
+                }
+                catch (ObjectDisposedException)
+                {
+                    Debug.Log("流式处理已经结束");
+                }
             }
         }
         
@@ -83,40 +102,110 @@ namespace UnityAIAgent.Editor
         /// </summary>
         private async Task ProcessStreamAsync(string message, CancellationToken cancellationToken)
         {
-            await Task.Run(() =>
+            // 添加超时控制
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // 5分钟总超时
+            var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+            
+            var lastChunkTime = DateTime.UtcNow;
+            var chunkTimeoutSeconds = 60; // 60秒无新chunk超时
+            
+            try
             {
-                try
-                {
-                    PythonBridge.ProcessMessageStream(
-                        message,
-                        onChunk: (chunk) => {
-                            if (!cancellationToken.IsCancellationRequested)
+                await PythonBridge.ProcessMessageStream(
+                    message,
+                    onChunk: (chunk) => {
+                        lastChunkTime = DateTime.UtcNow;
+                        try
+                        {
+                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
                             {
+                                Debug.Log($"[StreamingHandler] 接收到chunk: {chunk}");
                                 EnqueueChunk(new StreamChunk { Type = "chunk", Content = chunk });
                             }
-                        },
-                        onComplete: () => {
-                            if (!cancellationToken.IsCancellationRequested)
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // CancellationTokenSource已被释放，忽略此回调
+                        }
+                    },
+                    onComplete: () => {
+                        try
+                        {
+                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
                             {
+                                Debug.Log("[StreamingHandler] 接收到complete");
                                 EnqueueChunk(new StreamChunk { Type = "complete" });
                             }
-                        },
-                        onError: (error) => {
-                            EnqueueChunk(new StreamChunk { Type = "error", Error = error });
                         }
-                    );
-                }
-                catch (Exception e)
-                {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        throw;
+                        catch (ObjectDisposedException)
+                        {
+                            // CancellationTokenSource已被释放，忽略此回调
+                        }
+                    },
+                    onError: (error) => {
+                        try
+                        {
+                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
+                            {
+                                Debug.Log($"[StreamingHandler] 接收到error: {error}");
+                                EnqueueChunk(new StreamChunk { Type = "error", Error = error });
+                            }
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // CancellationTokenSource已被释放，忽略此回调
+                        }
                     }
+                );
+                
+                // 处理队列中的数据块
+                ProcessChunkQueue();
+            }
+            catch (OperationCanceledException)
+            {
+                // 检查是否是超时导致的取消
+                if (timeoutCts.Token.IsCancellationRequested)
+                {
+                    var timeSinceLastChunk = DateTime.UtcNow - lastChunkTime;
+                    string timeoutMessage;
+                    if (timeSinceLastChunk.TotalSeconds > chunkTimeoutSeconds)
+                    {
+                        timeoutMessage = $"响应超时：超过{chunkTimeoutSeconds}秒无新数据";
+                    }
+                    else
+                    {
+                        timeoutMessage = "响应超时：处理时间过长";
+                    }
+                    
+                    EnqueueChunk(new StreamChunk { Type = "error", Error = timeoutMessage });
+                    Debug.LogWarning($"流式响应超时: {timeoutMessage}");
                 }
-            }, cancellationToken);
-            
-            // 处理队列中的数据块
-            ProcessChunkQueue();
+                else
+                {
+                    throw; // 重新抛出用户取消的异常
+                }
+            }
+            finally
+            {
+                // 安全地释放资源，避免ObjectDisposedException
+                try
+                {
+                    timeoutCts?.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 忽略已释放的异常
+                }
+                
+                try
+                {
+                    combinedCts?.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // 忽略已释放的异常
+                }
+            }
         }
         
         /// <summary>
@@ -187,17 +276,22 @@ namespace UnityAIAgent.Editor
         /// </summary>
         private void HandleChunk(StreamChunk chunk)
         {
+            Debug.Log($"[StreamingHandler] 处理数据块类型: {chunk.Type}");
+            
             switch (chunk.Type)
             {
                 case "chunk":
+                    Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
                     OnChunkReceived?.Invoke(chunk.Content);
                     break;
                     
                 case "complete":
+                    Debug.Log("[StreamingHandler] 触发OnStreamCompleted事件");
                     OnStreamCompleted?.Invoke();
                     break;
                     
                 case "error":
+                    Debug.Log($"[StreamingHandler] 触发OnStreamError事件，错误: {chunk.Error}");
                     OnStreamError?.Invoke(chunk.Error);
                     break;
             }
@@ -208,18 +302,25 @@ namespace UnityAIAgent.Editor
         /// </summary>
         public void Dispose()
         {
-            StopStreaming();
-            
-            lock (queueLock)
+            try
             {
-                chunkQueue.Clear();
+                StopStreaming();
+                
+                lock (queueLock)
+                {
+                    chunkQueue.Clear();
+                }
+                
+                OnChunkReceived = null;
+                OnStreamStarted = null;
+                OnStreamCompleted = null;
+                OnStreamError = null;
+                OnStreamCancelled = null;
             }
-            
-            OnChunkReceived = null;
-            OnStreamStarted = null;
-            OnStreamCompleted = null;
-            OnStreamError = null;
-            OnStreamCancelled = null;
+            catch (Exception e)
+            {
+                Debug.LogWarning($"StreamingHandler清理时出错: {e.Message}");
+            }
         }
         
         /// <summary>

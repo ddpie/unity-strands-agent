@@ -173,7 +173,12 @@ namespace UnityAIAgent.Editor
             // 状态栏
             if (isProcessing)
             {
-                EditorGUILayout.HelpBox("🤔 AI正在思考...", MessageType.Info);
+                string statusText = "🤔 AI正在思考...";
+                if (streamingHandler != null && streamingHandler.IsStreaming)
+                {
+                    statusText = "📡 正在接收响应... (如果长时间无响应，系统将自动超时)";
+                }
+                EditorGUILayout.HelpBox(statusText, MessageType.Info);
             }
             else if (!PythonManager.IsInitialized)
             {
@@ -272,8 +277,45 @@ namespace UnityAIAgent.Editor
                     continue;
                 }
                 
+                // 工具调用处理 - 美化显示
+                if (line.StartsWith("Tool #"))
+                {
+                    // 提取工具编号和名称
+                    var match = System.Text.RegularExpressions.Regex.Match(line, @"Tool #(\d+): (.+)");
+                    if (match.Success)
+                    {
+                        var toolNumber = match.Groups[1].Value;
+                        var toolName = match.Groups[2].Value;
+                        
+                        // 创建工具调用样式
+                        EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+                        
+                        // 工具图标
+                        var iconStyle = new GUIStyle(EditorStyles.label)
+                        {
+                            fontSize = 14,
+                            normal = { textColor = new Color(0.5f, 0.8f, 1f) }
+                        };
+                        GUILayout.Label("🔧", iconStyle, GUILayout.Width(25));
+                        
+                        // 工具信息
+                        var toolStyle = new GUIStyle(EditorStyles.label)
+                        {
+                            fontStyle = FontStyle.Bold,
+                            normal = { textColor = new Color(0.6f, 0.9f, 1f) }
+                        };
+                        GUILayout.Label($"调用工具 #{toolNumber}: {toolName}", toolStyle);
+                        
+                        EditorGUILayout.EndHorizontal();
+                        GUILayout.Space(3);
+                    }
+                    else
+                    {
+                        GUILayout.Label(line, EditorStyles.wordWrappedLabel);
+                    }
+                }
                 // 标题处理
-                if (line.StartsWith("### "))
+                else if (line.StartsWith("### "))
                 {
                     var headerStyle = new GUIStyle(EditorStyles.boldLabel)
                     {
@@ -513,6 +555,8 @@ namespace UnityAIAgent.Editor
         // 流式响应回调方法
         private void OnStreamChunkReceived(string chunk)
         {
+            Debug.Log($"[AIAgentWindow] 接收到流式数据块: {chunk}");
+            
             // 如果还没有创建流式消息，创建一个
             if (currentStreamingMessageIndex == -1)
             {
@@ -523,6 +567,7 @@ namespace UnityAIAgent.Editor
                     timestamp = DateTime.Now
                 });
                 currentStreamingMessageIndex = messages.Count - 1;
+                Debug.Log($"[AIAgentWindow] 创建新的流式消息，索引: {currentStreamingMessageIndex}");
             }
             
             // 更新流式消息内容
@@ -530,8 +575,10 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText + "▌"; // 添加光标
+                Debug.Log($"[AIAgentWindow] 更新消息内容，当前长度: {currentStreamText.Length}");
             }
             
+            // 确保在主线程中更新UI
             EditorApplication.delayCall += () => {
                 if (this != null)
                 {
@@ -544,10 +591,13 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamComplete()
         {
+            Debug.Log("[AIAgentWindow] 流式响应完成");
+            
             // 更新最终消息内容（移除光标）
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText;
+                Debug.Log($"[AIAgentWindow] 完成消息内容，最终长度: {currentStreamText.Length}");
             }
             
             // 重置流式状态
@@ -566,17 +616,34 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamError(string error)
         {
+            Debug.Log($"[AIAgentWindow] 流式响应错误: {error}");
+            
+            // 格式化错误消息
+            string errorMessage = error;
+            if (error.Contains("超时"))
+            {
+                errorMessage = $"⏱️ **响应超时**\n\n{error}\n\n💡 **建议**：\n- 尝试简化您的问题\n- 检查网络连接\n- 稍后再试";
+            }
+            else if (error.Contains("SSL") || error.Contains("certificate"))
+            {
+                errorMessage = $"🔒 **SSL连接错误**\n\n{error}\n\n💡 **建议**：\n- 检查网络连接\n- 更新系统证书\n- 检查防火墙设置";
+            }
+            else
+            {
+                errorMessage = $"❌ **处理错误**\n\n{error}";
+            }
+            
             // 如果正在流式处理，更新当前消息为错误信息
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
-                messages[currentStreamingMessageIndex].content = $"错误: {error}";
+                messages[currentStreamingMessageIndex].content = errorMessage;
             }
             else
             {
                 // 否则添加新的错误消息
                 messages.Add(new ChatMessage
                 {
-                    content = $"错误: {error}",
+                    content = errorMessage,
                     isUser = false,
                     timestamp = DateTime.Now
                 });
