@@ -35,12 +35,25 @@ def configure_ssl_for_unity():
     
     # 尝试系统Python的certifi路径
     system_certifi_paths = [
+        # 最新版本优先
+        '/usr/local/lib/python3.13/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.12/site-packages/certifi/cacert.pem', 
+        '/usr/local/lib/python3.11/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.10/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.9/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.8/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.7/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.6/site-packages/certifi/cacert.pem',
+        # macOS Framework路径
         '/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/certifi/cacert.pem',
         '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.13/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.12/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/certifi/cacert.pem',   
     ]
-    
     for cert_path in system_certifi_paths:
         if os.path.exists(cert_path):
             os.environ['SSL_CERT_FILE'] = cert_path
@@ -627,7 +640,7 @@ After initial implementation:
                                 logger.info(f"💻 [SHELL_MONITOR] 检测到shell工具调用: {command}")
                                 yield json.dumps({
                                     "type": "chunk", 
-                                    "content": f"\n<details>\n<summary>💻 <strong>Shell工具执行</strong> - {tool_name}</summary>\n\n**命令**: `{command}`\n\n⏳ 正在执行shell命令...\n</details>\n",
+                                    "content": f"\n<details>\n<summary>Shell工具执行 - {tool_name}</summary>\n\n**命令**: `{command}`\n\n⏳ 正在执行shell命令...\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                             elif 'file_read' in tool_name.lower():
@@ -637,13 +650,13 @@ After initial implementation:
                                     logger.warning(f"⚠️ [FILE_READ_MONITOR] 警告：尝试读取当前目录，这可能导致卡死！")
                                     yield json.dumps({
                                         "type": "chunk", 
-                                        "content": f"\n<details>\n<summary>⚠️ <strong>安全提示</strong> - 文件读取操作</summary>\n\n**工具**: {tool_name}  \n**路径**: `{file_path}`  \n\n⚠️ **注意**: 检测到尝试读取目录，建议使用shell工具进行目录浏览\n</details>\n",
+                                        "content": f"\n<details>\n<summary>安全提示 - 文件读取操作</summary>\n\n**工具**: {tool_name}  \n**路径**: `{file_path}`  \n\n⚠️ **注意**: 检测到尝试读取目录，建议使用shell工具进行目录浏览\n</details>\n",
                                         "done": False
                                     }, ensure_ascii=False)
                                 else:
                                     yield json.dumps({
                                         "type": "chunk", 
-                                        "content": f"\n<details>\n<summary>📖 <strong>文件读取</strong> - {tool_name}</summary>\n\n**文件路径**: `{file_path}`\n\n⏳ 正在读取文件...\n</details>\n",
+                                        "content": f"\n<details>\n<summary>文件读取 - {tool_name}</summary>\n\n**文件路径**: `{file_path}`\n\n⏳ 正在读取文件...\n</details>\n",
                                         "done": False
                                     }, ensure_ascii=False)
                             else:
@@ -671,7 +684,7 @@ After initial implementation:
                                 
                                 yield json.dumps({
                                     "type": "chunk", 
-                                    "content": f"\n<details>\n<summary>{tool_icon} <strong>工具执行</strong> - {tool_name}</summary>\n\n**输入参数**:\n```json\n{formatted_input}\n```\n\n⏳ 正在执行...\n</details>\n",
+                                    "content": f"\n<details>\n<summary>工具执行 - {tool_name}</summary>\n\n**输入参数**:\n```json\n{formatted_input}\n```\n\n⏳ 正在执行...\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                             tool_info_generated = True
@@ -720,7 +733,7 @@ After initial implementation:
                                 logger.warning(f"⚠️ [TOOL_TIMEOUT] 工具执行超过30秒无响应，可能卡死")
                                 yield json.dumps({
                                     "type": "chunk",
-                                    "content": f"\n<details>\n<summary>⏰ <strong>执行状态</strong> - 工具超时提醒</summary>\n\n**状态**: 已超过30秒无响应  \n**可能原因**: 工具处理大文件或遇到问题  \n**建议**: 如持续无响应可停止执行\n</details>\n",
+                                    "content": f"\n<details>\n<summary>执行状态 - 工具超时提醒</summary>\n\n**状态**: 已超过30秒无响应  \n**可能原因**: 工具处理大文件或遇到问题  \n**建议**: 如持续无响应可停止执行\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                                 last_tool_time = current_time  # 重置以避免重复警告
@@ -953,7 +966,7 @@ After initial implementation:
             if found_tool_info:
                 # 更详细地解析工具信息
                 tool_details = self._parse_tool_details(chunk, detected_pattern)
-                tool_msg = f"\n<details>\n<summary>🔧 <strong>工具活动</strong> - {detected_pattern} (Chunk #{chunk_count})</summary>\n\n{tool_details}\n</details>\n"
+                tool_msg = f"\n<details>\n<summary>🔧 工具活动 - {detected_pattern} (Chunk #{chunk_count})</summary>\n\n{tool_details}\n</details>\n"
                 logger.info(f"强制输出工具信息: {tool_msg}")
                 return tool_msg
                 

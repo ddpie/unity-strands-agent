@@ -23,6 +23,9 @@ namespace UnityAIAgent.Editor
         private GUIStyle headerStyle;
         private StreamingHandler streamingHandler;
         private bool autoScroll = true;
+        
+        // 折叠状态跟踪
+        private Dictionary<string, bool> collapsedStates = new Dictionary<string, bool>();
 
         [MenuItem("Window/AI助手/聊天")]
         public static void ShowWindow()
@@ -268,6 +271,442 @@ namespace UnityAIAgent.Editor
         
         private void RenderTextWithMarkdown(string text)
         {
+            // 首先处理HTML标签
+            if (text.Contains("<details>") || text.Contains("<strong>") || text.Contains("<em>") || 
+                text.Contains("<code>") || text.Contains("<pre>") || text.Contains("<blockquote>"))
+            {
+                RenderHtmlContent(text);
+                return;
+            }
+            
+            // 如果没有HTML标签，使用传统的Markdown渲染
+            RenderMarkdownText(text);
+        }
+        
+        private void RenderBoldText(string text)
+        {
+            // 简单的粗体文本处理
+            var regex = new System.Text.RegularExpressions.Regex(@"\*\*(.*?)\*\*");
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                
+                int lastIndex = 0;
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    // 添加前面的普通文本
+                    if (match.Index > lastIndex)
+                    {
+                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
+                        if (!string.IsNullOrEmpty(beforeText))
+                        {
+                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        }
+                    }
+                    
+                    // 添加粗体文本
+                    var boldStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, 1f, 0.8f) } // 轻微高亮
+                    };
+                    GUILayout.Label(match.Groups[1].Value, boldStyle, GUILayout.ExpandWidth(false));
+                    
+                    lastIndex = match.Index + match.Length;
+                }
+                
+                // 添加后面的普通文本
+                if (lastIndex < text.Length)
+                {
+                    string afterText = text.Substring(lastIndex);
+                    if (!string.IsNullOrEmpty(afterText))
+                    {
+                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                    }
+                }
+                
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.Label(text, EditorStyles.wordWrappedLabel);
+            }
+        }
+        
+        private void RenderHtmlContent(string text)
+        {
+            // 按优先级处理各种HTML标签
+            // 1. 首先处理details标签（折叠内容）
+            if (text.Contains("<details>"))
+            {
+                RenderDetailsBlocks(text);
+                return;
+            }
+            
+            // 2. 处理其他HTML标签
+            RenderOtherHtmlTags(text);
+        }
+        
+        private void RenderDetailsBlocks(string text)
+        {
+            var parts = System.Text.RegularExpressions.Regex.Split(text, @"(<details>.*?</details>)", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrWhiteSpace(part)) continue;
+                
+                if (part.StartsWith("<details>") && part.EndsWith("</details>"))
+                {
+                    RenderDetailsBlock(part);
+                }
+                else
+                {
+                    // 继续处理其他HTML标签
+                    RenderOtherHtmlTags(part);
+                }
+            }
+        }
+        
+        private void RenderOtherHtmlTags(string text)
+        {
+            // 处理strong标签
+            text = ProcessStrongTags(text);
+            
+            // 处理em标签
+            text = ProcessEmTags(text);
+            
+            // 处理code标签
+            text = ProcessCodeTags(text);
+            
+            // 处理pre标签
+            text = ProcessPreTags(text);
+            
+            // 处理blockquote标签
+            text = ProcessBlockquoteTags(text);
+            
+            // 处理列表标签
+            text = ProcessListTags(text);
+            
+            // 如果还有剩余文本，按普通Markdown处理
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                RenderMarkdownText(text);
+            }
+        }
+        
+        private string ProcessStrongTags(string text)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"<strong>(.*?)</strong>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                
+                int lastIndex = 0;
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    // 渲染前面的普通文本
+                    if (match.Index > lastIndex)
+                    {
+                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
+                        if (!string.IsNullOrEmpty(beforeText))
+                        {
+                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        }
+                    }
+                    
+                    // 渲染粗体文本
+                    var boldStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, 1f, 0.8f) }
+                    };
+                    GUILayout.Label(match.Groups[1].Value, boldStyle, GUILayout.ExpandWidth(false));
+                    
+                    lastIndex = match.Index + match.Length;
+                }
+                
+                // 渲染后面的普通文本
+                if (lastIndex < text.Length)
+                {
+                    string afterText = text.Substring(lastIndex);
+                    if (!string.IsNullOrEmpty(afterText))
+                    {
+                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                    }
+                }
+                
+                GUILayout.EndHorizontal();
+                return ""; // 已处理完成
+            }
+            
+            return text; // 未找到标签，返回原文本
+        }
+        
+        private string ProcessEmTags(string text)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"<em>(.*?)</em>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                
+                int lastIndex = 0;
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    // 渲染前面的普通文本
+                    if (match.Index > lastIndex)
+                    {
+                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
+                        if (!string.IsNullOrEmpty(beforeText))
+                        {
+                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        }
+                    }
+                    
+                    // 渲染斜体文本
+                    var italicStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        fontStyle = FontStyle.Italic,
+                        normal = { textColor = new Color(0.9f, 0.9f, 1f) }
+                    };
+                    GUILayout.Label(match.Groups[1].Value, italicStyle, GUILayout.ExpandWidth(false));
+                    
+                    lastIndex = match.Index + match.Length;
+                }
+                
+                // 渲染后面的普通文本
+                if (lastIndex < text.Length)
+                {
+                    string afterText = text.Substring(lastIndex);
+                    if (!string.IsNullOrEmpty(afterText))
+                    {
+                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                    }
+                }
+                
+                GUILayout.EndHorizontal();
+                return ""; // 已处理完成
+            }
+            
+            return text; // 未找到标签，返回原文本
+        }
+        
+        private string ProcessCodeTags(string text)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"<code>(.*?)</code>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                
+                int lastIndex = 0;
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    // 渲染前面的普通文本
+                    if (match.Index > lastIndex)
+                    {
+                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
+                        if (!string.IsNullOrEmpty(beforeText))
+                        {
+                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        }
+                    }
+                    
+                    // 渲染内联代码
+                    var inlineCodeStyle = new GUIStyle(EditorStyles.textField)
+                    {
+                        font = Font.CreateDynamicFontFromOSFont("Courier New", 11),
+                        normal = { 
+                            background = MakeColorTexture(new Color(0.2f, 0.2f, 0.2f, 0.8f)),
+                            textColor = new Color(0.9f, 1f, 0.9f)
+                        },
+                        padding = new RectOffset(4, 4, 2, 2)
+                    };
+                    GUILayout.Label(match.Groups[1].Value, inlineCodeStyle, GUILayout.ExpandWidth(false));
+                    
+                    lastIndex = match.Index + match.Length;
+                }
+                
+                // 渲染后面的普通文本
+                if (lastIndex < text.Length)
+                {
+                    string afterText = text.Substring(lastIndex);
+                    if (!string.IsNullOrEmpty(afterText))
+                    {
+                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                    }
+                }
+                
+                GUILayout.EndHorizontal();
+                return ""; // 已处理完成
+            }
+            
+            return text; // 未找到标签，返回原文本
+        }
+        
+        private string ProcessPreTags(string text)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"<pre>(.*?)</pre>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    var preContent = match.Groups[1].Value;
+                    
+                    // 渲染预格式化文本块
+                    var preStyle = new GUIStyle(EditorStyles.textArea)
+                    {
+                        font = Font.CreateDynamicFontFromOSFont("Courier New", 11),
+                        normal = { background = MakeColorTexture(new Color(0.1f, 0.1f, 0.1f, 0.9f)) },
+                        padding = new RectOffset(10, 10, 10, 10),
+                        wordWrap = false
+                    };
+                    
+                    var rect = EditorGUILayout.GetControlRect(false, 
+                        preStyle.CalcHeight(new GUIContent(preContent), Screen.width - 40));
+                    GUI.Box(rect, "", preStyle);
+                    GUI.Label(rect, preContent, preStyle);
+                }
+                
+                // 移除已处理的pre标签
+                text = regex.Replace(text, "");
+            }
+            
+            return text;
+        }
+        
+        private string ProcessBlockquoteTags(string text)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"<blockquote>(.*?)</blockquote>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    var quoteContent = match.Groups[1].Value.Trim();
+                    
+                    // 渲染引用块
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    // 左侧引用线
+                    var lineRect = EditorGUILayout.GetControlRect(false, GUILayout.Width(4));
+                    EditorGUI.DrawRect(lineRect, new Color(0.4f, 0.6f, 1f, 0.8f));
+                    
+                    GUILayout.Space(8);
+                    
+                    // 引用内容
+                    EditorGUILayout.BeginVertical();
+                    var quoteStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        fontStyle = FontStyle.Italic,
+                        normal = { textColor = new Color(0.8f, 0.8f, 0.9f) },
+                        padding = new RectOffset(0, 0, 5, 5)
+                    };
+                    GUILayout.Label(quoteContent, quoteStyle);
+                    EditorGUILayout.EndVertical();
+                    
+                    EditorGUILayout.EndHorizontal();
+                }
+                
+                // 移除已处理的blockquote标签
+                text = regex.Replace(text, "");
+            }
+            
+            return text;
+        }
+        
+        private string ProcessListTags(string text)
+        {
+            // 处理无序列表
+            var ulRegex = new System.Text.RegularExpressions.Regex(@"<ul>(.*?)</ul>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var ulMatches = ulRegex.Matches(text);
+            
+            if (ulMatches.Count > 0)
+            {
+                foreach (System.Text.RegularExpressions.Match match in ulMatches)
+                {
+                    var listContent = match.Groups[1].Value;
+                    RenderUnorderedList(listContent);
+                }
+                text = ulRegex.Replace(text, "");
+            }
+            
+            // 处理有序列表
+            var olRegex = new System.Text.RegularExpressions.Regex(@"<ol>(.*?)</ol>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var olMatches = olRegex.Matches(text);
+            
+            if (olMatches.Count > 0)
+            {
+                foreach (System.Text.RegularExpressions.Match match in olMatches)
+                {
+                    var listContent = match.Groups[1].Value;
+                    RenderOrderedList(listContent);
+                }
+                text = olRegex.Replace(text, "");
+            }
+            
+            return text;
+        }
+        
+        private void RenderUnorderedList(string listContent)
+        {
+            var liRegex = new System.Text.RegularExpressions.Regex(@"<li>(.*?)</li>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var liMatches = liRegex.Matches(listContent);
+            
+            foreach (System.Text.RegularExpressions.Match match in liMatches)
+            {
+                var itemContent = match.Groups[1].Value.Trim();
+                
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(15);
+                GUILayout.Label("•", EditorStyles.wordWrappedLabel, GUILayout.Width(10));
+                GUILayout.Label(itemContent, EditorStyles.wordWrappedLabel);
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+        
+        private void RenderOrderedList(string listContent)
+        {
+            var liRegex = new System.Text.RegularExpressions.Regex(@"<li>(.*?)</li>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+            var liMatches = liRegex.Matches(listContent);
+            
+            int index = 1;
+            foreach (System.Text.RegularExpressions.Match match in liMatches)
+            {
+                var itemContent = match.Groups[1].Value.Trim();
+                
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(15);
+                GUILayout.Label($"{index}.", EditorStyles.wordWrappedLabel, GUILayout.Width(20));
+                GUILayout.Label(itemContent, EditorStyles.wordWrappedLabel);
+                EditorGUILayout.EndHorizontal();
+                
+                index++;
+            }
+        }
+        
+        private void RenderMarkdownText(string text)
+        {
+            // 原有的Markdown处理逻辑，用于处理剩余的普通文本
             var lines = text.Split('\n');
             
             foreach (var line in lines)
@@ -378,56 +817,94 @@ namespace UnityAIAgent.Editor
             }
         }
         
-        private void RenderBoldText(string text)
+        private void RenderDetailsBlock(string detailsBlock)
         {
-            // 简单的粗体文本处理
-            var regex = new System.Text.RegularExpressions.Regex(@"\*\*(.*?)\*\*");
-            var matches = regex.Matches(text);
+            // 提取summary和content
+            var summaryMatch = System.Text.RegularExpressions.Regex.Match(
+                detailsBlock, @"<summary>(.*?)</summary>", 
+                System.Text.RegularExpressions.RegexOptions.Singleline);
             
-            if (matches.Count > 0)
+            if (!summaryMatch.Success) return;
+            
+            var summary = summaryMatch.Groups[1].Value.Trim();
+            var content = detailsBlock
+                .Replace(summaryMatch.Value, "")
+                .Replace("<details>", "")
+                .Replace("</details>", "")
+                .Trim();
+            
+            // 生成唯一的折叠ID
+            var collapseId = $"details_{summary.GetHashCode()}_{content.GetHashCode()}";
+            
+            if (!collapsedStates.ContainsKey(collapseId))
             {
-                GUILayout.BeginHorizontal();
+                collapsedStates[collapseId] = true; // 默认收缩
+            }
+            
+            var isCollapsed = collapsedStates[collapseId];
+            
+            // 渲染可点击的summary标题
+            EditorGUILayout.BeginHorizontal();
+            
+            var buttonStyle = new GUIStyle(EditorStyles.label)
+            {
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.8f, 0.9f, 1f) }
+            };
+            
+            // 折叠/展开图标
+            var icon = isCollapsed ? "▶" : "▼";
+            if (GUILayout.Button($"{icon} {summary}", buttonStyle, GUILayout.ExpandWidth(true)))
+            {
+                collapsedStates[collapseId] = !isCollapsed;
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // 如果展开，显示内容
+            if (!isCollapsed)
+            {
+                EditorGUILayout.BeginVertical("box");
+                GUILayout.Space(5);
                 
-                int lastIndex = 0;
-                foreach (System.Text.RegularExpressions.Match match in matches)
+                // 渲染内容（支持Markdown）
+                var contentLines = content.Split('\n');
+                foreach (var line in contentLines)
                 {
-                    // 添加前面的普通文本
-                    if (match.Index > lastIndex)
+                    if (string.IsNullOrWhiteSpace(line))
                     {
-                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
-                        if (!string.IsNullOrEmpty(beforeText))
-                        {
-                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
-                        }
+                        GUILayout.Space(2);
+                        continue;
                     }
                     
-                    // 添加粗体文本
-                    var boldStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    // 简单的Markdown支持
+                    if (line.StartsWith("**") && line.EndsWith("**"))
                     {
-                        fontStyle = FontStyle.Bold,
-                        normal = { textColor = new Color(1f, 1f, 0.8f) } // 轻微高亮
-                    };
-                    GUILayout.Label(match.Groups[1].Value, boldStyle, GUILayout.ExpandWidth(false));
-                    
-                    lastIndex = match.Index + match.Length;
-                }
-                
-                // 添加后面的普通文本
-                if (lastIndex < text.Length)
-                {
-                    string afterText = text.Substring(lastIndex);
-                    if (!string.IsNullOrEmpty(afterText))
+                        var boldText = line.Substring(2, line.Length - 4);
+                        var boldStyle = new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold };
+                        GUILayout.Label(boldText, boldStyle);
+                    }
+                    else if (line.StartsWith("```") && line.EndsWith("```"))
                     {
-                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        var codeText = line.Substring(3, line.Length - 6);
+                        var codeStyle = new GUIStyle(EditorStyles.textField) 
+                        { 
+                            wordWrap = true,
+                            normal = { background = null }
+                        };
+                        GUILayout.Label(codeText, codeStyle);
+                    }
+                    else
+                    {
+                        GUILayout.Label(line, EditorStyles.wordWrappedLabel);
                     }
                 }
                 
-                GUILayout.EndHorizontal();
+                GUILayout.Space(5);
+                EditorGUILayout.EndVertical();
             }
-            else
-            {
-                GUILayout.Label(text, EditorStyles.wordWrappedLabel);
-            }
+            
+            GUILayout.Space(3);
         }
         
         private void RenderToolHeader(string line)
