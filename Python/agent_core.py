@@ -130,16 +130,12 @@ class UnityAgent:
             # 配置Unity开发相关的工具集
             unity_tools = self._get_unity_tools()
             
-            # 为了避免流式API的工具调用问题，暂时创建无工具的代理
-            # 在未来版本的Strands Agent SDK修复工具流式调用问题后可以重新启用
-            logger.info("注意：为避免工具调用的流式API问题，当前使用无工具模式")
-            logger.info(f"可用的Unity工具（将在未来版本启用）: {[tool.__name__ for tool in unity_tools] if unity_tools else []}")
             
             # 如果SSL未正确配置，为Agent添加SSL配置
             if not ssl_configured:
                 logger.warning("SSL证书配置失败，将使用不安全连接")
             
-            # 创建无工具的代理以避免tool_result配对问题，但添加Unity专用指令
+            # 创建带工具的代理，包含Unity专用指令
             unity_system_prompt = """
 你是Unity AI助手，专门为Unity游戏开发提供帮助。你擅长：
 
@@ -161,10 +157,22 @@ class UnityAgent:
    - 跨平台开发指导
 
 请用中文回复，提供详细、实用的建议。如果用户询问当前项目分析，请引导用户提供项目的具体文件、脚本或问题描述。
+
+**重要提示**：
+- 当用户要求执行shell命令时，优先使用file_read工具的find模式来列出目录内容
+- 对于需要执行系统命令的场景，可以考虑使用python_repl工具通过Python的subprocess模块执行
+- 避免直接使用shell工具，因为它可能需要交互式确认
 """
             
-            self.agent = Agent(system_prompt=unity_system_prompt)
-            logger.info("Unity代理初始化成功（暂时无工具模式，包含Unity专用指令）")
+            # 尝试启用工具
+            try:
+                self.agent = Agent(system_prompt=unity_system_prompt, tools=unity_tools)
+                logger.info(f"Unity代理初始化成功，已启用 {len(unity_tools)} 个工具")
+                logger.info(f"启用的工具: {[tool.__name__ for tool in unity_tools]}")
+            except Exception as e:
+                logger.warning(f"带工具初始化失败: {e}，回退到无工具模式")
+                self.agent = Agent(system_prompt=unity_system_prompt)
+                logger.info("Unity代理初始化成功（无工具模式）")
             
             # 存储工具列表以供将来使用
             self._available_tools = unity_tools if unity_tools else []
@@ -220,12 +228,19 @@ class UnityAgent:
         except (NameError, ImportError) as e:
             logger.warning(f"时间工具不可用: {e}")
         
-        # Shell工具 - 执行Unity CLI命令和构建脚本
+        # Shell工具 - 使用Unity专用版本，避免交互式确认问题
         try:
-            unity_tools.append(shell)
-            logger.info("✓ 添加Shell工具: shell")
+            # 尝试导入自定义的Unity shell工具
+            from unity_shell_tool import unity_shell
+            unity_tools.append(unity_shell)
+            logger.info("✓ 添加Shell工具: unity_shell（Unity专用版本）")
         except (NameError, ImportError) as e:
-            logger.warning(f"Shell工具不可用: {e}")
+            # 如果自定义工具不可用，尝试使用原版（但可能有交互式问题）
+            try:
+                unity_tools.append(shell)
+                logger.info("✓ 添加Shell工具: shell（注意：可能需要交互式确认）")
+            except (NameError, ImportError) as e2:
+                logger.warning(f"Shell工具不可用: {e}, {e2}")
         
         # HTTP工具 - 访问Unity文档、API等
         try:
