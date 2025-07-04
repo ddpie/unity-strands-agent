@@ -16,19 +16,30 @@ os.environ['PYTHONIOENCODING'] = 'utf-8'
 try:
     import certifi
     # 使用certifi提供的证书束
-    os.environ['SSL_CERT_FILE'] = certifi.where()
-    os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
-    print(f"[Python] 使用certifi证书路径: {certifi.where()}")
+    cert_path = certifi.where()
+    os.environ['SSL_CERT_FILE'] = cert_path
+    os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+    os.environ['CURL_CA_BUNDLE'] = cert_path
+    print(f"[Python] 使用certifi证书路径: {cert_path}")
+    
+    # 验证证书文件存在
+    if os.path.exists(cert_path):
+        print(f"[Python] 证书文件验证成功: {cert_path}")
+    else:
+        print(f"[Python] 警告: 证书文件不存在: {cert_path}")
+        
 except ImportError:
     # 如果certifi不可用，使用系统默认证书
     print("[Python] certifi不可用，使用系统默认SSL证书")
-    pass
+    os.environ['SSL_CERT_FILE'] = '/etc/ssl/cert.pem'
+    os.environ['REQUESTS_CA_BUNDLE'] = '/etc/ssl/cert.pem'
 
 # 配置SSL上下文
 try:
-    # 创建更宽松的SSL上下文以避免证书验证问题
-    ssl._create_default_https_context = ssl._create_unverified_context
-    print("[Python] 配置SSL上下文完成")
+    # 配置SSL上下文但保持验证
+    import ssl
+    # 不使用unverified context，而是确保使用正确的证书
+    print("[Python] 保持SSL验证启用，使用配置的证书")
 except Exception as e:
     print(f"[Python] SSL配置警告: {e}")
     pass

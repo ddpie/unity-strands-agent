@@ -226,7 +226,7 @@ namespace UnityAIAgent.Editor
             };
         }
         
-        private static void CreateVirtualEnvironment()
+        public static void CreateVirtualEnvironment()
         {
             string projectPath = Path.GetDirectoryName(Application.dataPath);
             venvPath = Path.Combine(projectPath, "Python", "venv");
@@ -314,6 +314,16 @@ namespace UnityAIAgent.Editor
             Environment.SetEnvironmentVariable("PYTHONHTTPSVERIFY", "1");
             Environment.SetEnvironmentVariable("SSL_CERT_DIR", "/etc/ssl/certs");
             Environment.SetEnvironmentVariable("SSL_CERT_FILE", "/etc/ssl/cert.pem");
+            // 设置certifi证书路径
+            string certifiPath = Path.Combine(venvSitePackages, "certifi", "cacert.pem");
+            if (File.Exists(certifiPath))
+            {
+                Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", certifiPath);
+                Environment.SetEnvironmentVariable("CURL_CA_BUNDLE", certifiPath);
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log($"设置certifi证书路径: {certifiPath}");
+                };
+            }
             
             // 设置DYLD_LIBRARY_PATH（macOS特定）
             string dylibPath = Path.Combine(pythonHome, "lib");
@@ -376,6 +386,117 @@ namespace UnityAIAgent.Editor
             EditorApplication.delayCall += () => {
                 UnityEngine.Debug.Log("依赖安装成功");
             };
+        }
+        
+        
+        /// <summary>
+        /// 安装单个Python包
+        /// </summary>
+        public static void InstallPythonPackage(string packageName)
+        {
+            string pipPath = Path.Combine(venvPath, "bin", "pip");
+            
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = pipPath,
+                    Arguments = $"install {packageName}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+            
+            process.Start();
+            process.WaitForExit();
+            
+            if (process.ExitCode != 0)
+            {
+                string error = process.StandardError.ReadToEnd();
+                throw new Exception($"包安装失败 ({packageName}): {error}");
+            }
+            
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"包安装成功: {packageName}");
+            };
+        }
+        
+        /// <summary>
+        /// 批量安装Python包
+        /// </summary>
+        public static void InstallMultiplePackages(string[] packageNames)
+        {
+            foreach (var packageName in packageNames)
+            {
+                InstallPythonPackage(packageName);
+            }
+        }
+        
+        /// <summary>
+        /// 配置SSL环境
+        /// </summary>
+        public static void ConfigureSSLEnvironment()
+        {
+            // 设置SSL证书路径
+            string venvSitePackages = Path.Combine(venvPath, "lib", $"python{pythonVersion}", "site-packages");
+            string certifiPath = Path.Combine(venvSitePackages, "certifi", "cacert.pem");
+            
+            if (File.Exists(certifiPath))
+            {
+                Environment.SetEnvironmentVariable("SSL_CERT_FILE", certifiPath);
+                Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", certifiPath);
+                Environment.SetEnvironmentVariable("CURL_CA_BUNDLE", certifiPath);
+                
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log($"SSL证书配置完成: {certifiPath}");
+                };
+            }
+            else
+            {
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.LogWarning("未找到certifi证书文件，使用系统默认证书");
+                };
+                Environment.SetEnvironmentVariable("SSL_CERT_FILE", "/etc/ssl/cert.pem");
+                Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", "/etc/ssl/cert.pem");
+            }
+        }
+        
+        /// <summary>
+        /// 测试AWS连接
+        /// </summary>
+        public static void TestAWSConnection()
+        {
+            try
+            {
+                // 简单的AWS凭证检查
+                var awsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aws");
+                var credentialsFile = Path.Combine(awsFolder, "credentials");
+                var configFile = Path.Combine(awsFolder, "config");
+                
+                bool hasCredentials = File.Exists(credentialsFile) || 
+                                    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"));
+                
+                if (hasCredentials)
+                {
+                    EditorApplication.delayCall += () => {
+                        UnityEngine.Debug.Log("AWS凭证检查通过");
+                    };
+                }
+                else
+                {
+                    EditorApplication.delayCall += () => {
+                        UnityEngine.Debug.LogWarning("未检测到AWS凭证，请确保已配置AWS访问密钥");
+                    };
+                }
+            }
+            catch (Exception e)
+            {
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.LogWarning($"AWS连接检查失败: {e.Message}");
+                };
+            }
         }
         
         // Unity Editor事件处理

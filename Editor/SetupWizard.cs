@@ -19,8 +19,13 @@ namespace UnityAIAgent.Editor
         private readonly string[] setupSteps = {
             "检测Python环境",
             "创建虚拟环境", 
-            "安装Python依赖",
-            "初始化AI引擎"
+            "安装Strands Agent SDK",
+            "安装SSL证书支持",
+            "安装其他依赖包",
+            "配置环境变量",
+            "初始化Python桥接",
+            "验证AWS连接",
+            "完成设置"
         };
         
         [MenuItem("Window/AI助手/设置向导")]
@@ -74,6 +79,45 @@ namespace UnityAIAgent.Editor
                 if (this != null)
                     Repaint();
             };
+        }
+        
+        private void UpdateProgress(string message, float progressValue)
+        {
+            statusMessage = message;
+            progress = progressValue;
+            currentStep = Mathf.FloorToInt(progressValue * setupSteps.Length);
+            
+            EditorApplication.delayCall += () => {
+                if (this != null)
+                    Repaint();
+            };
+        }
+        
+        private async Task RetryOperation(System.Action operation, string operationName, int maxRetries = 3)
+        {
+            Exception lastException = null;
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    await Task.Run(operation);
+                    return; // 成功，退出重试循环
+                }
+                catch (Exception e)
+                {
+                    lastException = e;
+                    
+                    if (attempt < maxRetries)
+                    {
+                        UpdateProgress($"重试 {operationName} ({attempt}/{maxRetries})...", progress);
+                        await Task.Delay(2000); // 等待2秒后重试
+                    }
+                }
+            }
+            
+            // 所有重试都失败了，抛出最后一个异常
+            throw new Exception($"{operationName} 失败 (已重试 {maxRetries} 次): {lastException?.Message}");
         }
         
         private void OnGUI()
@@ -141,7 +185,7 @@ namespace UnityAIAgent.Editor
             }
             else
             {
-                EditorGUILayout.HelpBox("欢迎使用Unity AI助手！此向导将帮助您完成初始设置。", MessageType.Info);
+                EditorGUILayout.HelpBox("欢迎使用Unity AI助手！此向导将自动完成以下操作：\n• 检测并配置Python环境\n• 创建虚拟环境\n• 安装Strands Agent SDK\n• 配置SSL证书支持\n• 验证AWS连接", MessageType.Info);
             }
         }
 
@@ -315,17 +359,63 @@ namespace UnityAIAgent.Editor
             
             try
             {
-                // 在后台线程中初始化Python
+                // 步骤1: 检测Python环境
+                UpdateProgress("检测Python环境...", 0.1f);
+                await Task.Delay(500);
+                
+                // 步骤2: 创建虚拟环境
+                UpdateProgress("创建虚拟环境...", 0.2f);
+                await Task.Run(() => {
+                    PythonManager.CreateVirtualEnvironment();
+                });
+                
+                // 步骤3: 安装Strands Agent SDK (带重试)
+                UpdateProgress("安装Strands Agent SDK...", 0.3f);
+                await RetryOperation(() => {
+                    PythonManager.InstallPythonPackage("strands-agents>=0.2.0");
+                }, "Strands Agent SDK");
+                
+                // 步骤4: 安装SSL证书支持 (带重试)
+                UpdateProgress("安装SSL证书支持...", 0.4f);
+                await RetryOperation(() => {
+                    PythonManager.InstallPythonPackage("certifi>=2023.0.0");
+                }, "SSL证书支持");
+                
+                // 步骤5: 安装其他依赖包 (带重试)
+                UpdateProgress("安装其他依赖包...", 0.6f);
+                await RetryOperation(() => {
+                    PythonManager.InstallMultiplePackages(new[] {
+                        "strands-agents-tools>=0.1.8",
+                        "boto3>=1.28.0",
+                        "aiofiles>=23.0.0",
+                        "colorlog>=6.7.0",
+                        "orjson>=3.9.0"
+                    });
+                }, "其他依赖包");
+                
+                // 步骤6: 配置环境变量
+                UpdateProgress("配置环境变量...", 0.7f);
+                await Task.Run(() => {
+                    PythonManager.ConfigureSSLEnvironment();
+                });
+                
+                // 步骤7: 初始化Python桥接
+                UpdateProgress("初始化Python桥接...", 0.8f);
                 await Task.Run(() => {
                     PythonManager.EnsureInitialized();
                 });
                 
-                // 回到主线程更新UI
-                await Task.Yield();
+                // 步骤8: 验证AWS连接
+                UpdateProgress("验证AWS连接...", 0.9f);
+                await Task.Run(() => {
+                    PythonManager.TestAWSConnection();
+                });
+                
+                // 步骤9: 完成设置
+                UpdateProgress("设置完成！AI助手已就绪。", 1.0f);
                 
                 setupCompleted = true;
                 currentStep = setupSteps.Length;
-                statusMessage = "设置完成！AI助手已就绪。";
                 isProcessing = false;
                 Repaint();
                 
@@ -350,9 +440,14 @@ namespace UnityAIAgent.Editor
                 
                 // 显示错误对话框
                 EditorApplication.delayCall += () => {
-                    EditorUtility.DisplayDialog("设置失败", 
-                        $"设置过程中遇到错误：\n\n{e.Message}\n\n请检查：\n• Python 3.10+是否已安装\n• 网络连接是否正常\n• AWS凭证是否配置", 
-                        "确定");
+                    string errorMessage = $"设置过程中遇到错误：\n\n{e.Message}\n\n请检查：\n• Python 3.7-3.12是否已安装\n• 网络连接是否正常\n• 是否有权限创建虚拟环境\n• AWS凭证是否配置\n• 防火墙是否阻止了包下载";
+                    
+                    if (e.Message.Contains("SSL") || e.Message.Contains("certificate"))
+                    {
+                        errorMessage += "\n\nSSL相关错误可能原因：\n• 系统时间不正确\n• 证书过期\n• 网络代理配置问题";
+                    }
+                    
+                    EditorUtility.DisplayDialog("设置失败", errorMessage, "确定");
                 };
             }
         }
