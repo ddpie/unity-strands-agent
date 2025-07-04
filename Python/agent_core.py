@@ -130,18 +130,44 @@ class UnityAgent:
             # 配置Unity开发相关的工具集
             unity_tools = self._get_unity_tools()
             
-            # 使用默认AWS Bedrock配置和工具创建代理
-            if unity_tools:
-                # 如果SSL未正确配置，为Agent添加SSL配置
-                if not ssl_configured:
-                    logger.warning("SSL证书配置失败，将使用不安全连接")
-                
-                self.agent = Agent(tools=unity_tools)
-                logger.info(f"Unity代理初始化成功，配置了 {len(unity_tools)} 个工具")
-                logger.info(f"可用工具: {[tool.__name__ for tool in unity_tools]}")
-            else:
-                self.agent = Agent()
-                logger.info("Unity代理初始化成功（无工具模式）")
+            # 为了避免流式API的工具调用问题，暂时创建无工具的代理
+            # 在未来版本的Strands Agent SDK修复工具流式调用问题后可以重新启用
+            logger.info("注意：为避免工具调用的流式API问题，当前使用无工具模式")
+            logger.info(f"可用的Unity工具（将在未来版本启用）: {[tool.__name__ for tool in unity_tools] if unity_tools else []}")
+            
+            # 如果SSL未正确配置，为Agent添加SSL配置
+            if not ssl_configured:
+                logger.warning("SSL证书配置失败，将使用不安全连接")
+            
+            # 创建无工具的代理以避免tool_result配对问题，但添加Unity专用指令
+            unity_system_prompt = """
+你是Unity AI助手，专门为Unity游戏开发提供帮助。你擅长：
+
+1. **Unity开发支持**：
+   - C# 脚本编写和调试
+   - Unity Editor 功能和工作流程
+   - 游戏对象、组件、预制体管理
+   - 场景管理和资源优化
+   - 物理系统、动画、UI系统
+
+2. **项目分析**：
+   - 当用户询问项目分析时，请要求用户提供项目的具体信息
+   - 分析项目结构、脚本架构、性能问题
+   - 提供代码改进建议和最佳实践
+
+3. **问题解决**：
+   - 调试常见Unity错误
+   - 性能优化建议
+   - 跨平台开发指导
+
+请用中文回复，提供详细、实用的建议。如果用户询问当前项目分析，请引导用户提供项目的具体文件、脚本或问题描述。
+"""
+            
+            self.agent = Agent(system_prompt=unity_system_prompt)
+            logger.info("Unity代理初始化成功（暂时无工具模式，包含Unity专用指令）")
+            
+            # 存储工具列表以供将来使用
+            self._available_tools = unity_tools if unity_tools else []
                 
         except Exception as e:
             logger.error(f"代理初始化失败: {str(e)}")
@@ -219,6 +245,10 @@ class UnityAgent:
     def get_available_tools(self):
         """获取当前可用的工具列表"""
         try:
+            # 返回存储的工具列表（即使当前未启用）
+            if hasattr(self, '_available_tools') and self._available_tools:
+                return [tool.__name__ for tool in self._available_tools]
+            
             # 尝试获取代理的工具信息
             if hasattr(self.agent, 'tools') and self.agent.tools:
                 tool_names = []
@@ -288,20 +318,24 @@ class UnityAgent:
         try:
             logger.info(f"开始流式处理消息: {message[:50]}...")
             
-            # 使用异步流式API
-            async for chunk in self.agent.astream(message):
-                yield json.dumps({
-                    "type": "chunk",
-                    "content": chunk,
-                    "done": False
-                })
+            # 使用Strands Agent的流式API
+            async for chunk in self.agent.stream_async(message):
+                # 过滤并提取纯文本内容
+                text_content = self._extract_text_from_chunk(chunk)
+                
+                if text_content:
+                    yield json.dumps({
+                        "type": "chunk",
+                        "content": text_content,
+                        "done": False
+                    }, ensure_ascii=False)
             
             # 信号完成
             yield json.dumps({
                 "type": "complete",
                 "content": "",
                 "done": True
-            })
+            }, ensure_ascii=False)
             
         except Exception as e:
             logger.error(f"流式处理出错: {str(e)}")
@@ -309,7 +343,53 @@ class UnityAgent:
                 "type": "error",
                 "error": str(e),
                 "done": True
-            })
+            }, ensure_ascii=False)
+    
+    def _extract_text_from_chunk(self, chunk):
+        """从chunk中提取纯文本内容，过滤掉元数据"""
+        try:
+            # 如果是字符串，直接返回
+            if isinstance(chunk, str):
+                return chunk
+            
+            # 如果是字节，解码
+            if isinstance(chunk, bytes):
+                return chunk.decode('utf-8')
+            
+            # 如果是字典，尝试提取文本
+            if isinstance(chunk, dict):
+                # 跳过元数据事件
+                if any(key in chunk for key in ['init_event_loop', 'start', 'start_event_loop']):
+                    return None
+                
+                # 提取contentBlockDelta中的文本
+                if 'event' in chunk:
+                    event = chunk['event']
+                    if 'contentBlockDelta' in event:
+                        delta = event['contentBlockDelta']
+                        if 'delta' in delta and 'text' in delta['delta']:
+                            return delta['delta']['text']
+                    # 跳过其他事件类型
+                    return None
+                
+                # 跳过包含复杂元数据的响应
+                if any(key in chunk for key in ['agent', 'event_loop_metrics', 'traces', 'spans']):
+                    return None
+                
+                # 如果有text字段，提取它
+                if 'text' in chunk:
+                    return chunk['text']
+                
+                # 如果有content字段，提取它
+                if 'content' in chunk:
+                    return chunk['content']
+            
+            # 其他情况返回None，过滤掉
+            return None
+            
+        except Exception as e:
+            logger.warning(f"提取chunk文本时出错: {e}")
+            return None
     
     def health_check(self) -> Dict[str, Any]:
         """

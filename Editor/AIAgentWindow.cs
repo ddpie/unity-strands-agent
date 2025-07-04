@@ -14,6 +14,8 @@ namespace UnityAIAgent.Editor
         private Vector2 scrollPosition;
         private bool isProcessing = false;
         private string currentStreamText = "";
+        private int currentStreamingMessageIndex = -1; // 当前流式消息在列表中的索引
+        private bool scrollToBottom = false; // 是否需要滚动到底部
         private GUIStyle userMessageStyle;
         private GUIStyle aiMessageStyle;
         private GUIStyle codeStyle;
@@ -106,6 +108,16 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.EndHorizontal();
 
             // Chat messages area
+            Event e = Event.current;
+            
+            // 处理鼠标滚轮事件
+            if (e.type == EventType.ScrollWheel)
+            {
+                scrollPosition.y += e.delta.y * 20;
+                e.Use();
+                Repaint();
+            }
+            
             scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.ExpandHeight(true));
             
             foreach (var message in messages)
@@ -113,16 +125,16 @@ namespace UnityAIAgent.Editor
                 DrawMessage(message);
             }
 
-            // 显示当前流式消息（如果激活）
-            if (streamingHandler != null && streamingHandler.IsStreaming && !string.IsNullOrEmpty(currentStreamText))
+            // 流式消息现在已经包含在messages中，不需要单独显示
+            
+            // 自动滚动到底部
+            if (scrollToBottom)
             {
-                var streamMessage = new ChatMessage
-                {
-                    content = currentStreamText + "▌",
-                    isUser = false,
-                    timestamp = DateTime.Now
+                EditorApplication.delayCall += () => {
+                    scrollPosition.y = float.MaxValue;
+                    scrollToBottom = false;
+                    Repaint();
                 };
-                DrawMessage(streamMessage);
             }
 
             EditorGUILayout.EndScrollView();
@@ -189,16 +201,8 @@ namespace UnityAIAgent.Editor
             GUILayout.Label(message.timestamp.ToString("HH:mm"), EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
             
-            // 内容
-            if (message.content.Contains("```"))
-            {
-                // 特殊渲染代码块
-                RenderMarkdownContent(message.content);
-            }
-            else
-            {
-                GUILayout.Label(message.content, EditorStyles.wordWrappedLabel);
-            }
+            // 内容 - 统一使用Markdown渲染
+            RenderMarkdownContent(message.content);
             
             // 操作按钮
             EditorGUILayout.BeginHorizontal();
@@ -222,24 +226,167 @@ namespace UnityAIAgent.Editor
             {
                 if (i % 2 == 0)
                 {
-                    // Regular text
+                    // 正常文本 - 进行进一步Markdown解析
                     if (!string.IsNullOrWhiteSpace(parts[i]))
                     {
-                        GUILayout.Label(parts[i].Trim(), EditorStyles.wordWrappedLabel);
+                        RenderTextWithMarkdown(parts[i].Trim());
                     }
                 }
                 else
                 {
-                    // Code block
+                    // 代码块
                     var lines = parts[i].Split('\n');
                     var language = lines.Length > 0 ? lines[0].Trim() : "";
                     var code = string.Join("\n", lines, 1, lines.Length - 1);
                     
                     if (!string.IsNullOrWhiteSpace(code))
                     {
-                        EditorGUILayout.TextArea(code, codeStyle);
+                        // 显示语言标签
+                        if (!string.IsNullOrEmpty(language))
+                        {
+                            var langStyle = new GUIStyle(EditorStyles.miniLabel)
+                            {
+                                normal = { textColor = Color.gray }
+                            };
+                            GUILayout.Label($"[{language}]", langStyle);
+                        }
+                        
+                        // 代码块背景
+                        var rect = EditorGUILayout.GetControlRect(false, EditorStyles.textArea.CalcHeight(new GUIContent(code), Screen.width - 40));
+                        GUI.Box(rect, "", codeStyle);
+                        GUI.Label(rect, code, codeStyle);
                     }
                 }
+            }
+        }
+        
+        private void RenderTextWithMarkdown(string text)
+        {
+            var lines = text.Split('\n');
+            
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    GUILayout.Space(3);
+                    continue;
+                }
+                
+                // 标题处理
+                if (line.StartsWith("### "))
+                {
+                    var headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        fontSize = 13,
+                        wordWrap = true,
+                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
+                    };
+                    GUILayout.Label(line.Substring(4), headerStyle);
+                    GUILayout.Space(2);
+                }
+                else if (line.StartsWith("## "))
+                {
+                    var headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        fontSize = 15,
+                        wordWrap = true,
+                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
+                    };
+                    GUILayout.Label(line.Substring(3), headerStyle);
+                    GUILayout.Space(3);
+                }
+                else if (line.StartsWith("# "))
+                {
+                    var headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        fontSize = 17,
+                        wordWrap = true,
+                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
+                    };
+                    GUILayout.Label(line.Substring(2), headerStyle);
+                    GUILayout.Space(4);
+                }
+                // 列表项处理
+                else if (line.Trim().StartsWith("- ") || line.Trim().StartsWith("* "))
+                {
+                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(15);
+                    GUILayout.Label("•", listStyle, GUILayout.Width(10));
+                    GUILayout.Label(line.Trim().Substring(2), listStyle);
+                    GUILayout.EndHorizontal();
+                }
+                // 数字列表处理
+                else if (System.Text.RegularExpressions.Regex.IsMatch(line.Trim(), @"^\d+\. "))
+                {
+                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(15);
+                    GUILayout.Label(line.Trim(), listStyle);
+                    GUILayout.EndHorizontal();
+                }
+                // 粗体文本处理
+                else if (line.Contains("**"))
+                {
+                    RenderBoldText(line);
+                }
+                // 普通文本
+                else
+                {
+                    GUILayout.Label(line, EditorStyles.wordWrappedLabel);
+                }
+            }
+        }
+        
+        private void RenderBoldText(string text)
+        {
+            // 简单的粗体文本处理
+            var regex = new System.Text.RegularExpressions.Regex(@"\*\*(.*?)\*\*");
+            var matches = regex.Matches(text);
+            
+            if (matches.Count > 0)
+            {
+                GUILayout.BeginHorizontal();
+                
+                int lastIndex = 0;
+                foreach (System.Text.RegularExpressions.Match match in matches)
+                {
+                    // 添加前面的普通文本
+                    if (match.Index > lastIndex)
+                    {
+                        string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
+                        if (!string.IsNullOrEmpty(beforeText))
+                        {
+                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        }
+                    }
+                    
+                    // 添加粗体文本
+                    var boldStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        fontStyle = FontStyle.Bold,
+                        normal = { textColor = new Color(1f, 1f, 0.8f) } // 轻微高亮
+                    };
+                    GUILayout.Label(match.Groups[1].Value, boldStyle, GUILayout.ExpandWidth(false));
+                    
+                    lastIndex = match.Index + match.Length;
+                }
+                
+                // 添加后面的普通文本
+                if (lastIndex < text.Length)
+                {
+                    string afterText = text.Substring(lastIndex);
+                    if (!string.IsNullOrEmpty(afterText))
+                    {
+                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                    }
+                }
+                
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.Label(text, EditorStyles.wordWrappedLabel);
             }
         }
 
@@ -257,6 +404,10 @@ namespace UnityAIAgent.Editor
             messages.Add(message);
             var currentInput = userInput;
             userInput = "";
+            
+            // 重置流式状态
+            currentStreamText = "";
+            currentStreamingMessageIndex = -1;
             isProcessing = true;
             
             Repaint();
@@ -279,6 +430,13 @@ namespace UnityAIAgent.Editor
             }
             finally
             {
+                // 如果有错误，确保重置流式状态
+                if (isProcessing)
+                {
+                    currentStreamText = "";
+                    currentStreamingMessageIndex = -1;
+                    isProcessing = false;
+                }
                 SaveChatHistory();
                 Repaint();
             }
@@ -355,49 +513,86 @@ namespace UnityAIAgent.Editor
         // 流式响应回调方法
         private void OnStreamChunkReceived(string chunk)
         {
+            // 如果还没有创建流式消息，创建一个
+            if (currentStreamingMessageIndex == -1)
+            {
+                messages.Add(new ChatMessage
+                {
+                    content = "",
+                    isUser = false,
+                    timestamp = DateTime.Now
+                });
+                currentStreamingMessageIndex = messages.Count - 1;
+            }
+            
+            // 更新流式消息内容
             currentStreamText += chunk;
+            if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
+            {
+                messages[currentStreamingMessageIndex].content = currentStreamText + "▌"; // 添加光标
+            }
+            
             EditorApplication.delayCall += () => {
                 if (this != null)
+                {
+                    // 自动滚动到底部
+                    scrollToBottom = true;
                     Repaint();
+                }
             };
         }
         
         private void OnStreamComplete()
         {
-            if (!string.IsNullOrEmpty(currentStreamText))
+            // 更新最终消息内容（移除光标）
+            if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
-                messages.Add(new ChatMessage
-                {
-                    content = currentStreamText,
-                    isUser = false,
-                    timestamp = DateTime.Now
-                });
+                messages[currentStreamingMessageIndex].content = currentStreamText;
             }
             
+            // 重置流式状态
             currentStreamText = "";
+            currentStreamingMessageIndex = -1;
             isProcessing = false;
             
             EditorApplication.delayCall += () => {
                 if (this != null)
+                {
+                    SaveChatHistory();
                     Repaint();
+                }
             };
         }
         
         private void OnStreamError(string error)
         {
-            messages.Add(new ChatMessage
+            // 如果正在流式处理，更新当前消息为错误信息
+            if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
-                content = $"流式处理错误: {error}",
-                isUser = false,
-                timestamp = DateTime.Now
-            });
+                messages[currentStreamingMessageIndex].content = $"错误: {error}";
+            }
+            else
+            {
+                // 否则添加新的错误消息
+                messages.Add(new ChatMessage
+                {
+                    content = $"错误: {error}",
+                    isUser = false,
+                    timestamp = DateTime.Now
+                });
+            }
             
+            // 重置流式状态
             currentStreamText = "";
+            currentStreamingMessageIndex = -1;
             isProcessing = false;
             
             EditorApplication.delayCall += () => {
                 if (this != null)
+                {
+                    SaveChatHistory();
                     Repaint();
+                }
             };
         }
 

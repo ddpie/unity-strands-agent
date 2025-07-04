@@ -75,60 +75,110 @@ async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
         logger.info(f"开始使用Unity代理处理消息: {message[:50]}...")
         logger.info(f"可用工具: {unity_agent.get_available_tools()}")
         
-        # 使用异步流式API
+        # 使用异步流式API - 使用Unity代理的流式方法
         response_text = ""
-        async for chunk in agent.stream_async(message):
+        seen_chunks = set()  # 用于去重chunk内容
+        async for chunk in unity_agent.process_message_stream(message):
             logger.debug(f"收到chunk: {chunk}")
             
-            # 处理不同类型的chunk
-            content = ""
-            if isinstance(chunk, dict):
-                # 解析Strands Agent的流式响应格式
-                if 'event' in chunk:
-                    event_data = chunk.get('event', {})
-                    if 'contentBlockDelta' in event_data:
-                        delta = event_data['contentBlockDelta']
-                        if 'delta' in delta and 'text' in delta['delta']:
-                            content = delta['delta']['text']
-                    elif 'message' in event_data and 'content' in event_data['message']:
-                        # 获取最终消息内容
-                        msg_content = event_data['message']['content']
-                        if isinstance(msg_content, list) and len(msg_content) > 0:
-                            if 'text' in msg_content[0]:
-                                content = msg_content[0]['text']
-                elif 'content' in chunk:
-                    content = chunk['content']
-                elif 'data' in chunk:
-                    content = chunk['data']
-            else:
-                content = str(chunk)
+            # 处理Unity代理返回的JSON格式块
+            try:
+                # chunk已经是JSON字符串，需要解析
+                if isinstance(chunk, str):
+                    chunk_data = json.loads(chunk)
+                else:
+                    chunk_data = chunk
+                
+                logger.debug(f"解析chunk数据: {chunk_data}")
+                
+                # 处理Unity代理的流式响应格式
+                if chunk_data.get('type') == 'chunk':
+                    content = chunk_data.get('content', '')
+                    logger.debug(f"从Unity代理chunk提取内容: '{content}'")
+                elif chunk_data.get('type') == 'complete':
+                    # 流式完成，跳出循环
+                    logger.info("Unity代理流式响应完成")
+                    break
+                elif chunk_data.get('type') == 'error':
+                    # 处理错误
+                    error_msg = chunk_data.get('error', '未知错误')
+                    logger.error(f"Unity代理流式错误: {error_msg}")
+                    raise Exception(error_msg)
+                else:
+                    # 可能是原始的Strands响应，尝试提取文本内容
+                    if isinstance(chunk_data, dict):
+                        # 提取纯文本内容，过滤掉元数据
+                        if 'event' in chunk_data:
+                            event = chunk_data['event']
+                            if 'contentBlockDelta' in event:
+                                delta = event['contentBlockDelta']
+                                if 'delta' in delta and 'text' in delta['delta']:
+                                    content = delta['delta']['text']
+                                    logger.debug(f"从Strands event提取文本: '{content}'")
+                                else:
+                                    continue
+                            else:
+                                continue
+                        else:
+                            logger.debug(f"跳过非文本chunk: {str(chunk_data)[:100]}...")
+                            continue
+                    else:
+                        logger.debug(f"未知chunk类型: {chunk_data}")
+                        continue
+                    
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON解析错误: {e}, chunk: {chunk}")
+                continue
+            except Exception as e:
+                logger.error(f"处理chunk时出错: {e}")
+                continue
             
-            # 跳过空内容、初始化事件和元数据
-            if (not content or 
-                content == "{'init_event_loop': True}" or
-                'start' in str(chunk) or
-                'metadata' in str(chunk)):
+            # 跳过空内容
+            if not content or len(content.strip()) == 0:
+                logger.debug(f"跳过空内容")
                 continue
                 
             # 累积响应文本
             response_text += content
             
             # 返回每个文本块给Unity
-            if content:
+            if content and content.strip():  # 确保不是空白内容
                 # 确保内容是UTF-8编码的字符串
                 if isinstance(content, bytes):
                     content = content.decode('utf-8')
                 elif not isinstance(content, str):
                     content = str(content)
                 
-                # 记录响应内容到日志
-                logger.info(f"Agent响应块: {content[:100]}{'...' if len(content) > 100 else ''}")
-                
-                yield json.dumps({
-                    "type": "chunk", 
-                    "content": content,
-                    "done": False
-                }, ensure_ascii=False, separators=(',', ':'))
+                # 过滤掉过长的单个chunk（可能是完整响应）
+                if len(content) > 500:
+                    logger.warning(f"检测到过长chunk ({len(content)}字符)，可能是完整响应而非流式块")
+                    # 将长内容分割成较小的块
+                    for i in range(0, len(content), 30):
+                        chunk_part = content[i:i+30]
+                        # 去重检查
+                        if chunk_part not in seen_chunks:
+                            seen_chunks.add(chunk_part)
+                            logger.info(f"分割chunk块: '{chunk_part}'")
+                            yield json.dumps({
+                                "type": "chunk", 
+                                "content": chunk_part,
+                                "done": False
+                            }, ensure_ascii=False, separators=(',', ':'))
+                        else:
+                            logger.debug(f"跳过重复分割chunk: '{chunk_part}'")
+                else:
+                    # 正常大小的流式块
+                    # 更精确的去重检查
+                    if content not in seen_chunks:
+                        seen_chunks.add(content)
+                        logger.info(f"新chunk块: '{content}'")
+                        yield json.dumps({
+                            "type": "chunk", 
+                            "content": content,
+                            "done": False
+                        }, ensure_ascii=False, separators=(',', ':'))
+                    else:
+                        logger.debug(f"跳过重复chunk: '{content}'")
         
         # 流式完成
         logger.info(f"Agent流式响应完成，总长度: {len(response_text)}字符")

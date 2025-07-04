@@ -32,7 +32,7 @@ namespace UnityAIAgent.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<SetupWizard>("AI助手设置");
-            window.minSize = new Vector2(500, 400);
+            window.minSize = new Vector2(500, 600); // 增加高度以适应更多内容
             window.maxSize = new Vector2(500, 400);
         }
         
