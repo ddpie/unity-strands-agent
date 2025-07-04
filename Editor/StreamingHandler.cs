@@ -14,6 +14,7 @@ namespace UnityAIAgent.Editor
     public class StreamingHandler
     {
         private bool isStreaming = false;
+        private bool isCompleted = false;
         private CancellationTokenSource cancellationTokenSource;
         private Queue<StreamChunk> chunkQueue = new Queue<StreamChunk>();
         private readonly object queueLock = new object();
@@ -40,6 +41,7 @@ namespace UnityAIAgent.Editor
             }
             
             isStreaming = true;
+            isCompleted = false;
             cancellationTokenSource = new CancellationTokenSource();
             
             OnStreamStarted?.Invoke();
@@ -278,20 +280,32 @@ namespace UnityAIAgent.Editor
         {
             Debug.Log($"[StreamingHandler] 处理数据块类型: {chunk.Type}");
             
+            // 如果已经完成，忽略后续的chunk
+            if (isCompleted && chunk.Type == "chunk")
+            {
+                Debug.Log("[StreamingHandler] 忽略完成后到达的chunk");
+                return;
+            }
+            
             switch (chunk.Type)
             {
                 case "chunk":
-                    Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
-                    OnChunkReceived?.Invoke(chunk.Content);
+                    if (!isCompleted)
+                    {
+                        Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
+                        OnChunkReceived?.Invoke(chunk.Content);
+                    }
                     break;
                     
                 case "complete":
                     Debug.Log("[StreamingHandler] 触发OnStreamCompleted事件");
+                    isCompleted = true;
                     OnStreamCompleted?.Invoke();
                     break;
                     
                 case "error":
                     Debug.Log($"[StreamingHandler] 触发OnStreamError事件，错误: {chunk.Error}");
+                    isCompleted = true;
                     OnStreamError?.Invoke(chunk.Error);
                     break;
             }

@@ -557,6 +557,13 @@ namespace UnityAIAgent.Editor
         {
             Debug.Log($"[AIAgentWindow] 接收到流式数据块: {chunk}");
             
+            // 检查是否正在处理，防止在完成后收到延迟的chunk
+            if (!isProcessing)
+            {
+                Debug.Log("[AIAgentWindow] 忽略延迟到达的chunk，流式处理已完成");
+                return;
+            }
+            
             // 如果还没有创建流式消息，创建一个
             if (currentStreamingMessageIndex == -1)
             {
