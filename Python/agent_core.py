@@ -33,6 +33,22 @@ def configure_ssl_for_unity():
     except ImportError as e:
         print(f"[Python] ⚠️ certifi不可用: {e}")
     
+    # 尝试系统Python的certifi路径
+    system_certifi_paths = [
+        '/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/certifi/cacert.pem',
+        '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.13/site-packages/certifi/cacert.pem',
+        '/usr/local/lib/python3.12/site-packages/certifi/cacert.pem',
+    ]
+    
+    for cert_path in system_certifi_paths:
+        if os.path.exists(cert_path):
+            os.environ['SSL_CERT_FILE'] = cert_path
+            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+            os.environ['CURL_CA_BUNDLE'] = cert_path
+            print(f"[Python] ✓ 使用系统Python证书路径: {cert_path}")
+            return True
+    
     # 尝试macOS系统证书路径
     macos_cert_paths = [
         '/etc/ssl/cert.pem',  # 标准位置
@@ -92,8 +108,15 @@ import asyncio
 from typing import Dict, Any, Optional
 from tool_tracker import get_tool_tracker
 
-# 导入Strands Agent工具
+# 导入Strands预定义工具
 try:
+    # 添加strands tools路径到sys.path
+    import sys
+    strands_tools_path = "/Users/caobao/projects/strands/tools/src"
+    if strands_tools_path not in sys.path:
+        sys.path.insert(0, strands_tools_path)
+    
+    # 导入预定义工具模块
     import strands_tools.file_read as file_read_module
     import strands_tools.file_write as file_write_module  
     import strands_tools.editor as editor_module
@@ -104,7 +127,7 @@ try:
     import strands_tools.shell as shell_module
     import strands_tools.http_request as http_request_module
     
-    print("[Python] Strands工具模块导入成功")
+    print("[Python] Strands预定义工具导入成功")
     TOOLS_AVAILABLE = True
 except ImportError as e:
     print(f"[Python] Strands工具导入失败: {e}")
@@ -334,7 +357,7 @@ After initial implementation:
         except (NameError, ImportError) as e:
             logger.warning(f"文件操作工具不可用: {e}")
 
-        # shell
+        # shell工具
         try:
             unity_tools.append(shell_module)
             logger.info("✓ 添加shell工具: shell")
@@ -369,9 +392,6 @@ After initial implementation:
         except (NameError, ImportError) as e:
             logger.warning(f"时间工具不可用: {e}")
         
-        # 移除所有Unity自定义工具，只使用Strands内置工具
-        logger.info("✓ 配置完成，仅使用Strands内置工具")
-        
         # HTTP工具 - 访问Unity文档、API等
         try:
             unity_tools.append(http_request_module)
@@ -392,7 +412,11 @@ After initial implementation:
         try:
             # 返回存储的工具列表（即使当前未启用）
             if hasattr(self, '_available_tools') and self._available_tools:
-                return [tool.__name__ for tool in self._available_tools]
+                # 如果是字符串列表，直接返回
+                if isinstance(self._available_tools[0], str):
+                    return self._available_tools
+                # 如果是模块对象，提取名称
+                return [tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in self._available_tools]
             
             # 尝试获取代理的工具信息
             if hasattr(self.agent, 'tools') and self.agent.tools:
@@ -409,7 +433,7 @@ After initial implementation:
                 return self.agent.tool_names
             else:
                 logger.info("代理没有配置工具或工具信息不可访问")
-                return []
+                return ["file_read", "file_write", "editor", "shell", "python_repl", "calculator", "memory", "current_time", "http_request"] if TOOLS_AVAILABLE else []
         except Exception as e:
             logger.error(f"获取工具列表时出错: {e}")
             return []
@@ -509,12 +533,8 @@ After initial implementation:
             
             logger.info("开始遍历流式响应...")
             
-            # 在开始处理之前，立即输出一个测试消息
-            yield json.dumps({
-                "type": "chunk",
-                "content": "\n🔧 **工具追踪系统已启用** - 如果AI使用工具，您将看到详细的执行过程\n",
-                "done": False
-            }, ensure_ascii=False)
+            # 静默启动，不显示工具系统提示
+            pass
             
             logger.info("=== 开始进入流式处理循环 ===")
             
@@ -607,7 +627,7 @@ After initial implementation:
                                 logger.info(f"💻 [SHELL_MONITOR] 检测到shell工具调用: {command}")
                                 yield json.dumps({
                                     "type": "chunk", 
-                                    "content": f"\n💻 **[SHELL]** 工具调用检测\n   🔧 工具: {tool_name}\n   📋 命令: {command}\n   ⏳ 开始执行shell命令...",
+                                    "content": f"\n<details>\n<summary>💻 <strong>Shell工具执行</strong> - {tool_name}</summary>\n\n**命令**: `{command}`\n\n⏳ 正在执行shell命令...\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                             elif 'file_read' in tool_name.lower():
@@ -617,19 +637,41 @@ After initial implementation:
                                     logger.warning(f"⚠️ [FILE_READ_MONITOR] 警告：尝试读取当前目录，这可能导致卡死！")
                                     yield json.dumps({
                                         "type": "chunk", 
-                                        "content": f"\n⚠️ **[FILE_READ]** 危险操作检测\n   🔧 工具: {tool_name}\n   📂 路径: {file_path}\n   ⚠️ 警告：尝试读取目录而非文件，可能导致卡死！",
+                                        "content": f"\n<details>\n<summary>⚠️ <strong>安全提示</strong> - 文件读取操作</summary>\n\n**工具**: {tool_name}  \n**路径**: `{file_path}`  \n\n⚠️ **注意**: 检测到尝试读取目录，建议使用shell工具进行目录浏览\n</details>\n",
                                         "done": False
                                     }, ensure_ascii=False)
                                 else:
                                     yield json.dumps({
                                         "type": "chunk", 
-                                        "content": f"\n📖 **[FILE_READ]** 工具调用检测\n   🔧 工具: {tool_name}\n   📂 文件: {file_path}\n   ⏳ 开始读取文件...",
+                                        "content": f"\n<details>\n<summary>📖 <strong>文件读取</strong> - {tool_name}</summary>\n\n**文件路径**: `{file_path}`\n\n⏳ 正在读取文件...\n</details>\n",
                                         "done": False
                                     }, ensure_ascii=False)
                             else:
+                                # 生成工具图标
+                                tool_icon = "🔧"
+                                if 'python' in tool_name.lower():
+                                    tool_icon = "🐍"
+                                elif 'calculator' in tool_name.lower():
+                                    tool_icon = "🧮"
+                                elif 'memory' in tool_name.lower():
+                                    tool_icon = "🧠"
+                                elif 'http' in tool_name.lower():
+                                    tool_icon = "🌐"
+                                elif 'time' in tool_name.lower():
+                                    tool_icon = "⏰"
+                                elif 'write' in tool_name.lower():
+                                    tool_icon = "✏️"
+                                elif 'editor' in tool_name.lower():
+                                    tool_icon = "📝"
+                                
+                                # 格式化输入参数
+                                formatted_input = json.dumps(tool_input, ensure_ascii=False, indent=2)
+                                if len(formatted_input) > 300:
+                                    formatted_input = formatted_input[:300] + "...\n}"
+                                
                                 yield json.dumps({
                                     "type": "chunk", 
-                                    "content": f"\n🔧 **检测到工具调用**: {tool_name}\n   📋 输入参数: {json.dumps(tool_input, ensure_ascii=False)[:200]}...\n   ⏳ 开始执行...",
+                                    "content": f"\n<details>\n<summary>{tool_icon} <strong>工具执行</strong> - {tool_name}</summary>\n\n**输入参数**:\n```json\n{formatted_input}\n```\n\n⏳ 正在执行...\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                             tool_info_generated = True
@@ -678,7 +720,7 @@ After initial implementation:
                                 logger.warning(f"⚠️ [TOOL_TIMEOUT] 工具执行超过30秒无响应，可能卡死")
                                 yield json.dumps({
                                     "type": "chunk",
-                                    "content": f"\n⚠️ **工具执行超时警告**\n   ⏰ 已超过30秒无工具响应\n   🔧 可能的问题：工具卡死或处理大文件\n   💡 建议：如果持续无响应，请停止执行",
+                                    "content": f"\n<details>\n<summary>⏰ <strong>执行状态</strong> - 工具超时提醒</summary>\n\n**状态**: 已超过30秒无响应  \n**可能原因**: 工具处理大文件或遇到问题  \n**建议**: 如持续无响应可停止执行\n</details>\n",
                                     "done": False
                                 }, ensure_ascii=False)
                                 last_tool_time = current_time  # 重置以避免重复警告
@@ -911,7 +953,7 @@ After initial implementation:
             if found_tool_info:
                 # 更详细地解析工具信息
                 tool_details = self._parse_tool_details(chunk, detected_pattern)
-                tool_msg = f"\n🔧 **检测到工具活动** (Chunk #{chunk_count})\n   📋 类型: {detected_pattern}\n{tool_details}\n"
+                tool_msg = f"\n<details>\n<summary>🔧 <strong>工具活动</strong> - {detected_pattern} (Chunk #{chunk_count})</summary>\n\n{tool_details}\n</details>\n"
                 logger.info(f"强制输出工具信息: {tool_msg}")
                 return tool_msg
                 
