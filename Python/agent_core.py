@@ -351,6 +351,9 @@ class UnityAgent:
             async for chunk in self.agent.stream_async(message):
                 chunk_count += 1
                 logger.info(f"收到第 {chunk_count} 个chunk: {str(chunk)[:200]}...")
+                
+                # 更新最后接收时间（无论是否生成输出）
+                last_chunk_time = asyncio.get_event_loop().time()
                 # 检查总超时
                 current_time = asyncio.get_event_loop().time()
                 if current_time - start_time > chunk_timeout:
@@ -362,17 +365,19 @@ class UnityAgent:
                     }, ensure_ascii=False)
                     break
                 
-                # 检查chunk间隔超时
-                if current_time - last_chunk_time > chunk_interval_timeout:
-                    logger.error(f"chunk间隔超时，超过{chunk_interval_timeout}秒无新数据")
-                    yield json.dumps({
-                        "type": "error",
-                        "error": f"响应中断：超过{chunk_interval_timeout}秒无新数据",
-                        "done": True
-                    }, ensure_ascii=False)
-                    break
-                
-                last_chunk_time = current_time
+                # 检查chunk间隔超时（但给AI充分思考时间）
+                chunk_interval = current_time - last_chunk_time
+                if chunk_interval > chunk_interval_timeout:
+                    logger.warning(f"chunk间隔较长: {chunk_interval:.1f}秒，可能是AI正在深度思考")
+                    # 只有在没有工具调用的情况下才认为是真正的超时
+                    if chunk_count > 0 and chunk_interval > chunk_interval_timeout * 2:  # 双倍超时才真正中断
+                        logger.error(f"chunk间隔严重超时，超过{chunk_interval_timeout * 2}秒无新数据")
+                        yield json.dumps({
+                            "type": "error",
+                            "error": f"响应超时：超过{chunk_interval_timeout * 2}秒无新数据",
+                            "done": True
+                        }, ensure_ascii=False)
+                        break
                 
                 # 首先尝试提取工具调用信息
                 if isinstance(chunk, dict) and 'event' in chunk:
@@ -399,7 +404,8 @@ class UnityAgent:
                     }, ensure_ascii=False)
             
             # 信号完成
-            logger.info(f"流式处理完成，总共处理了 {chunk_count} 个chunk")
+            total_time = asyncio.get_event_loop().time() - start_time
+            logger.info(f"流式处理完成，总共处理了 {chunk_count} 个chunk，耗时 {total_time:.1f}秒")
             yield json.dumps({
                 "type": "complete",
                 "content": "",
@@ -408,9 +414,13 @@ class UnityAgent:
             
         except Exception as e:
             logger.error(f"流式处理出错: {str(e)}")
+            logger.error(f"错误类型: {type(e).__name__}")
+            logger.error(f"已处理chunk数量: {chunk_count}")
+            import traceback
+            logger.error(f"错误堆栈: {traceback.format_exc()}")
             yield json.dumps({
                 "type": "error",
-                "error": str(e),
+                "error": f"流式处理错误 ({type(e).__name__}): {str(e)}",
                 "done": True
             }, ensure_ascii=False)
     

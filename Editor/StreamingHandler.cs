@@ -218,10 +218,41 @@ namespace UnityAIAgent.Editor
             lock (queueLock)
             {
                 chunkQueue.Enqueue(chunk);
+                Debug.Log($"[StreamingHandler] 入队chunk类型: {chunk.Type}，队列长度: {chunkQueue.Count}");
             }
             
             // 在主线程中处理
-            EditorApplication.delayCall += ProcessNextChunk;
+            EditorApplication.delayCall += ProcessAllChunks;
+        }
+        
+        /// <summary>
+        /// 处理所有待处理的数据块
+        /// </summary>
+        private void ProcessAllChunks()
+        {
+            // 一次性处理队列中的所有chunk，确保顺序
+            while (true)
+            {
+                StreamChunk chunk = null;
+                
+                lock (queueLock)
+                {
+                    if (chunkQueue.Count > 0)
+                    {
+                        chunk = chunkQueue.Dequeue();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                
+                if (chunk != null)
+                {
+                    Debug.Log($"[StreamingHandler] 出队处理chunk类型: {chunk.Type}");
+                    HandleChunk(chunk);
+                }
+            }
         }
         
         /// <summary>
@@ -278,14 +309,7 @@ namespace UnityAIAgent.Editor
         /// </summary>
         private void HandleChunk(StreamChunk chunk)
         {
-            Debug.Log($"[StreamingHandler] 处理数据块类型: {chunk.Type}");
-            
-            // 如果已经完成，忽略后续的chunk
-            if (isCompleted && chunk.Type == "chunk")
-            {
-                Debug.Log("[StreamingHandler] 忽略完成后到达的chunk");
-                return;
-            }
+            Debug.Log($"[StreamingHandler] 处理数据块类型: {chunk.Type}，当前完成状态: {isCompleted}");
             
             switch (chunk.Type)
             {
@@ -295,18 +319,36 @@ namespace UnityAIAgent.Editor
                         Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
                         OnChunkReceived?.Invoke(chunk.Content);
                     }
+                    else
+                    {
+                        Debug.Log($"[StreamingHandler] 忽略完成后的chunk: {chunk.Content}");
+                    }
                     break;
                     
                 case "complete":
-                    Debug.Log("[StreamingHandler] 触发OnStreamCompleted事件");
-                    isCompleted = true;
-                    OnStreamCompleted?.Invoke();
+                    if (!isCompleted)
+                    {
+                        Debug.Log("[StreamingHandler] 触发OnStreamCompleted事件");
+                        isCompleted = true;
+                        OnStreamCompleted?.Invoke();
+                    }
+                    else
+                    {
+                        Debug.Log("[StreamingHandler] 忽略重复的complete信号");
+                    }
                     break;
                     
                 case "error":
-                    Debug.Log($"[StreamingHandler] 触发OnStreamError事件，错误: {chunk.Error}");
-                    isCompleted = true;
-                    OnStreamError?.Invoke(chunk.Error);
+                    if (!isCompleted)
+                    {
+                        Debug.Log($"[StreamingHandler] 触发OnStreamError事件，错误: {chunk.Error}");
+                        isCompleted = true;
+                        OnStreamError?.Invoke(chunk.Error);
+                    }
+                    else
+                    {
+                        Debug.Log($"[StreamingHandler] 忽略完成后的error: {chunk.Error}");
+                    }
                     break;
             }
         }

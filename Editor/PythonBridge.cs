@@ -172,9 +172,15 @@ namespace UnityAIAgent.Editor
                                 catch (PythonException stopIteration) when (stopIteration.Message.Contains("StopAsyncIteration"))
                                 {
                                     // 流正常结束
-                                    Debug.Log("[Unity] Agent流式响应正常结束");
+                                    Debug.Log($"[Unity] Agent流式响应正常结束，总共处理了 {chunkIndex} 个chunk");
                                     EditorApplication.delayCall += () => onComplete?.Invoke();
                                     break;
+                                }
+                                catch (Exception chunkError)
+                                {
+                                    Debug.LogError($"[Unity] 处理第 {chunkIndex} 个chunk时出错: {chunkError.Message}");
+                                    Debug.LogError($"[Unity] 错误详情: {chunkError}");
+                                    // 继续处理下一个chunk，不要中断整个流
                                 }
                             }
                         }

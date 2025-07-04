@@ -557,10 +557,10 @@ namespace UnityAIAgent.Editor
         {
             Debug.Log($"[AIAgentWindow] 接收到流式数据块: {chunk}");
             
-            // 检查是否正在处理，防止在完成后收到延迟的chunk
+            // 如果流式处理已停止，忽略延迟chunk
             if (!isProcessing)
             {
-                Debug.Log("[AIAgentWindow] 忽略延迟到达的chunk，流式处理已完成");
+                Debug.Log($"[AIAgentWindow] 忽略延迟chunk，流式处理已停止: {chunk}");
                 return;
             }
             
@@ -600,21 +600,24 @@ namespace UnityAIAgent.Editor
         {
             Debug.Log("[AIAgentWindow] 流式响应完成");
             
-            // 更新最终消息内容（移除光标）
-            if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
-            {
-                messages[currentStreamingMessageIndex].content = currentStreamText;
-                Debug.Log($"[AIAgentWindow] 完成消息内容，最终长度: {currentStreamText.Length}");
-            }
-            
-            // 重置流式状态
-            currentStreamText = "";
-            currentStreamingMessageIndex = -1;
+            // 立即停止处理，防止后续chunk创建新消息
             isProcessing = false;
             
+            // 延迟更新UI和重置状态
             EditorApplication.delayCall += () => {
                 if (this != null)
                 {
+                    // 更新最终消息内容（移除光标）
+                    if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
+                    {
+                        messages[currentStreamingMessageIndex].content = currentStreamText;
+                        Debug.Log($"[AIAgentWindow] 完成消息内容，最终长度: {currentStreamText.Length}");
+                    }
+                    
+                    // 重置流式状态
+                    currentStreamText = "";
+                    currentStreamingMessageIndex = -1;
+                    
                     SaveChatHistory();
                     Repaint();
                 }
@@ -624,6 +627,9 @@ namespace UnityAIAgent.Editor
         private void OnStreamError(string error)
         {
             Debug.Log($"[AIAgentWindow] 流式响应错误: {error}");
+            
+            // 立即停止处理
+            isProcessing = false;
             
             // 格式化错误消息
             string errorMessage = error;
@@ -659,7 +665,6 @@ namespace UnityAIAgent.Editor
             // 重置流式状态
             currentStreamText = "";
             currentStreamingMessageIndex = -1;
-            isProcessing = false;
             
             EditorApplication.delayCall += () => {
                 if (this != null)
