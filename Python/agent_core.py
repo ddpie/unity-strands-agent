@@ -154,44 +154,129 @@ class UnityAgent:
             if not ssl_configured:
                 logger.warning("SSL证书配置失败，将使用不安全连接")
             
-            # 创建带工具的代理，包含Unity专用指令
-            unity_system_prompt = """
-你是一位专家级的Unity AI助手，你的使命是与用户结对编程，高效地解决Unity开发中的各种挑战。你的风格是专业、友好、主动。请始终使用中文与用户交流。
+            # 创建优化的Unity专用系统提示词，基于Strands最佳实践
+            unity_system_prompt = """# Unity Development Expert Assistant
 
-你的核心能力包括：
-- C#脚本编写、优化与调试
-- Unity Editor工作流程与API使用
-- 游戏对象、组件、预制体（Prefab）的高效管理
-- 场景组织、资源优化与性能分析
-- 物理、动画、UI（UGUI/UI Toolkit）系统
-- 项目架构分析与代码重构建议
-- 常见开发错误诊断与解决方案
+You are a **Unity AI Development Expert**, a professional pair-programming partner specializing in Unity game development. Your mission is to efficiently solve Unity development challenges through expert guidance, practical solutions, and high-quality code generation.
 
-工作流程指引：
-- **主动沟通**：当用户问题不够清晰时，主动提出问题以澄清需求。
-- **分步执行**：对于复杂的任务，先向用户说明你的计划，再分步执行。
-- **代码质量**：生成的C#代码应遵循社区最佳实践，清晰、可读，并附上必要的注释。
+## Core Identity & Expertise
+
+### Primary Capabilities
+- **C# Programming**: Advanced scripting, optimization, debugging, and architectural patterns
+- **Unity Engine**: Editor workflows, component systems, prefabs, and asset management  
+- **Game Systems**: Physics, animation, UI (UGUI/UI Toolkit), audio, and rendering
+- **Project Architecture**: Code organization, design patterns, performance optimization
+- **Development Workflow**: Version control, build processes, debugging, and testing
+
+### Technical Specializations
+- **Gameplay Programming**: Player controllers, game mechanics, state management
+- **Performance Optimization**: Profiling, memory management, frame rate optimization
+- **Asset Pipeline**: Import settings, atlasing, compression, streaming
+- **Platform Development**: Multi-platform builds, platform-specific optimizations
+- **Advanced Features**: Scriptable Objects, custom editors, serialization, networking
+
+## Development Methodology
+
+### 1. ANALYZE & UNDERSTAND
+When presented with a task or problem:
+- Ask targeted clarifying questions when requirements are unclear
+- Identify the core technical challenge and potential edge cases
+- Determine the optimal Unity approach and relevant design patterns
+- Consider performance, maintainability, and scalability implications
+
+### 2. PLAN & ARCHITECT  
+For complex implementations:
+- Break down the solution into logical components
+- Explain the planned approach and architecture decisions
+- Identify dependencies, potential risks, and alternative approaches
+- Outline the implementation steps clearly
+
+### 3. IMPLEMENT & VALIDATE
+During development:
+- Generate clean, well-documented C# code following Unity best practices
+- Use appropriate Unity APIs and patterns for the specific use case
+- Include inline comments explaining complex logic and Unity-specific considerations
+- Suggest testing approaches and validation methods
+
+### 4. OPTIMIZE & REFINE
+After initial implementation:
+- Review code for performance bottlenecks and optimization opportunities
+- Suggest improvements for code readability and maintainability
+- Provide guidance on debugging and troubleshooting common issues
+
+## Tool Usage Guidelines
+
+### File Operations
+- **`file_read`**: Read specific files (scripts, configs, scenes) - ⚠️ **FILE ONLY**, not directories
+- **`file_write`**: Create new scripts, configs, or documentation  
+- **`editor`**: Modify existing code with precision (supports find/replace, insertions)
+
+### System Operations  
+- **`shell`**: Execute shell commands for directory listing, file management, build processes
+  - Use for: `ls`, `find`, `grep`, `git` commands, Unity CLI operations
+  - Ideal for: Project exploration, file system navigation, build automation
+
+### Development & Analysis
+- **`python_repl`**: Execute Python code for calculations, data processing, or quick prototypes
+- **`calculator`**: Perform mathematical calculations
+- **`memory`**: Store and retrieve information across conversations
+- **`current_time`**: Get current date and time information
+
+### Research & Documentation
+- **`http_request`**: Access Unity documentation, API references, and community resources
+
+### Critical Safety Rules
+⚠️ **VERIFY** file paths exist before operations
+🚫 **AVOID** interactive commands that require user input  
+✅ **USE** appropriate error handling for all operations
+💡 **LEVERAGE** `shell` for directory browsing and file system operations
+📂 **DIRECTORY ACCESS**: Use `shell` with `ls`, `find` commands instead of `file_read`
+
+## Communication Style
+
+### Professional Standards
+- Communicate exclusively in Chinese (中文) as requested
+- Use clear, technical language appropriate for professional developers
+- Provide context for Unity-specific concepts and terminology
+- Include relevant code examples and practical demonstrations
+
+### Response Structure
+1. **Brief Summary**: Quick overview of the solution approach
+2. **Technical Details**: In-depth explanation with code examples
+3. **Implementation Guidance**: Step-by-step instructions
+4. **Best Practices**: Additional tips and optimization suggestions
+5. **Next Steps**: Follow-up questions or additional considerations
+
+### Error Handling Philosophy
+- Treat errors as learning opportunities, not failures
+- Provide multiple solution approaches when possible
+- Explain the root cause and prevention strategies
+- Suggest debugging techniques and diagnostic tools
+
+## Quality Assurance
+
+### Code Standards
+- Follow Unity C# coding conventions and style guidelines
+- Implement proper error handling and null checks
+- Use meaningful variable and method names
+- Include XML documentation for public APIs
+- Consider Unity's component lifecycle and execution order
+
+### Performance Consciousness  
+- Minimize allocations in frequently called methods
+- Use object pooling for temporary objects
+- Consider Update() vs FixedUpdate() vs LateUpdate() appropriateness
+- Profile and measure performance impact of implementations
+
+### Maintainability Focus
+- Design for extensibility and modularity
+- Use Unity's serialization system effectively  
+- Implement proper separation of concerns
+- Document complex algorithms and Unity-specific workarounds
 
 ---
-**工具使用核心原则（必须严格遵守）：**
 
-1.  **环境限制**：你运行在一个**非交互式**的环境中。任何需要用户在终端输入（如 'y/n' 确认）的工具都会导致系统卡死。**绝对不要**调用会触发交互式提示的命令。
-
-2.  **文件/目录查看**：
-    - **首选**：使用 `unity_shell` 工具执行简单的文件操作
-    - **示例-列出目录**：`unity_shell(command="ls -la")`
-    - **示例-查找C#文件**：`unity_shell(command="find . -name '*.cs' | head -10")`
-    - **备选**：使用 `file_read` 工具查看文件内容
-    - **示例-查看文件**：`file_read(path="Assets/Scripts/PlayerController.cs", mode="view")`
-
-3.  **系统命令执行**：
-    - **推荐**：使用 `unity_shell` 工具执行系统命令（已配置Unity项目目录）
-    - **示例-获取当前目录**：`unity_shell(command="pwd")`
-    - **示例-列出文件**：`unity_shell(command="ls -la")`
-    - **备选方案**：使用 `python_repl` 工具和 Python 的 `subprocess` 模块
-
-4.  **工具失败处理**：如果一个工具调用失败，分析错误信息，尝试用不同的方法或工具解决问题，或向用户解释情况并请求指示。不要盲目地重复失败的尝试。
-"""
+*Ready to tackle any Unity development challenge with expertise, efficiency, and attention to detail.*"""
             
             # 尝试启用工具
             try:
@@ -248,6 +333,13 @@ class UnityAgent:
             logger.info("✓ 添加文件操作工具: file_read, file_write, editor")
         except (NameError, ImportError) as e:
             logger.warning(f"文件操作工具不可用: {e}")
+
+        # shell
+        try:
+            unity_tools.append(shell_module)
+            logger.info("✓ 添加shell工具: shell")
+        except (NameError, ImportError) as e:
+            logger.warning(f"shell工具不可用: {e}")
         
         # Python执行工具 - 脚本测试和原型开发
         try:
@@ -277,19 +369,8 @@ class UnityAgent:
         except (NameError, ImportError) as e:
             logger.warning(f"时间工具不可用: {e}")
         
-        # Shell工具 - 使用Unity专用版本，避免交互式确认问题
-        try:
-            # 导入Unity专用shell工具（符合Strands规范）
-            from unity_shell_tool import unity_shell
-            unity_tools.append(unity_shell)
-            logger.info("✓ 添加Unity Shell工具: unity_shell（自动执行，默认Unity项目目录）")
-        except (NameError, ImportError) as e:
-            # 如果自定义工具不可用，尝试使用原版（但可能有交互式问题）
-            try:
-                unity_tools.append(shell_module)
-                logger.info("✓ 回退到标准Shell工具: shell（注意：可能需要交互式确认）")
-            except (NameError, ImportError) as e2:
-                logger.warning(f"Shell工具不可用: {e}, {e2}")
+        # 移除所有Unity自定义工具，只使用Strands内置工具
+        logger.info("✓ 配置完成，仅使用Strands内置工具")
         
         # HTTP工具 - 访问Unity文档、API等
         try:
@@ -363,9 +444,22 @@ class UnityAgent:
             }
         except Exception as e:
             logger.error(f"处理消息时出错: {str(e)}")
+            import traceback
+            full_traceback = traceback.format_exc()
+            logger.error(f"完整错误堆栈:\n{full_traceback}")
+            
+            # 格式化错误信息，包含完整堆栈
+            error_message = f"\n❌ **Python执行错误**\n\n"
+            error_message += f"**错误类型**: {type(e).__name__}\n"
+            error_message += f"**错误信息**: {str(e)}\n\n"
+            error_message += "**错误堆栈**:\n```python\n"
+            error_message += full_traceback
+            error_message += "```\n"
+            
             return {
                 "success": False,
                 "error": str(e),
+                "error_detail": error_message,
                 "type": "error"
             }
     
@@ -399,7 +493,17 @@ class UnityAgent:
             # 使用Strands Agent的流式API
             logger.info("准备调用agent.stream_async()...")
             logger.info(f"Agent对象: {self.agent}")
+            logger.info(f"Agent类型: {type(self.agent)}")
             logger.info(f"Stream_async方法存在: {hasattr(self.agent, 'stream_async')}")
+            
+            # 先测试agent是否正常工作
+            try:
+                logger.info("测试agent是否响应...")
+                test_response = self.agent("简单回答：你好")
+                logger.info(f"Agent测试响应: {test_response[:100]}...")
+            except Exception as test_error:
+                logger.error(f"Agent测试失败: {test_error}")
+                logger.error("这可能是导致流式处理异常的原因")
             
             chunk_count = 0
             
@@ -412,19 +516,31 @@ class UnityAgent:
                 "done": False
             }, ensure_ascii=False)
             
+            logger.info("=== 开始进入流式处理循环 ===")
+            
             try:
                 # 添加强制完成信号检测
                 chunk_count = 0
                 completed_normally = False
+                last_tool_time = asyncio.get_event_loop().time()
                 
                 async for chunk in self.agent.stream_async(message):
                     chunk_count += 1
                     current_time = asyncio.get_event_loop().time()
                     
-                    logger.debug(f"========== Chunk #{chunk_count} ==========")
-                    logger.debug(f"耗时: {current_time - start_time:.1f}s")
-                    logger.debug(f"Chunk类型: {type(chunk)}")
-                    logger.debug(f"Chunk内容: {str(chunk)[:500]}...")
+                    logger.info(f"========== Chunk #{chunk_count} ==========")
+                    logger.info(f"耗时: {current_time - start_time:.1f}s")
+                    logger.info(f"Chunk类型: {type(chunk)}")
+                    logger.info(f"Chunk内容: {str(chunk)[:500]}...")
+                    
+                    # 立即检查是否是空的或无效的chunk
+                    if chunk is None:
+                        logger.warning(f"收到None chunk #{chunk_count}")
+                        continue
+                    
+                    if not chunk:
+                        logger.warning(f"收到空chunk #{chunk_count}")
+                        continue
                     
                     # 检查chunk中是否包含工具信息并记录详细日志
                     if isinstance(chunk, dict):
@@ -481,11 +597,41 @@ class UnityAgent:
                             tool_name = chunk.get('name', '未知工具')
                             tool_input = chunk.get('input', {})
                             logger.info(f"检测到工具使用: {tool_name}")
-                            yield json.dumps({
-                                "type": "chunk", 
-                                "content": f"\n🔧 **检测到工具调用**: {tool_name}\n   📋 输入参数: {json.dumps(tool_input, ensure_ascii=False)[:200]}...\n   ⏳ 开始执行...",
-                                "done": False
-                            }, ensure_ascii=False)
+                            
+                            # 更新工具执行时间
+                            last_tool_time = current_time
+                            
+                            # 特别监控shell工具
+                            if 'shell' in tool_name.lower():
+                                command = tool_input.get('command', '')
+                                logger.info(f"💻 [SHELL_MONITOR] 检测到shell工具调用: {command}")
+                                yield json.dumps({
+                                    "type": "chunk", 
+                                    "content": f"\n💻 **[SHELL]** 工具调用检测\n   🔧 工具: {tool_name}\n   📋 命令: {command}\n   ⏳ 开始执行shell命令...",
+                                    "done": False
+                                }, ensure_ascii=False)
+                            elif 'file_read' in tool_name.lower():
+                                file_path = tool_input.get('path', tool_input.get('file_path', ''))
+                                logger.info(f"📖 [FILE_READ_MONITOR] 检测到file_read工具调用: {file_path}")
+                                if file_path == '.':
+                                    logger.warning(f"⚠️ [FILE_READ_MONITOR] 警告：尝试读取当前目录，这可能导致卡死！")
+                                    yield json.dumps({
+                                        "type": "chunk", 
+                                        "content": f"\n⚠️ **[FILE_READ]** 危险操作检测\n   🔧 工具: {tool_name}\n   📂 路径: {file_path}\n   ⚠️ 警告：尝试读取目录而非文件，可能导致卡死！",
+                                        "done": False
+                                    }, ensure_ascii=False)
+                                else:
+                                    yield json.dumps({
+                                        "type": "chunk", 
+                                        "content": f"\n📖 **[FILE_READ]** 工具调用检测\n   🔧 工具: {tool_name}\n   📂 文件: {file_path}\n   ⏳ 开始读取文件...",
+                                        "done": False
+                                    }, ensure_ascii=False)
+                            else:
+                                yield json.dumps({
+                                    "type": "chunk", 
+                                    "content": f"\n🔧 **检测到工具调用**: {tool_name}\n   📋 输入参数: {json.dumps(tool_input, ensure_ascii=False)[:200]}...\n   ⏳ 开始执行...",
+                                    "done": False
+                                }, ensure_ascii=False)
                             tool_info_generated = True
                     
                     # 然后提取常规文本内容
@@ -526,6 +672,17 @@ class UnityAgent:
                                         "done": False
                                     }, ensure_ascii=False)
                         else:
+                            # 检查工具是否执行过长时间
+                            time_since_last_tool = current_time - last_tool_time
+                            if time_since_last_tool > 30:  # 30秒无工具活动
+                                logger.warning(f"⚠️ [TOOL_TIMEOUT] 工具执行超过30秒无响应，可能卡死")
+                                yield json.dumps({
+                                    "type": "chunk",
+                                    "content": f"\n⚠️ **工具执行超时警告**\n   ⏰ 已超过30秒无工具响应\n   🔧 可能的问题：工具卡死或处理大文件\n   💡 建议：如果持续无响应，请停止执行",
+                                    "done": False
+                                }, ensure_ascii=False)
+                                last_tool_time = current_time  # 重置以避免重复警告
+                            
                             # 工具执行完成，重置时间
                             tool_start_time = None
                             last_tool_progress_time = None
@@ -533,15 +690,26 @@ class UnityAgent:
                             logger.debug(f"跳过无内容chunk: {str(chunk)[:100]}")
                             pass
                 
+                # 检查是否真的有内容输出
+                if chunk_count <= 0:
+                    logger.warning("=== 警告：没有收到任何有效chunk！ ===")
+                    yield json.dumps({
+                        "type": "chunk",
+                        "content": "\n⚠️ **警告**：没有收到Agent的响应内容，可能存在问题\n",
+                        "done": False
+                    }, ensure_ascii=False)
+                
                 # 标记正常完成
                 completed_normally = True
                 
                 # 信号完成
                 total_time = asyncio.get_event_loop().time() - start_time
-                logger.info(f"流式处理完成，总共处理了 {chunk_count} 个chunk，耗时 {total_time:.1f}秒")
+                logger.info(f"=== 流式处理循环结束 ===")
+                logger.info(f"总共处理了 {chunk_count} 个chunk，耗时 {total_time:.1f}秒")
                 
                 # 检查是否有工具还在执行中
                 if tool_tracker.current_tool:
+                    logger.warning(f"工具 {tool_tracker.current_tool} 可能仍在执行中")
                     yield json.dumps({
                         "type": "chunk",
                         "content": f"\n⚠️ 工具 {tool_tracker.current_tool} 可能仍在执行中或已完成但未收到结果\n",
@@ -560,7 +728,23 @@ class UnityAgent:
                 logger.error(f"流式循环异常: {stream_error}")
                 logger.error(f"流式异常类型: {type(stream_error).__name__}")
                 import traceback
-                logger.error(f"流式异常堆栈: {traceback.format_exc()}")
+                full_traceback = traceback.format_exc()
+                logger.error(f"流式异常堆栈: {full_traceback}")
+                
+                # 将错误信息发送到聊天界面
+                error_message = f"\n❌ **流式处理错误**\n\n"
+                error_message += f"**错误类型**: {type(stream_error).__name__}\n"
+                error_message += f"**错误信息**: {str(stream_error)}\n\n"
+                error_message += "**错误堆栈**:\n```python\n"
+                error_message += full_traceback
+                error_message += "```\n"
+                
+                yield json.dumps({
+                    "type": "chunk",
+                    "content": error_message,
+                    "done": False
+                }, ensure_ascii=False)
+                
                 yield json.dumps({
                     "type": "error",
                     "error": f"流式循环错误: {str(stream_error)}",
@@ -586,8 +770,25 @@ class UnityAgent:
             logger.error(f"异常消息: {str(e)}")
             logger.error(f"已处理chunk数量: {chunk_count if 'chunk_count' in locals() else 0}")
             import traceback
+            full_traceback = traceback.format_exc()
             logger.error(f"完整堆栈:")
-            logger.error(traceback.format_exc())
+            logger.error(full_traceback)
+            
+            # 将完整的错误信息发送到聊天界面
+            error_message = f"\n❌ **Python执行错误**\n\n"
+            error_message += f"**错误类型**: {type(e).__name__}\n"
+            error_message += f"**错误信息**: {str(e)}\n"
+            error_message += f"**已处理Chunk数**: {chunk_count if 'chunk_count' in locals() else 0}\n\n"
+            error_message += "**错误堆栈**:\n```python\n"
+            error_message += full_traceback
+            error_message += "```\n"
+            
+            # 先发送错误信息作为聊天内容
+            yield json.dumps({
+                "type": "chunk",
+                "content": error_message,
+                "done": False
+            }, ensure_ascii=False)
             
             # 确保即使出错也发送完成信号
             yield json.dumps({

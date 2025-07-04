@@ -343,6 +343,28 @@ namespace UnityAIAgent.Editor
                     GUILayout.Label(line.Trim(), listStyle);
                     GUILayout.EndHorizontal();
                 }
+                // Python错误信息处理
+                else if (line.StartsWith("❌"))
+                {
+                    var errorStyle = new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        fontSize = 14,
+                        wordWrap = true,
+                        normal = { textColor = new Color(1f, 0.3f, 0.3f) }
+                    };
+                    GUILayout.Label(line, errorStyle);
+                    GUILayout.Space(3);
+                }
+                // 错误详情行
+                else if (line.StartsWith("**错误") || line.StartsWith("**已处理"))
+                {
+                    var errorDetailStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        normal = { textColor = new Color(1f, 0.6f, 0.6f) },
+                        fontStyle = FontStyle.Bold
+                    };
+                    GUILayout.Label(line, errorDetailStyle);
+                }
                 // 粗体文本处理
                 else if (line.Contains("**"))
                 {

@@ -58,6 +58,14 @@ namespace UnityAIAgent.Editor
             catch (Exception e)
             {
                 Debug.LogError($"流式处理出错: {e.Message}");
+                Debug.LogError($"错误堆栈: {e.StackTrace}");
+                
+                // 发送格式化的错误信息到聊天界面
+                var errorMessage = $"\n❌ **Unity流式处理错误**\n\n";
+                errorMessage += $"**错误类型**: {e.GetType().Name}\n";
+                errorMessage += $"**错误信息**: {e.Message}\n";
+                
+                OnChunkReceived?.Invoke(errorMessage);
                 OnStreamError?.Invoke(e.Message);
             }
             finally
