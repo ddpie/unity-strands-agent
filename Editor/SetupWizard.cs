@@ -69,7 +69,11 @@ namespace UnityAIAgent.Editor
                 }
             }
             
-            Repaint();
+            // 确保在主线程中调用Repaint
+            EditorApplication.delayCall += () => {
+                if (this != null)
+                    Repaint();
+            };
         }
         
         private void OnGUI()
@@ -307,17 +311,23 @@ namespace UnityAIAgent.Editor
             setupCompleted = false;
             statusMessage = "正在开始设置...";
             progress = 0f;
+            Repaint();
             
             try
             {
+                // 在后台线程中初始化Python
                 await Task.Run(() => {
                     PythonManager.EnsureInitialized();
                 });
+                
+                // 回到主线程更新UI
+                await Task.Yield();
                 
                 setupCompleted = true;
                 currentStep = setupSteps.Length;
                 statusMessage = "设置完成！AI助手已就绪。";
                 isProcessing = false;
+                Repaint();
                 
                 // 显示成功通知
                 EditorApplication.delayCall += () => {

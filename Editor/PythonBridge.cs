@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEditor;
 using Python.Runtime;
 using System;
 using System.Threading.Tasks;
@@ -27,9 +28,36 @@ namespace UnityAIAgent.Editor
 
                 using (Py.GIL())
                 {
+                    // 调试：检查Python路径
+                    dynamic sys = Py.Import("sys");
+                    dynamic pathList = sys.path;
+                    var paths = new System.Collections.Generic.List<string>();
+                    
+                    // 使用Python的len()函数获取列表长度
+                    using (var builtins = Py.Import("builtins"))
+                    {
+                        int pathCount = (int)builtins.InvokeMethod("len", pathList);
+                        for (int i = 0; i < pathCount; i++)
+                        {
+                            paths.Add(pathList[i].ToString());
+                        }
+                    }
+                    Debug.Log($"Python sys.path: {string.Join(", ", paths)}");
+                    
+                    // 手动添加插件路径到sys.path（如果不存在）
+                    string pluginPath = "/Users/caobao/projects/unity/unity-strands-agent/Python";
+                    if (!paths.Contains(pluginPath))
+                    {
+                        sys.path.insert(0, pluginPath);
+                        Debug.Log($"手动添加插件路径到sys.path: {pluginPath}");
+                    }
+                    
                     // 导入Python模块
                     agentCore = Py.Import("agent_core");
                     streamingAgent = Py.Import("streaming_agent");
+                    
+                    // 配置Python日志输出到Unity Console
+                    ConfigurePythonLogging();
                     
                     Debug.Log("Python桥接初始化成功");
                     isInitialized = true;
@@ -53,10 +81,16 @@ namespace UnityAIAgent.Editor
 
             try
             {
+                Debug.Log($"[Unity] 开始处理同步消息: {message.Substring(0, Math.Min(message.Length, 50))}{(message.Length > 50 ? "..." : "")}");
+                
                 using (Py.GIL())
                 {
                     dynamic result = agentCore.process_sync(message);
-                    return result.ToString();
+                    string response = result.ToString();
+                    
+                    Debug.Log($"[Unity] 同步处理完成，响应长度: {response.Length}字符");
+                    
+                    return response;
                 }
             }
             catch (Exception e)
@@ -83,6 +117,8 @@ namespace UnityAIAgent.Editor
 
             try
             {
+                Debug.Log($"[Unity] 开始流式处理消息: {message.Substring(0, Math.Min(message.Length, 50))}{(message.Length > 50 ? "..." : "")}");
+                
                 await Task.Run(() =>
                 {
                     using (Py.GIL())
@@ -94,6 +130,7 @@ namespace UnityAIAgent.Editor
                         try
                         {
                             // 获取流式生成器
+                            Debug.Log("[Unity] 创建流式生成器");
                             dynamic streamGen = streamingAgent.process_message_stream(message);
                             
                             // 处理流式数据
@@ -109,15 +146,19 @@ namespace UnityAIAgent.Editor
                                     
                                     if (chunkData.type == "chunk")
                                     {
-                                        UnityMainThreadDispatcher.Enqueue(() => onChunk?.Invoke(chunkData.content));
+                                        string content = chunkData.content;
+                                        Debug.Log($"[Unity] 收到Agent响应块: {content.Substring(0, Math.Min(content.Length, 100))}{(content.Length > 100 ? "..." : "")}");
+                                        UnityMainThreadDispatcher.Enqueue(() => onChunk?.Invoke(content));
                                     }
                                     else if (chunkData.type == "complete")
                                     {
+                                        Debug.Log("[Unity] Agent流式响应完成");
                                         UnityMainThreadDispatcher.Enqueue(() => onComplete?.Invoke());
                                         break;
                                     }
                                     else if (chunkData.type == "error")
                                     {
+                                        Debug.LogError($"[Unity] Agent响应错误: {chunkData.error}");
                                         UnityMainThreadDispatcher.Enqueue(() => onError?.Invoke(chunkData.error));
                                         break;
                                     }
@@ -125,6 +166,7 @@ namespace UnityAIAgent.Editor
                                 catch (PythonException stopIteration) when (stopIteration.Message.Contains("StopAsyncIteration"))
                                 {
                                     // 流正常结束
+                                    Debug.Log("[Unity] Agent流式响应正常结束");
                                     UnityMainThreadDispatcher.Enqueue(() => onComplete?.Invoke());
                                     break;
                                 }
@@ -218,6 +260,55 @@ namespace UnityAIAgent.Editor
             if (!isInitialized)
             {
                 Initialize();
+            }
+        }
+
+        /// <summary>
+        /// 配置Python日志输出到Unity Console
+        /// </summary>
+        private static void ConfigurePythonLogging()
+        {
+            try
+            {
+                using (Py.GIL())
+                {
+                    // 创建自定义日志处理器，将Python日志转发到Unity Console
+                    string loggerSetupCode = @"
+import logging
+import sys
+
+class UnityLogHandler(logging.Handler):
+    def emit(self, record):
+        msg = self.format(record)
+        # 通过sys.stdout发送到Unity
+        print(f'[Python] {msg}')
+        sys.stdout.flush()
+
+# 获取根logger和相关logger
+loggers = ['agent_core', 'streaming_agent', 'strands']
+unity_handler = UnityLogHandler()
+unity_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+unity_handler.setFormatter(formatter)
+
+# 为每个logger添加Unity处理器
+for logger_name in loggers:
+    logger = logging.getLogger(logger_name)
+    logger.addHandler(unity_handler)
+    logger.setLevel(logging.INFO)
+
+print('[Python] Unity日志处理器配置完成')
+";
+                    
+                    var scope = Py.CreateScope();
+                    scope.Exec(loggerSetupCode);
+                    
+                    Debug.Log("Python日志配置完成");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"配置Python日志失败: {e.Message}");
             }
         }
 

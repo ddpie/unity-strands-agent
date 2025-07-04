@@ -57,12 +57,23 @@ namespace UnityAIAgent.Editor
                 ReportProgress("正在初始化Python引擎...", 0.8f);
                 
                 // 4. 初始化Python引擎
-                PythonEngine.Initialize();
-                PythonEngine.BeginAllowThreads();
+                // 重要：必须在主线程初始化Python
+                if (!PythonEngine.IsInitialized)
+                {
+                    // 设置Python路径
+                    PythonEngine.PythonHome = pythonHome;
+                    PythonEngine.PythonPath = Environment.GetEnvironmentVariable("PYTHONPATH");
+                    
+                    // 初始化
+                    PythonEngine.Initialize();
+                    PythonEngine.BeginAllowThreads();
+                }
                 
                 isPythonInitialized = true;
                 ReportProgress("Python初始化成功！", 1.0f);
-                UnityEngine.Debug.Log("Python环境初始化成功");
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log("Python环境初始化成功");
+                };
             }
             catch (Exception e)
             {
@@ -79,30 +90,55 @@ namespace UnityAIAgent.Editor
         
         private static void DetectPython()
         {
-            // 使用 which python3 查找Python
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "/bin/bash",
-                    Arguments = "-c \"which python3\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
+            // 优先使用Python 3.11（Python.NET兼容版本）
+            string[] pythonPaths = {
+                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",  // Apple Silicon Homebrew (刚安装的)
+                "/opt/homebrew/bin/python3.11",               // Apple Silicon Homebrew 符号链接
+                "/usr/local/opt/python@3.11/bin/python3.11",  // Intel Homebrew Python 3.11
+                "/usr/local/opt/python@3.11/bin/python3",     // Intel Homebrew Python 3.11 别名
+                "/usr/local/bin/python3.11",                  // 标准位置
+                "/usr/bin/python3"                             // 系统Python（后备）
             };
             
-            process.Start();
-            pythonExecutable = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit();
-            
-            if (process.ExitCode != 0 || string.IsNullOrEmpty(pythonExecutable) || !File.Exists(pythonExecutable))
+            pythonExecutable = null;
+            foreach (var path in pythonPaths)
             {
-                throw new Exception("未找到Python 3。请安装Python 3.10或更高版本。");
+                if (File.Exists(path))
+                {
+                    pythonExecutable = path;
+                    break;
+                }
             }
             
-            UnityEngine.Debug.Log($"找到Python: {pythonExecutable}");
+            // 如果没找到，使用which命令
+            if (string.IsNullOrEmpty(pythonExecutable))
+            {
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = "-c \"which python3\"",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+                
+                process.Start();
+                pythonExecutable = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+            }
+            
+            if (string.IsNullOrEmpty(pythonExecutable) || !File.Exists(pythonExecutable))
+            {
+                throw new Exception("未找到兼容的Python版本。请安装Python 3.11：\nbrew install python@3.11");
+            }
+            
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"找到Python: {pythonExecutable}");
+            };
             
             // 获取Python信息
             GetPythonInfo();
@@ -142,7 +178,19 @@ namespace UnityAIAgent.Editor
             pythonVersion = info.version;
             pythonHome = info.base_prefix;
             
-            UnityEngine.Debug.Log($"Python版本: {pythonVersion}, 主目录: {pythonHome}");
+            // 检查Python版本兼容性
+            var versionParts = pythonVersion.Split('.');
+            int majorVersion = int.Parse(versionParts[0]);
+            int minorVersion = int.Parse(versionParts[1]);
+            
+            if (majorVersion != 3 || minorVersion > 12)
+            {
+                throw new Exception($"Python {pythonVersion} 可能不兼容。Python.NET 目前支持 Python 3.7-3.12。\n建议安装 Python 3.11：brew install python@3.11");
+            }
+            
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"Python版本: {pythonVersion}, 主目录: {pythonHome}");
+            };
         }
         
         private static void SetPythonDLL()
@@ -173,7 +221,9 @@ namespace UnityAIAgent.Editor
             }
             
             Runtime.PythonDLL = dllPath;
-            UnityEngine.Debug.Log($"Python DLL: {dllPath}");
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"Python DLL: {dllPath}");
+            };
         }
         
         private static void CreateVirtualEnvironment()
@@ -183,7 +233,9 @@ namespace UnityAIAgent.Editor
             
             if (!Directory.Exists(venvPath))
             {
-                UnityEngine.Debug.Log("正在创建虚拟环境...");
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log("正在创建虚拟环境...");
+                };
                 
                 var process = new Process
                 {
@@ -207,7 +259,9 @@ namespace UnityAIAgent.Editor
                     throw new Exception($"创建虚拟环境失败: {error}");
                 }
                 
-                UnityEngine.Debug.Log("虚拟环境创建成功");
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log("虚拟环境创建成功");
+                };
                 
                 // 安装依赖
                 InstallDependencies();
@@ -219,10 +273,47 @@ namespace UnityAIAgent.Editor
             // 设置PYTHONHOME为主Python安装目录
             Environment.SetEnvironmentVariable("PYTHONHOME", pythonHome);
             
-            // 设置PYTHONPATH包含虚拟环境的site-packages
+            // 构建完整的PYTHONPATH，包含标准库和虚拟环境
             string venvLib = Path.Combine(venvPath, "lib", $"python{pythonVersion}");
             string venvSitePackages = Path.Combine(venvLib, "site-packages");
-            Environment.SetEnvironmentVariable("PYTHONPATH", venvSitePackages);
+            
+            // Python标准库路径
+            string pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
+            string pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+            
+            // 插件Python模块路径
+            string assemblyLocation = typeof(PythonManager).Assembly.Location;
+            string packagePath = Path.GetDirectoryName(Path.GetDirectoryName(assemblyLocation));
+            string pluginPythonPath = Path.Combine(packagePath, "Python");
+            
+            // 如果路径解析失败，使用固定路径作为后备
+            if (!Directory.Exists(pluginPythonPath))
+            {
+                pluginPythonPath = "/Users/caobao/projects/unity/unity-strands-agent/Python";
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log($"使用后备Python模块路径: {pluginPythonPath}");
+                };
+            }
+            
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"Assembly位置: {assemblyLocation}");
+                UnityEngine.Debug.Log($"包路径: {packagePath}");
+                UnityEngine.Debug.Log($"最终插件Python路径: {pluginPythonPath}");
+            };
+            
+            // 组合完整的PYTHONPATH（标准库 + 插件模块 + 虚拟环境）
+            string fullPythonPath = $"{pythonStdLib}:{pythonStdLibDynload}:{pluginPythonPath}:{venvSitePackages}";
+            Environment.SetEnvironmentVariable("PYTHONPATH", fullPythonPath);
+            
+            // 设置UTF-8编码环境变量
+            Environment.SetEnvironmentVariable("PYTHONIOENCODING", "utf-8");
+            Environment.SetEnvironmentVariable("LC_ALL", "en_US.UTF-8");
+            Environment.SetEnvironmentVariable("LANG", "en_US.UTF-8");
+            
+            // 设置SSL证书环境变量（解决SSL验证问题）
+            Environment.SetEnvironmentVariable("PYTHONHTTPSVERIFY", "1");
+            Environment.SetEnvironmentVariable("SSL_CERT_DIR", "/etc/ssl/certs");
+            Environment.SetEnvironmentVariable("SSL_CERT_FILE", "/etc/ssl/cert.pem");
             
             // 设置DYLD_LIBRARY_PATH（macOS特定）
             string dylibPath = Path.Combine(pythonHome, "lib");
@@ -232,9 +323,11 @@ namespace UnityAIAgent.Editor
             
             // 配置PythonEngine
             PythonEngine.PythonHome = pythonHome;
-            PythonEngine.PythonPath = venvSitePackages;
+            PythonEngine.PythonPath = fullPythonPath;
             
-            UnityEngine.Debug.Log($"环境配置完成 - PYTHONHOME: {pythonHome}, PYTHONPATH: {venvSitePackages}");
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"环境配置完成 - PYTHONHOME: {pythonHome}, PYTHONPATH: {fullPythonPath}");
+            };
         }
         
         private static void InstallDependencies()
@@ -262,8 +355,11 @@ namespace UnityAIAgent.Editor
             process.OutputDataReceived += (sender, e) => {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    UnityEngine.Debug.Log($"[pip] {e.Data}");
-                    ReportProgress($"安装中: {e.Data}", 0.5f);
+                    // 使用EditorApplication.delayCall确保在主线程中执行
+                    EditorApplication.delayCall += () => {
+                        UnityEngine.Debug.Log($"[pip] {e.Data}");
+                        ReportProgress($"安装中: {e.Data}", 0.5f);
+                    };
                 }
             };
             
@@ -277,7 +373,9 @@ namespace UnityAIAgent.Editor
                 throw new Exception($"依赖安装失败: {error}");
             }
             
-            UnityEngine.Debug.Log("依赖安装成功");
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log("依赖安装成功");
+            };
         }
         
         // Unity Editor事件处理

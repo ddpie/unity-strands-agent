@@ -20,6 +20,21 @@
 
 ## 安装方式
 
+### 前置要求：安装Python.NET
+
+1. 下载Python.Runtime.dll：
+   ```bash
+   # 方法1：通过curl下载
+   curl -L -o pythonnet.zip https://www.nuget.org/api/v2/package/pythonnet/3.0.3
+   unzip pythonnet.zip
+   # DLL位置：lib/netstandard2.0/Python.Runtime.dll
+   
+   # 方法2：通过NuGet网站
+   # 访问 https://www.nuget.org/packages/pythonnet/
+   ```
+
+2. 将`Python.Runtime.dll`复制到`Editor/Plugins/`目录
+
 ### 通过Unity Package Manager（本地）
 
 1. 克隆仓库：
@@ -38,6 +53,8 @@
 1. 在Unity Package Manager中，点击"+" → "Add package from git URL..."
 
 2. 输入：`https://github.com/yourusername/unity-ai-agent.git`
+
+3. 安装后，记得添加Python.Runtime.dll到`Editor/Plugins/`目录
 
 ## 快速开始
 

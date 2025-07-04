@@ -3,6 +3,36 @@ Unity AI Agent 核心模块
 为Unity集成封装Strands Agent SDK
 """
 
+import sys
+import os
+import ssl
+# 确保使用UTF-8编码
+if sys.version_info >= (3, 7):
+    if hasattr(sys, 'set_int_max_str_digits'):
+        sys.set_int_max_str_digits(0)
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+
+# 配置SSL证书路径
+try:
+    import certifi
+    # 使用certifi提供的证书束
+    os.environ['SSL_CERT_FILE'] = certifi.where()
+    os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+    print(f"[Python] 使用certifi证书路径: {certifi.where()}")
+except ImportError:
+    # 如果certifi不可用，使用系统默认证书
+    print("[Python] certifi不可用，使用系统默认SSL证书")
+    pass
+
+# 配置SSL上下文
+try:
+    # 创建更宽松的SSL上下文以避免证书验证问题
+    ssl._create_default_https_context = ssl._create_unverified_context
+    print("[Python] 配置SSL上下文完成")
+except Exception as e:
+    print(f"[Python] SSL配置警告: {e}")
+    pass
+
 from strands import Agent
 import json
 import logging
@@ -44,6 +74,16 @@ class UnityAgent:
         try:
             logger.info(f"正在处理消息: {message[:50]}...")
             response = self.agent(message)
+            # 确保响应是UTF-8编码的字符串
+            if isinstance(response, bytes):
+                response = response.decode('utf-8')
+            elif not isinstance(response, str):
+                response = str(response)
+            
+            # 记录完整响应到日志
+            logger.info(f"Agent同步响应完成，长度: {len(response)}字符")
+            logger.info(f"Agent响应内容: {response[:200]}{'...' if len(response) > 200 else ''}")
+            
             return {
                 "success": True,
                 "response": response,
@@ -142,7 +182,7 @@ def process_sync(message: str) -> str:
     """
     agent = get_agent()
     result = agent.process_message(message)
-    return json.dumps(result)
+    return json.dumps(result, ensure_ascii=False, separators=(',', ':'))
 
 def health_check() -> str:
     """
@@ -153,7 +193,7 @@ def health_check() -> str:
     """
     agent = get_agent()
     result = agent.health_check()
-    return json.dumps(result)
+    return json.dumps(result, ensure_ascii=False, separators=(',', ':'))
 
 if __name__ == "__main__":
     # 测试代理

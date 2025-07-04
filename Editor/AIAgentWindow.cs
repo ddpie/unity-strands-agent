@@ -33,6 +33,15 @@ namespace UnityAIAgent.Editor
             LoadChatHistory();
             InitializeStyles();
             
+            // Initialize streaming handler
+            if (streamingHandler == null)
+            {
+                streamingHandler = new StreamingHandler();
+                streamingHandler.OnChunkReceived += OnStreamChunkReceived;
+                streamingHandler.OnStreamCompleted += OnStreamComplete;
+                streamingHandler.OnStreamError += OnStreamError;
+            }
+            
             // Ensure Python is initialized
             EditorApplication.delayCall += () => {
                 PythonManager.EnsureInitialized();
@@ -42,6 +51,14 @@ namespace UnityAIAgent.Editor
         private void OnDisable()
         {
             SaveChatHistory();
+            
+            // 清理事件订阅
+            if (streamingHandler != null)
+            {
+                streamingHandler.OnChunkReceived -= OnStreamChunkReceived;
+                streamingHandler.OnStreamCompleted -= OnStreamComplete;
+                streamingHandler.OnStreamError -= OnStreamError;
+            }
         }
 
         private void InitializeStyles()
@@ -96,8 +113,8 @@ namespace UnityAIAgent.Editor
                 DrawMessage(message);
             }
 
-            // Draw current streaming message if active
-            if (isStreaming && !string.IsNullOrEmpty(currentStreamText))
+            // 显示当前流式消息（如果激活）
+            if (streamingHandler != null && streamingHandler.IsStreaming && !string.IsNullOrEmpty(currentStreamText))
             {
                 var streamMessage = new ChatMessage
                 {
@@ -119,17 +136,17 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             
-            if (isStreaming)
+            if (streamingHandler != null && streamingHandler.IsStreaming)
             {
-                if (GUILayout.Button("Stop", GUILayout.Width(100), GUILayout.Height(30)))
+                if (GUILayout.Button("停止", GUILayout.Width(100), GUILayout.Height(30)))
                 {
-                    StopStreaming();
+                    streamingHandler.StopStreaming();
                 }
             }
             else
             {
                 GUI.enabled = !isProcessing && !string.IsNullOrWhiteSpace(userInput);
-                if (GUILayout.Button("Send", GUILayout.Width(100), GUILayout.Height(30)) || 
+                if (GUILayout.Button("发送", GUILayout.Width(100), GUILayout.Height(30)) || 
                     (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return && Event.current.control))
                 {
                     SendMessage();
@@ -141,10 +158,20 @@ namespace UnityAIAgent.Editor
             
             EditorGUILayout.EndVertical();
 
-            // Status bar
+            // 状态栏
             if (isProcessing)
             {
-                EditorGUILayout.HelpBox("Processing...", MessageType.Info);
+                EditorGUILayout.HelpBox("🤔 AI正在思考...", MessageType.Info);
+            }
+            else if (!PythonManager.IsInitialized)
+            {
+                EditorGUILayout.HelpBox("⚠️ 请先进行设置", MessageType.Warning);
+            }
+            
+            // 自动滚动到底部
+            if (autoScroll && Event.current.type == EventType.Repaint)
+            {
+                scrollPosition.y = float.MaxValue;
             }
         }
 
@@ -154,17 +181,18 @@ namespace UnityAIAgent.Editor
             
             EditorGUILayout.BeginVertical(style);
             
-            // Header
+            // 头部
             EditorGUILayout.BeginHorizontal();
-            GUILayout.Label(message.isUser ? "You" : "AI", EditorStyles.boldLabel, GUILayout.Width(30));
+            string userLabel = message.isUser ? "😊 您" : "🤖 AI";
+            GUILayout.Label(userLabel, EditorStyles.boldLabel, GUILayout.Width(50));
             GUILayout.FlexibleSpace();
             GUILayout.Label(message.timestamp.ToString("HH:mm"), EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
             
-            // Content
+            // 内容
             if (message.content.Contains("```"))
             {
-                // Render code blocks specially
+                // 特殊渲染代码块
                 RenderMarkdownContent(message.content);
             }
             else
@@ -172,12 +200,13 @@ namespace UnityAIAgent.Editor
                 GUILayout.Label(message.content, EditorStyles.wordWrappedLabel);
             }
             
-            // Actions
+            // 操作按钮
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Copy", EditorStyles.miniButton, GUILayout.Width(40)))
+            if (GUILayout.Button("📋 复制", EditorStyles.miniButton, GUILayout.Width(60)))
             {
                 EditorGUIUtility.systemCopyBuffer = message.content;
+                Debug.Log("已复制到剪贴板");
             }
             EditorGUILayout.EndHorizontal();
             
@@ -234,114 +263,27 @@ namespace UnityAIAgent.Editor
 
             try
             {
-                // Start streaming response
-                await ProcessStreamingResponse(currentInput);
+                // 开始流式响应
+                await streamingHandler.StartStreaming(currentInput);
             }
             catch (Exception e)
             {
                 messages.Add(new ChatMessage
                 {
-                    content = $"Error: {e.Message}",
+                    content = $"错误: {e.Message}",
                     isUser = false,
                     timestamp = DateTime.Now
                 });
-                Debug.LogError($"AI Agent Error: {e}");
+                Debug.LogError($"AI助手错误: {e}");
+                isProcessing = false;
             }
             finally
             {
-                isProcessing = false;
                 SaveChatHistory();
                 Repaint();
             }
         }
 
-        private async Task ProcessStreamingResponse(string message)
-        {
-            isStreaming = true;
-            currentStreamText = "";
-
-            await Task.Run(() =>
-            {
-                using (Py.GIL())
-                {
-                    dynamic streaming = Py.Import("streaming_agent");
-                    dynamic asyncio = Py.Import("asyncio");
-                    
-                    // Get the event loop
-                    dynamic loop = asyncio.new_event_loop();
-                    asyncio.set_event_loop(loop);
-                    
-                    try
-                    {
-                        // Create streaming task
-                        dynamic streamTask = streaming.process_message_stream(message);
-                        
-                        // Process chunks
-                        while (true)
-                        {
-                            try
-                            {
-                                dynamic chunk = loop.run_until_complete(streamTask.__anext__());
-                                string chunkStr = chunk.ToString();
-                                var chunkData = JsonUtility.FromJson<StreamChunk>(chunkStr);
-                                
-                                if (chunkData.type == "chunk")
-                                {
-                                    currentStreamText += chunkData.content;
-                                    EditorApplication.delayCall += Repaint;
-                                }
-                                else if (chunkData.type == "complete")
-                                {
-                                    break;
-                                }
-                                else if (chunkData.type == "error")
-                                {
-                                    throw new Exception(chunkData.error);
-                                }
-                            }
-                            catch (PyObject stopIteration)
-                            {
-                                // Stream ended normally
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        loop.close();
-                    }
-                }
-            });
-
-            // Add completed message
-            if (!string.IsNullOrEmpty(currentStreamText))
-            {
-                messages.Add(new ChatMessage
-                {
-                    content = currentStreamText,
-                    isUser = false,
-                    timestamp = DateTime.Now
-                });
-            }
-
-            isStreaming = false;
-            currentStreamText = "";
-        }
-
-        private void StopStreaming()
-        {
-            isStreaming = false;
-            if (!string.IsNullOrEmpty(currentStreamText))
-            {
-                messages.Add(new ChatMessage
-                {
-                    content = currentStreamText + " [Stopped]",
-                    isUser = false,
-                    timestamp = DateTime.Now
-                });
-                currentStreamText = "";
-            }
-        }
 
         private void LoadChatHistory()
         {
@@ -408,6 +350,64 @@ namespace UnityAIAgent.Editor
         private class ChatHistoryWrapper
         {
             public List<ChatMessage> messages;
+        }
+        
+        // 流式响应回调方法
+        private void OnStreamChunkReceived(string chunk)
+        {
+            currentStreamText += chunk;
+            EditorApplication.delayCall += () => {
+                if (this != null)
+                    Repaint();
+            };
+        }
+        
+        private void OnStreamComplete()
+        {
+            if (!string.IsNullOrEmpty(currentStreamText))
+            {
+                messages.Add(new ChatMessage
+                {
+                    content = currentStreamText,
+                    isUser = false,
+                    timestamp = DateTime.Now
+                });
+            }
+            
+            currentStreamText = "";
+            isProcessing = false;
+            
+            EditorApplication.delayCall += () => {
+                if (this != null)
+                    Repaint();
+            };
+        }
+        
+        private void OnStreamError(string error)
+        {
+            messages.Add(new ChatMessage
+            {
+                content = $"流式处理错误: {error}",
+                isUser = false,
+                timestamp = DateTime.Now
+            });
+            
+            currentStreamText = "";
+            isProcessing = false;
+            
+            EditorApplication.delayCall += () => {
+                if (this != null)
+                    Repaint();
+            };
+        }
+
+        [Serializable]
+        private class StreamChunk
+        {
+            public string type;
+            public string content;
+            public string error;
+            public bool done;
         }
 
     }

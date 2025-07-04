@@ -17,3 +17,6 @@ colorlog>=6.7.0
 
 # JSON处理
 orjson>=3.9.0
+
+# SSL证书管理
+certifi>=2023.0.0
