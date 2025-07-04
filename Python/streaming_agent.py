@@ -44,19 +44,22 @@ except Exception as e:
     print(f"[Python] SSL配置警告: {e}")
     pass
 
-from strands import Agent
 import asyncio
 import json
 import logging
 from typing import AsyncGenerator, Dict, Any
 import signal
 
+# 导入Unity代理类
+from agent_core import get_agent
+
 # 配置日志
 logging.getLogger("strands").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# 创建代理实例
-agent = Agent()
+# 获取工具增强的Unity代理实例
+unity_agent = get_agent()
+agent = unity_agent.agent
 
 async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
     """
@@ -69,6 +72,9 @@ async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
         包含响应块的JSON字符串
     """
     try:
+        logger.info(f"开始使用Unity代理处理消息: {message[:50]}...")
+        logger.info(f"可用工具: {unity_agent.get_available_tools()}")
+        
         # 使用异步流式API
         response_text = ""
         async for chunk in agent.stream_async(message):
@@ -133,11 +139,20 @@ async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
         }, ensure_ascii=False, separators=(',', ':'))
         
     except Exception as e:
-        # 确保错误信息也是UTF-8编码
+        # 提供更详细的错误信息
         error_msg = str(e)
-        if isinstance(e, UnicodeEncodeError):
+        if 'SSL' in error_msg or 'certificate' in error_msg.lower():
+            error_msg = "SSL连接错误，请检查网络连接和证书配置"
+            logger.error(f"SSL错误检测: {str(e)}")
+        elif 'No such file or directory' in error_msg:
+            error_msg = "证书文件未找到，请检查SSL证书配置"
+            logger.error(f"证书文件错误: {str(e)}")
+        elif isinstance(e, UnicodeEncodeError):
             error_msg = "编码错误: 无法处理某些字符"
-        logger.error(f"流式响应错误: {error_msg}")
+            logger.error(f"编码错误: {str(e)}")
+        else:
+            logger.error(f"流式响应错误: {error_msg}")
+                
         yield json.dumps({
             "type": "error",
             "error": error_msg,
@@ -155,11 +170,32 @@ def process_message_sync(message: str) -> Dict[str, Any]:
         响应字典
     """
     try:
+        logger.info(f"同步处理消息: {message[:50]}...")
+        logger.info(f"使用Unity代理，可用工具: {unity_agent.get_available_tools()}")
+        
         response = agent(message)
+        
+        # 确保响应是UTF-8编码的字符串
+        if isinstance(response, bytes):
+            response = response.decode('utf-8')
+        elif not isinstance(response, str):
+            response = str(response)
+        
+        logger.info(f"Unity代理同步响应完成，长度: {len(response)}字符")
         return {"success": True, "response": response}
     except Exception as e:
-        logger.error(f"同步处理错误: {str(e)}")
-        return {"success": False, "error": str(e)}
+        # 提供更详细的错误信息
+        error_msg = str(e)
+        if 'SSL' in error_msg or 'certificate' in error_msg.lower():
+            error_msg = "SSL连接错误，请检查网络连接和证书配置"
+            logger.error(f"SSL错误检测: {str(e)}")
+        elif 'No such file or directory' in error_msg:
+            error_msg = "证书文件未找到，请检查SSL证书配置"
+            logger.error(f"证书文件错误: {str(e)}")
+        else:
+            logger.error(f"同步处理错误: {str(e)}")
+            
+        return {"success": False, "error": error_msg}
 
 async def stream_handler(message: str):
     """
@@ -189,7 +225,8 @@ async def main():
     """测试的主入口点"""
     signal.signal(signal.SIGINT, signal_handler)
     
-    print("Unity AI 流式代理")
+    print("Unity AI 流式代理 (带工具支持)")
+    print(f"可用工具: {unity_agent.get_available_tools()}")
     print("输入 'exit' 退出")
     print("-" * 50)
     
