@@ -213,26 +213,33 @@ You are a **Unity AI Development Expert**, a professional pair-programming partn
 
 ## Development Methodology
 
-### 1. ANALYZE & UNDERSTAND
+### 1. RESEARCH & ANALYZE FIRST
+⚠️ **CRITICAL**: Always read existing code BEFORE making decisions or suggestions
 When presented with a task or problem:
-- Ask targeted clarifying questions when requirements are unclear
-- Identify the core technical challenge and potential edge cases
-- Determine the optimal Unity approach and relevant design patterns
-- Consider performance, maintainability, and scalability implications
+- **READ RELEVANT FILES FIRST**: Use `file_read` to examine existing scripts, configs, and related code
+- **UNDERSTAND PROJECT STRUCTURE**: Use `shell` commands to explore directory structure and file organization
+- **ANALYZE CURRENT IMPLEMENTATION**: Study existing patterns, naming conventions, and architectural choices
+- **IDENTIFY DEPENDENCIES**: Check imports, references, and component relationships
+- Ask targeted clarifying questions only AFTER understanding the existing codebase
+- Determine the optimal Unity approach based on ACTUAL project context, not assumptions
 
-### 2. PLAN & ARCHITECT  
+### 2. PLAN & ARCHITECT (Based on Code Analysis)
 For complex implementations:
-- Break down the solution into logical components
-- Explain the planned approach and architecture decisions
-- Identify dependencies, potential risks, and alternative approaches
-- Outline the implementation steps clearly
+- Break down the solution into logical components that FIT the existing codebase
+- Explain the planned approach based on OBSERVED patterns and architecture
+- Respect existing naming conventions, code style, and architectural decisions
+- Identify dependencies, potential risks, and integration points with current code
+- Outline implementation steps that build upon existing foundation
+- Suggest refactoring only when absolutely necessary and clearly justified
 
-### 3. IMPLEMENT & VALIDATE
+### 3. IMPLEMENT & VALIDATE (Code-Aware Development)
 During development:
-- Generate clean, well-documented C# code following Unity best practices
-- Use appropriate Unity APIs and patterns for the specific use case
+- Generate clean, well-documented C# code that MATCHES existing project style
+- Use Unity APIs and patterns CONSISTENT with the current codebase
+- Follow the OBSERVED naming conventions, indentation, and comment style
 - Include inline comments explaining complex logic and Unity-specific considerations
-- Suggest testing approaches and validation methods
+- Integrate seamlessly with existing components and systems
+- Suggest testing approaches that work with current project structure
 
 ### 4. OPTIMIZE & REFINE
 After initial implementation:
@@ -242,10 +249,14 @@ After initial implementation:
 
 ## Tool Usage Guidelines
 
-### File Operations
-- **`file_read`**: Read specific files (scripts, configs, scenes) - ⚠️ **FILE ONLY**, not directories
-- **`file_write`**: Create new scripts, configs, or documentation  
+### File Operations - CODE ANALYSIS PRIORITY
+- **`file_read`**: 🔍 **PRIMARY TOOL** - Always read existing scripts FIRST before suggesting changes
+  - Read relevant C# scripts, configs, scenes - ⚠️ **FILE ONLY**, not directories
+  - Understand current implementation, patterns, and architecture
+  - Check existing component relationships and dependencies
+- **`file_write`**: Create new scripts that follow existing project conventions
 - **`editor`**: Modify existing code with precision (supports find/replace, insertions)
+  - Use AFTER understanding existing code structure and style
 
 ### System Operations  
 - **`shell`**: Execute shell commands for directory listing, file management, build processes
@@ -679,8 +690,9 @@ After initial implementation:
                                 
                                 # 格式化输入参数
                                 formatted_input = json.dumps(tool_input, ensure_ascii=False, indent=2)
-                                if len(formatted_input) > 300:
-                                    formatted_input = formatted_input[:300] + "...\n}"
+                                # 增加截断长度限制，避免过度截断
+                                if len(formatted_input) > 1000:
+                                    formatted_input = formatted_input[:1000] + "...\n}"
                                 
                                 yield json.dumps({
                                     "type": "chunk", 
@@ -987,19 +999,34 @@ After initial implementation:
                             if item.get('type') == 'tool_use':
                                 tool_name = item.get('name', '未知工具')
                                 tool_input = item.get('input', {})
-                                return f"   🔧 工具: {tool_name}\n   📋 输入: {json.dumps(tool_input, ensure_ascii=False)}"
+                                # 格式化工具输入，支持更长的内容显示
+                                formatted_input = json.dumps(tool_input, ensure_ascii=False, indent=2)
+                                if len(formatted_input) > 800:
+                                    formatted_input = formatted_input[:800] + "..."
+                                return f"   🔧 工具: {tool_name}\n   📋 输入:\n```json\n{formatted_input}\n```"
                             elif item.get('type') == 'tool_result':
                                 result = item.get('content', [])
                                 if result:
                                     result_text = result[0].get('text', '无结果') if isinstance(result, list) else str(result)
-                                    return f"   ✅ 工具结果: {result_text[:200]}..."
+                                    # 显示更多工具结果内容
+                                    if len(result_text) > 500:
+                                        result_text = result_text[:500] + "..."
+                                    return f"   ✅ 工具结果: {result_text}"
             elif 'toolUse' in chunk:
                 tool_info = chunk['toolUse']
                 tool_name = tool_info.get('name', '未知工具')
                 tool_input = tool_info.get('input', {})
-                return f"   🔧 工具: {tool_name}\n   📋 输入: {json.dumps(tool_input, ensure_ascii=False)}"
+                # 格式化工具输入，支持更长的内容显示
+                formatted_input = json.dumps(tool_input, ensure_ascii=False, indent=2)
+                if len(formatted_input) > 800:
+                    formatted_input = formatted_input[:800] + "..."
+                return f"   🔧 工具: {tool_name}\n   📋 输入:\n```json\n{formatted_input}\n```"
             
-            return f"   📋 原始数据: {str(chunk)[:200]}..."
+            # 显示更多原始数据内容
+            chunk_str = str(chunk)
+            if len(chunk_str) > 800:
+                chunk_str = chunk_str[:800] + "..."
+            return f"   📋 原始数据: {chunk_str}"
         except Exception as e:
             return f"   ❌ 解析错误: {str(e)}"
 

@@ -23,6 +23,8 @@ namespace UnityAIAgent.Editor
         private GUIStyle headerStyle;
         private StreamingHandler streamingHandler;
         private bool autoScroll = true;
+        private bool userScrolledUp = false;
+        private float lastScrollPosition = 0f;
         
         // 折叠状态跟踪
         private Dictionary<string, bool> collapsedStates = new Dictionary<string, bool>();
@@ -114,10 +116,28 @@ namespace UnityAIAgent.Editor
             // Chat messages area
             Event e = Event.current;
             
-            // 处理鼠标滚轮事件
+            // 处理鼠标滚轮事件和触控板滚动
             if (e.type == EventType.ScrollWheel)
             {
+                // 检测用户是否主动向上滚动
+                if (e.delta.y < 0) // 向上滚动
+                {
+                    userScrolledUp = true;
+                }
+                else if (e.delta.y > 0) // 向下滚动
+                {
+                    // 检查是否已经滚动到底部附近
+                    float maxScroll = Mathf.Max(0, GUI.skin.verticalScrollbar.CalcSize(new GUIContent("")).y);
+                    if (scrollPosition.y >= maxScroll - 50) // 距离底部50像素内
+                    {
+                        userScrolledUp = false; // 重新启用自动滚动
+                    }
+                }
+                
+                // 应用滚动
                 scrollPosition.y += e.delta.y * 20;
+                scrollPosition.y = Mathf.Max(0, scrollPosition.y);
+                
                 e.Use();
                 Repaint();
             }
@@ -131,8 +151,8 @@ namespace UnityAIAgent.Editor
 
             // 流式消息现在已经包含在messages中，不需要单独显示
             
-            // 自动滚动到底部
-            if (scrollToBottom)
+            // 只有在用户没有主动向上滚动时才自动滚动到底部
+            if (scrollToBottom && !userScrolledUp)
             {
                 EditorApplication.delayCall += () => {
                     scrollPosition.y = float.MaxValue;
@@ -189,10 +209,16 @@ namespace UnityAIAgent.Editor
                 EditorGUILayout.HelpBox("⚠️ 请先进行设置", MessageType.Warning);
             }
             
-            // 自动滚动到底部
-            if (autoScroll && Event.current.type == EventType.Repaint)
+            // 只有在用户没有主动向上滚动时才自动滚动到底部
+            if (autoScroll && !userScrolledUp && Event.current.type == EventType.Repaint)
             {
                 scrollPosition.y = float.MaxValue;
+            }
+            
+            // 记录滚动位置变化
+            if (Event.current.type == EventType.Repaint)
+            {
+                lastScrollPosition = scrollPosition.y;
             }
         }
 
