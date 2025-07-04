@@ -104,26 +104,15 @@ namespace UnityAIAgent.Editor
         /// </summary>
         private async Task ProcessStreamAsync(string message, CancellationToken cancellationToken)
         {
-            // 添加超时控制
-            var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5)); // 5分钟总超时
-            var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-            
-            var lastChunkTime = DateTime.UtcNow;
-            var chunkTimeoutSeconds = 60; // 60秒无新chunk超时
-            
             try
             {
                 await PythonBridge.ProcessMessageStream(
                     message,
                     onChunk: (chunk) => {
-                        lastChunkTime = DateTime.UtcNow;
                         try
                         {
-                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
-                            {
-                                Debug.Log($"[StreamingHandler] 接收到chunk: {chunk}");
-                                EnqueueChunk(new StreamChunk { Type = "chunk", Content = chunk });
-                            }
+                            Debug.Log($"[StreamingHandler] 接收到chunk: {chunk}");
+                            EnqueueChunk(new StreamChunk { Type = "chunk", Content = chunk });
                         }
                         catch (ObjectDisposedException)
                         {
@@ -133,11 +122,8 @@ namespace UnityAIAgent.Editor
                     onComplete: () => {
                         try
                         {
-                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
-                            {
-                                Debug.Log("[StreamingHandler] 接收到complete");
-                                EnqueueChunk(new StreamChunk { Type = "complete" });
-                            }
+                            Debug.Log("[StreamingHandler] 接收到complete");
+                            EnqueueChunk(new StreamChunk { Type = "complete" });
                         }
                         catch (ObjectDisposedException)
                         {
@@ -147,11 +133,8 @@ namespace UnityAIAgent.Editor
                     onError: (error) => {
                         try
                         {
-                            if (!combinedCts.Token.IsCancellationRequested && !timeoutCts.Token.IsCancellationRequested)
-                            {
-                                Debug.Log($"[StreamingHandler] 接收到error: {error}");
-                                EnqueueChunk(new StreamChunk { Type = "error", Error = error });
-                            }
+                            Debug.Log($"[StreamingHandler] 接收到error: {error}");
+                            EnqueueChunk(new StreamChunk { Type = "error", Error = error });
                         }
                         catch (ObjectDisposedException)
                         {
@@ -165,48 +148,13 @@ namespace UnityAIAgent.Editor
             }
             catch (OperationCanceledException)
             {
-                // 检查是否是超时导致的取消
-                if (timeoutCts.Token.IsCancellationRequested)
-                {
-                    var timeSinceLastChunk = DateTime.UtcNow - lastChunkTime;
-                    string timeoutMessage;
-                    if (timeSinceLastChunk.TotalSeconds > chunkTimeoutSeconds)
-                    {
-                        timeoutMessage = $"响应超时：超过{chunkTimeoutSeconds}秒无新数据";
-                    }
-                    else
-                    {
-                        timeoutMessage = "响应超时：处理时间过长";
-                    }
-                    
-                    EnqueueChunk(new StreamChunk { Type = "error", Error = timeoutMessage });
-                    Debug.LogWarning($"流式响应超时: {timeoutMessage}");
-                }
-                else
-                {
-                    throw; // 重新抛出用户取消的异常
-                }
+                Debug.Log("流式处理被取消");
+                throw;
             }
-            finally
+            catch (Exception e)
             {
-                // 安全地释放资源，避免ObjectDisposedException
-                try
-                {
-                    timeoutCts?.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 忽略已释放的异常
-                }
-                
-                try
-                {
-                    combinedCts?.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // 忽略已释放的异常
-                }
+                Debug.LogError($"流式处理出错: {e.Message}");
+                EnqueueChunk(new StreamChunk { Type = "error", Error = e.Message });
             }
         }
         
@@ -314,15 +262,9 @@ namespace UnityAIAgent.Editor
             switch (chunk.Type)
             {
                 case "chunk":
-                    if (!isCompleted)
-                    {
-                        Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
-                        OnChunkReceived?.Invoke(chunk.Content);
-                    }
-                    else
-                    {
-                        Debug.Log($"[StreamingHandler] 忽略完成后的chunk: {chunk.Content}");
-                    }
+                    // 允许chunk通过，由AIAgentWindow决定是否处理
+                    Debug.Log($"[StreamingHandler] 触发OnChunkReceived事件，内容: {chunk.Content}");
+                    OnChunkReceived?.Invoke(chunk.Content);
                     break;
                     
                 case "complete":

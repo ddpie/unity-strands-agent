@@ -166,36 +166,17 @@ async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
                 elif not isinstance(content, str):
                     content = str(content)
                 
-                # 过滤掉过长的单个chunk（可能是完整响应）
-                if len(content) > 500:
-                    logger.warning(f"检测到过长chunk ({len(content)}字符)，可能是完整响应而非流式块")
-                    # 将长内容分割成较小的块
-                    for i in range(0, len(content), 30):
-                        chunk_part = content[i:i+30]
-                        # 去重检查
-                        if chunk_part not in seen_chunks:
-                            seen_chunks.add(chunk_part)
-                            logger.info(f"分割chunk块: '{chunk_part}'")
-                            yield json.dumps({
-                                "type": "chunk", 
-                                "content": chunk_part,
-                                "done": False
-                            }, ensure_ascii=False, separators=(',', ':'))
-                        else:
-                            logger.debug(f"跳过重复分割chunk: '{chunk_part}'")
+                # 直接输出内容，不进行人工分割
+                if content not in seen_chunks:
+                    seen_chunks.add(content)
+                    logger.debug(f"输出chunk: '{content[:50]}{'...' if len(content) > 50 else ''}'")
+                    yield json.dumps({
+                        "type": "chunk", 
+                        "content": content,
+                        "done": False
+                    }, ensure_ascii=False, separators=(',', ':'))
                 else:
-                    # 正常大小的流式块
-                    # 更精确的去重检查
-                    if content not in seen_chunks:
-                        seen_chunks.add(content)
-                        logger.info(f"新chunk块: '{content}'")
-                        yield json.dumps({
-                            "type": "chunk", 
-                            "content": content,
-                            "done": False
-                        }, ensure_ascii=False, separators=(',', ':'))
-                    else:
-                        logger.debug(f"跳过重复chunk: '{content}'")
+                    logger.debug(f"跳过重复chunk: '{content[:30]}{'...' if len(content) > 30 else ''}')")
         
         # 流式完成
         logger.info(f"Agent流式响应完成，总长度: {len(response_text)}字符")

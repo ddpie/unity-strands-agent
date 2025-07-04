@@ -154,6 +154,13 @@ namespace UnityAIAgent.Editor
                                     {
                                         string content = chunkData.content;
                                         Debug.Log($"[Unity] 收到Agent响应块: {content.Substring(0, Math.Min(content.Length, 100))}{(content.Length > 100 ? "..." : "")}");
+                                        
+                                        // 专门检查file_read相关内容
+                                        if (content.Contains("[FILE_READ]") || content.Contains("file_read"))
+                                        {
+                                            Debug.Log($"[Unity] 📖 检测到FILE_READ相关内容: {content}");
+                                        }
+                                        
                                         EditorApplication.delayCall += () => onChunk?.Invoke(content);
                                     }
                                     else if (chunkData.type == "complete")
