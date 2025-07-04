@@ -978,7 +978,7 @@ After initial implementation:
             if found_tool_info:
                 # 更详细地解析工具信息
                 tool_details = self._parse_tool_details(chunk, detected_pattern)
-                tool_msg = f"\n<details>\n<summary>🔧 工具活动 - {detected_pattern} (Chunk #{chunk_count})</summary>\n\n{tool_details}\n</details>\n"
+                tool_msg = f"\n<details>\n<summary>🔧 工具调用</summary>\n\n{tool_details}\n</details>\n"
                 logger.info(f"强制输出工具信息: {tool_msg}")
                 return tool_msg
                 
@@ -986,6 +986,7 @@ After initial implementation:
         except Exception as e:
             logger.warning(f"强制检查工具调用时出错: {e}")
             return None
+
 
     def _parse_tool_details(self, chunk, pattern):
         """解析工具详情"""
