@@ -57,9 +57,16 @@ namespace UnityAIAgent.Editor
         [MenuItem("Window/AI助手/设置向导")]
         public static void ShowWindow()
         {
-            var window = GetWindow<SetupWizard>("AI助手设置");
-            window.minSize = new Vector2(500, 700); // 增加最小高度到700
-            window.maxSize = new Vector2(600, 800); // 增加最大尺寸，宽度也稍微增加
+            // Redirect to the merged AI Assistant window
+            var window = GetWindow<AIAgentWindow>("AI助手");
+            window.minSize = new Vector2(450, 600);
+            // Set to settings tab
+            var windowType = typeof(AIAgentWindow);
+            var selectedTabField = windowType.GetField("selectedTab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (selectedTabField != null)
+            {
+                selectedTabField.SetValue(window, 1); // Switch to settings tab
+            }
         }
         
         private void OnEnable()

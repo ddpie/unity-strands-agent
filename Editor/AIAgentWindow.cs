@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using Python.Runtime;
+using System.Linq;
 
 namespace UnityAIAgent.Editor
 {
@@ -28,11 +29,48 @@ namespace UnityAIAgent.Editor
         
         // 折叠状态跟踪
         private Dictionary<string, bool> collapsedStates = new Dictionary<string, bool>();
+        
+        // Tab system
+        private int selectedTab = 0;
+        private string[] tabNames = { "AI智能助手", "AI助手设置" };
+        
+        // Settings variables from SetupWizard
+        private int currentStep = 0;
+        private string statusMessage = "";
+        private float progress = 0f;
+        private bool setupCompleted = false;
+        private MCPConfiguration mcpConfig;
+        private GUIStyle stepStyle;
+        private GUIStyle statusStyle;
+        
+        // MCP configuration
+        private int settingsTab = 0;
+        private string[] settingsTabNames = { "设置进度", "MCP配置" };
+        private string mcpJsonConfig = "";
+        private bool mcpConfigExpanded = false;
+        private Vector2 mcpScrollPosition;
+        private bool showMCPPresets = false;
+        
+        private readonly string[] setupSteps = {
+            "检测Python环境",
+            "检测Node.js环境",
+            "安装Node.js和npm(如需要)",
+            "创建虚拟环境", 
+            "安装Strands Agent SDK",
+            "安装MCP支持包(可选)",
+            "安装SSL证书支持",
+            "安装其他依赖包",
+            "配置环境变量",
+            "配置MCP服务器",
+            "初始化Python桥接",
+            "验证AWS连接",
+            "完成设置"
+        };
 
-        [MenuItem("Window/AI助手/聊天")]
+        [MenuItem("Window/AI助手/AI助手")]
         public static void ShowWindow()
         {
-            var window = GetWindow<AIAgentWindow>("AI智能助手");
+            var window = GetWindow<AIAgentWindow>("AI助手");
             window.minSize = new Vector2(450, 600);
         }
 
@@ -49,6 +87,10 @@ namespace UnityAIAgent.Editor
                 streamingHandler.OnStreamCompleted += OnStreamComplete;
                 streamingHandler.OnStreamError += OnStreamError;
             }
+            
+            // Initialize MCP configuration
+            LoadMCPConfiguration();
+            CheckSetupStatus();
             
             // Ensure Python is initialized
             EditorApplication.delayCall += () => {
@@ -93,7 +135,74 @@ namespace UnityAIAgent.Editor
                 codeStyle.font = Font.CreateDynamicFontFromOSFont("Courier New", 12);
                 codeStyle.normal.background = MakeColorTexture(new Color(0.1f, 0.1f, 0.1f, 0.5f));
                 codeStyle.padding = new RectOffset(10, 10, 10, 10);
+                
+                stepStyle = new GUIStyle(EditorStyles.label);
+                statusStyle = new GUIStyle(EditorStyles.helpBox);
             }
+            
+            // Tab selector
+            DrawTabSelector();
+            
+            // Draw content based on selected tab
+            if (selectedTab == 0)
+            {
+                DrawChatInterface();
+            }
+            else
+            {
+                DrawSettingsInterface();
+            }
+        }
+        
+        private void DrawTabSelector()
+        {
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            
+            for (int i = 0; i < tabNames.Length; i++)
+            {
+                bool isSelected = selectedTab == i;
+                
+                // 使用不同的样式来区分选中和未选中状态
+                var style = isSelected ? "toolbarbutton" : "toolbarbutton";
+                
+                // 设置颜色
+                var originalColor = GUI.backgroundColor;
+                var originalContentColor = GUI.contentColor;
+                
+                if (isSelected)
+                {
+                    // 选中状态：深蓝色背景，白色文字
+                    GUI.backgroundColor = new Color(0.2f, 0.4f, 0.8f, 1f);
+                    GUI.contentColor = Color.white;
+                }
+                else
+                {
+                    // 未选中状态：正常颜色，灰色文字
+                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? new Color(0.3f, 0.3f, 0.3f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                    GUI.contentColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.4f, 0.4f, 0.4f, 1f);
+                }
+                
+                if (GUILayout.Button(tabNames[i], style, GUILayout.Height(25)))
+                {
+                    selectedTab = i;
+                }
+                
+                // 恢复颜色
+                GUI.backgroundColor = originalColor;
+                GUI.contentColor = originalContentColor;
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // 添加一条分隔线
+            EditorGUILayout.Space(2);
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? new Color(0.1f, 0.1f, 0.1f, 1f) : new Color(0.6f, 0.6f, 0.6f, 1f));
+            EditorGUILayout.Space(5);
+        }
+        
+        private void DrawChatInterface()
+        {
 
             // Header
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
@@ -104,11 +213,6 @@ namespace UnityAIAgent.Editor
             {
                 messages.Clear();
                 SaveChatHistory();
-            }
-            
-            if (GUILayout.Button("Logs", EditorStyles.toolbarButton, GUILayout.Width(50)))
-            {
-                LogWindow.ShowWindow();
             }
             
             EditorGUILayout.EndHorizontal();
@@ -1293,6 +1397,726 @@ namespace UnityAIAgent.Editor
                 }
             };
         }
+        
+        private void DrawSettingsInterface()
+        {
+            // Settings tab selector
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            
+            for (int i = 0; i < settingsTabNames.Length; i++)
+            {
+                bool isSelected = settingsTab == i;
+                
+                // 设置颜色
+                var originalColor = GUI.backgroundColor;
+                var originalContentColor = GUI.contentColor;
+                
+                if (isSelected)
+                {
+                    // 选中状态：深蓝色背景，白色文字
+                    GUI.backgroundColor = new Color(0.2f, 0.4f, 0.8f, 1f);
+                    GUI.contentColor = Color.white;
+                }
+                else
+                {
+                    // 未选中状态：正常颜色，灰色文字
+                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? new Color(0.3f, 0.3f, 0.3f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
+                    GUI.contentColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.4f, 0.4f, 0.4f, 1f);
+                }
+                
+                if (GUILayout.Button(settingsTabNames[i], "toolbarbutton", GUILayout.Height(22)))
+                {
+                    settingsTab = i;
+                }
+                
+                // 恢复颜色
+                GUI.backgroundColor = originalColor;
+                GUI.contentColor = originalContentColor;
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // 添加一条分隔线
+            EditorGUILayout.Space(2);
+            var rect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? new Color(0.15f, 0.15f, 0.15f, 1f) : new Color(0.7f, 0.7f, 0.7f, 1f));
+            EditorGUILayout.Space(5);
+            
+            if (settingsTab == 0)
+            {
+                DrawSetupProgress();
+            }
+            else
+            {
+                DrawMCPConfiguration();
+            }
+        }
+        
+        private void DrawSetupProgress()
+        {
+            // Steps display
+            DrawSteps();
+            
+            GUILayout.Space(20);
+            
+            // Status message
+            DrawStatus();
+            
+            GUILayout.Space(10);
+            
+            // Progress bar
+            DrawProgressBar();
+            
+            GUILayout.Space(20);
+            
+            // Operation buttons
+            DrawButtons();
+        }
+        
+        private void DrawSteps()
+        {
+            for (int i = 0; i < setupSteps.Length; i++)
+            {
+                DrawStep(i, setupSteps[i]);
+            }
+        }
+        
+        private void DrawStep(int step, string title)
+        {
+            EditorGUILayout.BeginHorizontal();
+            
+            // Step icon
+            string icon;
+            Color iconColor = Color.white;
+            
+            if (step < currentStep || setupCompleted)
+            {
+                icon = "✓";
+                iconColor = Color.green;
+            }
+            else if (step == currentStep && isProcessing)
+            {
+                icon = "⟳";
+                iconColor = Color.yellow;
+            }
+            else
+            {
+                icon = "○";
+                iconColor = Color.gray;
+            }
+            
+            var originalColor = GUI.color;
+            GUI.color = iconColor;
+            GUILayout.Label(icon, GUILayout.Width(20));
+            GUI.color = originalColor;
+            
+            // Step title
+            var style = new GUIStyle(stepStyle ?? EditorStyles.label);
+            if (step < currentStep || setupCompleted)
+            {
+                style.normal.textColor = Color.green;
+            }
+            else if (step == currentStep && isProcessing)
+            {
+                style.fontStyle = FontStyle.Bold;
+                style.normal.textColor = EditorGUIUtility.isProSkin ? Color.yellow : new Color(0.8f, 0.6f, 0f);
+            }
+            else
+            {
+                style.normal.textColor = Color.gray;
+            }
+            
+            GUILayout.Label($"{step + 1}. {title}", style);
+            
+            EditorGUILayout.EndHorizontal();
+        }
+        
+        private void DrawStatus()
+        {
+            if (!string.IsNullOrEmpty(statusMessage))
+            {
+                MessageType messageType = MessageType.Info;
+                
+                if (progress < 0)
+                {
+                    messageType = MessageType.Error;
+                }
+                else if (setupCompleted)
+                {
+                    messageType = MessageType.Info;
+                }
+                
+                EditorGUILayout.HelpBox(statusMessage, messageType);
+            }
+        }
+        
+        private void DrawProgressBar()
+        {
+            if (isProcessing && progress >= 0)
+            {
+                var rect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
+                EditorGUI.ProgressBar(rect, progress, $"{(int)(progress * 100)}%");
+            }
+            else if (setupCompleted)
+            {
+                var rect = EditorGUILayout.GetControlRect(GUILayout.Height(20));
+                EditorGUI.ProgressBar(rect, 1.0f, "100% - 完成");
+            }
+        }
+        
+        private void DrawButtons()
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            
+            if (setupCompleted)
+            {
+                // Buttons after setup completion
+                if (GUILayout.Button("打开AI助手", GUILayout.Width(120), GUILayout.Height(35)))
+                {
+                    selectedTab = 0; // Switch to chat tab
+                }
+                
+                GUILayout.Space(10);
+                
+                if (GUILayout.Button("重新设置", GUILayout.Width(100), GUILayout.Height(35)))
+                {
+                    ResetSetup();
+                }
+            }
+            else
+            {
+                // Buttons during setup process
+                GUI.enabled = !isProcessing;
+                if (GUILayout.Button("开始设置", GUILayout.Width(120), GUILayout.Height(35)))
+                {
+                    StartSetup();
+                }
+                GUI.enabled = true;
+                
+                if (isProcessing)
+                {
+                    GUILayout.Space(10);
+                    if (GUILayout.Button("取消", GUILayout.Width(80), GUILayout.Height(35)))
+                    {
+                        CancelSetup();
+                    }
+                }
+            }
+            
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+        }
+        
+        private void DrawMCPConfiguration()
+        {
+            EditorGUILayout.Space();
+            
+            // MCP Configuration UI
+            EditorGUILayout.BeginVertical("box");
+            GUILayout.Label("MCP 服务器配置", EditorStyles.boldLabel);
+            
+            if (mcpConfig == null)
+            {
+                EditorGUILayout.HelpBox("MCP配置未初始化", MessageType.Warning);
+                if (GUILayout.Button("初始化MCP配置"))
+                {
+                    InitializeMCPConfig();
+                }
+                EditorGUILayout.EndVertical();
+                return;
+            }
+            
+            // JSON configuration area
+            EditorGUILayout.LabelField("JSON配置", EditorStyles.boldLabel);
+            mcpScrollPosition = EditorGUILayout.BeginScrollView(mcpScrollPosition, GUILayout.Height(200));
+            mcpJsonConfig = EditorGUILayout.TextArea(mcpJsonConfig, GUILayout.ExpandHeight(true));
+            EditorGUILayout.EndScrollView();
+            
+            if (GUILayout.Button("保存配置"))
+            {
+                SaveMCPConfiguration();
+            }
+            
+            EditorGUILayout.EndVertical();
+            
+            // Server list
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginVertical("box");
+            GUILayout.Label("服务器列表", EditorStyles.boldLabel);
+            
+            if (mcpConfig.servers != null && mcpConfig.servers.Count > 0)
+            {
+                foreach (var server in mcpConfig.servers)
+                {
+                    EditorGUILayout.BeginHorizontal("box");
+                    GUILayout.Label(server.name, EditorStyles.boldLabel);
+                    GUILayout.FlexibleSpace();
+                    GUILayout.Label($"类型: {server.transportType}", EditorStyles.miniLabel);
+                    EditorGUILayout.EndHorizontal();
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("没有配置的服务器", MessageType.Info);
+            }
+            
+            EditorGUILayout.EndVertical();
+        }
+        
+        // Settings helper methods
+        private void LoadMCPConfiguration()
+        {
+            string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
+            mcpConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MCPConfiguration>(configPath);
+            if (mcpConfig != null)
+            {
+                mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
+            }
+            else
+            {
+                mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+            }
+        }
+        
+        private void SaveMCPConfiguration()
+        {
+            try
+            {
+                // 简化逻辑：直接保存原始JSON到文件
+                string jsonConfigPath = "Assets/UnityAIAgent/mcp_config.json";
+                
+                // 确保目录存在
+                string directory = System.IO.Path.GetDirectoryName(jsonConfigPath);
+                if (!System.IO.Directory.Exists(directory))
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+                
+                // 直接保存原始JSON配置文件
+                System.IO.File.WriteAllText(jsonConfigPath, mcpJsonConfig);
+                AssetDatabase.Refresh();
+                
+                Debug.Log($"MCP配置已保存到: {jsonConfigPath}");
+                
+                // 通知Python端重新加载MCP配置
+                ReloadMCPConfigInPython();
+                
+                EditorUtility.DisplayDialog("应用成功", "MCP JSON配置已成功保存！\\n\\nPython端已重新加载MCP配置。", "确定");
+                
+                statusMessage = "MCP配置已成功保存";
+                
+                // 可选：同时更新Unity ScriptableObject用于UI显示
+                if (mcpConfig != null)
+                {
+                    UpdateScriptableObjectFromJson();
+                }
+            }
+            catch (Exception e)
+            {
+                statusMessage = $"保存配置失败: {e.Message}";
+                EditorUtility.DisplayDialog("保存失败", $"保存JSON配置时出错：\\n{e.Message}", "确定");
+                Debug.LogError($"保存MCP配置失败: {e}");
+            }
+        }
+        
+        private void UpdateScriptableObjectFromJson()
+        {
+            try
+            {
+                // 简单解析JSON以更新Unity UI显示
+                mcpConfig.servers.Clear();
+                mcpConfig.enableMCP = true;
+                
+                // 基本的JSON解析来更新服务器列表显示
+                if (ParseServersFromJson(mcpJsonConfig))
+                {
+                    EditorUtility.SetDirty(mcpConfig);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"Unity ScriptableObject已更新，服务器总数: {mcpConfig.servers.Count}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"更新ScriptableObject失败，但JSON文件已保存: {e.Message}");
+            }
+        }
+        
+        private bool ParseServersFromJson(string jsonContent)
+        {
+            try
+            {
+                // 寻找mcpServers对象
+                int mcpServersStart = jsonContent.IndexOf("\"mcpServers\":");
+                if (mcpServersStart == -1) return false;
+                
+                int braceStart = jsonContent.IndexOf('{', mcpServersStart);
+                if (braceStart == -1) return false;
+                
+                // 找到匹配的结束大括号
+                int braceCount = 1;
+                int braceEnd = braceStart + 1;
+                
+                while (braceEnd < jsonContent.Length && braceCount > 0)
+                {
+                    if (jsonContent[braceEnd] == '{') braceCount++;
+                    else if (jsonContent[braceEnd] == '}') braceCount--;
+                    braceEnd++;
+                }
+                
+                if (braceCount > 0) return false;
+                
+                string serversContent = jsonContent.Substring(braceStart + 1, braceEnd - braceStart - 2);
+                
+                // 简化的服务器解析 - 只寻找顶级服务器定义
+                return ParseServerDefinitions(serversContent);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"JSON解析失败: {e.Message}");
+                return false;
+            }
+        }
+        
+        private bool ParseServerDefinitions(string serversContent)
+        {
+            int index = 0;
+            
+            while (index < serversContent.Length)
+            {
+                // 寻找服务器名称
+                int nameStart = serversContent.IndexOf('"', index);
+                if (nameStart == -1) break;
+                
+                int nameEnd = serversContent.IndexOf('"', nameStart + 1);
+                if (nameEnd == -1) break;
+                
+                // 检查是否是服务器定义
+                int colonIndex = serversContent.IndexOf(':', nameEnd);
+                if (colonIndex == -1) break;
+                
+                int braceIndex = serversContent.IndexOf('{', colonIndex);
+                if (braceIndex == -1) break;
+                
+                // 确保是顶层定义
+                string between = serversContent.Substring(nameEnd + 1, colonIndex - nameEnd - 1).Trim();
+                if (!string.IsNullOrEmpty(between))
+                {
+                    index = nameEnd + 1;
+                    continue;
+                }
+                
+                // 提取服务器名称
+                string serverName = serversContent.Substring(nameStart + 1, nameEnd - nameStart - 1);
+                
+                // 找到服务器配置的结束
+                int braceCount = 1;
+                int configEnd = braceIndex + 1;
+                
+                while (configEnd < serversContent.Length && braceCount > 0)
+                {
+                    if (serversContent[configEnd] == '{') braceCount++;
+                    else if (serversContent[configEnd] == '}') braceCount--;
+                    configEnd++;
+                }
+                
+                if (braceCount == 0)
+                {
+                    // 提取服务器配置
+                    string serverConfigContent = serversContent.Substring(braceIndex + 1, configEnd - braceIndex - 2);
+                    
+                    // 创建服务器配置 - 泛化解析所有字段
+                    var server = CreateServerFromConfig(serverName, serverConfigContent);
+                    mcpConfig.servers.Add(server);
+                }
+                
+                index = configEnd;
+            }
+            
+            return true;
+        }
+        
+        private MCPServerConfig CreateServerFromConfig(string serverName, string configContent)
+        {
+            var server = new MCPServerConfig
+            {
+                name = serverName,
+                enabled = true,
+                transportType = MCPTransportType.Stdio,
+                environmentVariables = new List<EnvironmentVariable>()
+            };
+            
+            // 泛化解析：command
+            server.command = ExtractStringValue(configContent, "command");
+            
+            // 泛化解析：args数组
+            server.args = ExtractArrayValue(configContent, "args");
+            
+            // 泛化解析：env对象
+            ParseEnvironmentVariables(server, configContent);
+            
+            // 可以在这里添加更多字段的解析，如：
+            // - workingDirectory
+            // - timeoutSeconds
+            // - httpUrl
+            // 等等，都使用相同的ExtractStringValue方法
+            
+            return server;
+        }
+        
+        private string ExtractStringValue(string content, string fieldName)
+        {
+            string pattern = $"\"{fieldName}\"";
+            int fieldIndex = content.IndexOf(pattern);
+            if (fieldIndex == -1) return "";
+            
+            int colonIndex = content.IndexOf(':', fieldIndex);
+            if (colonIndex == -1) return "";
+            
+            int firstQuote = content.IndexOf('"', colonIndex);
+            if (firstQuote == -1) return "";
+            
+            int lastQuote = content.IndexOf('"', firstQuote + 1);
+            if (lastQuote == -1) return "";
+            
+            return content.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+        }
+        
+        private string[] ExtractArrayValue(string content, string fieldName)
+        {
+            var result = new List<string>();
+            
+            string pattern = $"\"{fieldName}\"";
+            int fieldIndex = content.IndexOf(pattern);
+            if (fieldIndex == -1) return result.ToArray();
+            
+            int colonIndex = content.IndexOf(':', fieldIndex);
+            if (colonIndex == -1) return result.ToArray();
+            
+            int arrayStart = content.IndexOf('[', colonIndex);
+            if (arrayStart == -1) return result.ToArray();
+            
+            int arrayEnd = content.IndexOf(']', arrayStart);
+            if (arrayEnd == -1) return result.ToArray();
+            
+            string arrayContent = content.Substring(arrayStart + 1, arrayEnd - arrayStart - 1);
+            
+            // 解析数组元素
+            string[] parts = arrayContent.Split(',');
+            foreach (string part in parts)
+            {
+                string trimmed = part.Trim();
+                if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length > 1)
+                {
+                    result.Add(trimmed.Substring(1, trimmed.Length - 2));
+                }
+            }
+            
+            return result.ToArray();
+        }
+        
+        private void ParseEnvironmentVariables(MCPServerConfig server, string configContent)
+        {
+            string envPattern = "\"env\"";
+            int envIndex = configContent.IndexOf(envPattern);
+            if (envIndex == -1) return;
+            
+            int colonIndex = configContent.IndexOf(':', envIndex);
+            if (colonIndex == -1) return;
+            
+            int braceStart = configContent.IndexOf('{', colonIndex);
+            if (braceStart == -1) return;
+            
+            // 找到env对象的结束
+            int braceCount = 1;
+            int braceEnd = braceStart + 1;
+            
+            while (braceEnd < configContent.Length && braceCount > 0)
+            {
+                if (configContent[braceEnd] == '{') braceCount++;
+                else if (configContent[braceEnd] == '}') braceCount--;
+                braceEnd++;
+            }
+            
+            if (braceCount > 0) return;
+            
+            string envContent = configContent.Substring(braceStart + 1, braceEnd - braceStart - 2);
+            
+            // 解析环境变量键值对
+            string[] lines = envContent.Split(new char[] { ',', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            foreach (string line in lines)
+            {
+                string trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed)) continue;
+                
+                int colonPos = trimmed.IndexOf(':');
+                if (colonPos == -1) continue;
+                
+                string key = trimmed.Substring(0, colonPos).Trim().Trim('"');
+                string value = trimmed.Substring(colonPos + 1).Trim().Trim('"');
+                
+                if (!string.IsNullOrEmpty(key))
+                {
+                    server.environmentVariables.Add(new EnvironmentVariable
+                    {
+                        key = key,
+                        value = value,
+                        isSecret = false
+                    });
+                }
+            }
+        }
+        
+        private void ReloadMCPConfigInPython()
+        {
+            try
+            {
+                // 确保Python桥接已初始化
+                if (!PythonManager.IsInitialized)
+                {
+                    Debug.LogWarning("Python未初始化，无法重新加载MCP配置");
+                    return;
+                }
+                
+                // 调用Python端的reload_mcp_config函数
+                using (Py.GIL())
+                {
+                    dynamic agentCore = Py.Import("agent_core");
+                    string resultJson = agentCore.reload_mcp_config();
+                    
+                    // 解析结果
+                    var result = JsonUtility.FromJson<MCPReloadResult>(resultJson);
+                    
+                    if (result.success)
+                    {
+                        Debug.Log($"Python端MCP配置重新加载成功: {result.message}");
+                        Debug.Log($"MCP启用: {result.mcp_enabled}, 服务器数: {result.server_count}, 启用数: {result.enabled_server_count}");
+                    }
+                    else
+                    {
+                        Debug.LogError($"Python端MCP配置重新加载失败: {result.message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"调用Python reload_mcp_config失败: {e.Message}");
+            }
+        }
+        
+        private void InitializeMCPConfig()
+        {
+            string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
+            
+            // Create directory if it doesn't exist
+            string directory = System.IO.Path.GetDirectoryName(configPath);
+            if (!UnityEditor.AssetDatabase.IsValidFolder(directory))
+            {
+                UnityEditor.AssetDatabase.CreateFolder("Assets", "UnityAIAgent");
+            }
+            
+            // Create new configuration
+            mcpConfig = ScriptableObject.CreateInstance<MCPConfiguration>();
+            mcpConfig.AddPresetConfigurations();
+            
+            // Save as asset
+            UnityEditor.AssetDatabase.CreateAsset(mcpConfig, configPath);
+            UnityEditor.AssetDatabase.SaveAssets();
+            
+            mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
+        }
+        
+        private void CheckSetupStatus()
+        {
+            if (PythonManager.IsInitialized)
+            {
+                currentStep = setupSteps.Length;
+                setupCompleted = true;
+                statusMessage = "AI助手已就绪！";
+            }
+        }
+        
+        private async void StartSetup()
+        {
+            isProcessing = true;
+            statusMessage = "正在初始化设置...";
+            currentStep = 0;
+            progress = 0f;
+            
+            try
+            {
+                // 执行实际的设置步骤
+                await PerformSetupSteps();
+                
+                setupCompleted = true;
+                statusMessage = "设置完成！AI助手已就绪。";
+                
+                EditorUtility.DisplayDialog("设置完成", "AI助手设置已成功完成！\n\n您现在可以开始使用AI助手了。", "确定");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"设置过程中出现错误: {e.Message}");
+                statusMessage = $"设置失败: {e.Message}";
+                progress = -1; // 表示错误状态
+                
+                EditorUtility.DisplayDialog("设置失败", $"设置过程中出现错误:\n{e.Message}\n\n请检查日志获取更多信息。", "确定");
+            }
+            finally
+            {
+                isProcessing = false;
+                Repaint();
+            }
+        }
+        
+        private async Task PerformSetupSteps()
+        {
+            for (int i = 0; i < setupSteps.Length; i++)
+            {
+                currentStep = i;
+                statusMessage = $"正在执行: {setupSteps[i]}";
+                progress = (float)i / setupSteps.Length;
+                
+                EditorApplication.delayCall += () => Repaint();
+                
+                // 模拟步骤执行时间
+                await Task.Delay(1000);
+                
+                // 在这里可以添加实际的设置逻辑
+                // 例如: await ExecuteSetupStep(i);
+            }
+            
+            currentStep = setupSteps.Length;
+            progress = 1f;
+        }
+        
+        private void CancelSetup()
+        {
+            if (isProcessing)
+            {
+                isProcessing = false;
+                statusMessage = "设置已取消";
+                
+                EditorUtility.DisplayDialog("设置取消", "设置过程已被用户取消。", "确定");
+                Repaint();
+            }
+        }
+        
+        private void ResetSetup()
+        {
+            if (EditorUtility.DisplayDialog("重新设置", "确定要重新开始设置过程吗？\n\n这将清除所有当前的设置进度。", "确定", "取消"))
+            {
+                currentStep = 0;
+                setupCompleted = false;
+                isProcessing = false;
+                statusMessage = "";
+                progress = 0f;
+                
+                Debug.Log("设置已重置");
+                Repaint();
+            }
+        }
+        
 
         [Serializable]
         private class StreamChunk

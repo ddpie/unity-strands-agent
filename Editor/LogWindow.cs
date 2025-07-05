@@ -13,7 +13,7 @@ namespace UnityAIAgent.Editor
         private bool autoScroll = true;
         private string searchFilter = "";
 
-        [MenuItem("Window/AI Assistant/Logs")]
+        // [MenuItem("Window/AI Assistant/Logs")]
         public static void ShowWindow()
         {
             var window = GetWindow<LogWindow>("AI Assistant Logs");
