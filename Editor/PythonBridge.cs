@@ -119,10 +119,25 @@ namespace UnityAIAgent.Editor
             {
                 Debug.Log($"[Unity] 开始流式处理消息: {message.Substring(0, Math.Min(message.Length, 50))}{(message.Length > 50 ? "..." : "")}");
                 
-                await Task.Run(() =>
+                // 使用EditorCoroutine代替Task.Run来避免线程中止
+                var processCompleted = false;
+                var processError = "";
+                
+                // 检查Unity是否正在切换模式
+                if (ThreadProtection.IsUnityChangingMode)
                 {
-                    using (Py.GIL())
+                    Debug.LogWarning("[Unity] Unity正在切换模式，取消流式处理");
+                    EditorApplication.delayCall += () => onError?.Invoke("Unity正在切换模式");
+                    return;
+                }
+                
+                // 使用受保护的线程
+                var thread = ThreadProtection.CreateProtectedThread(() =>
+                {
+                    try
                     {
+                        using (Py.GIL())
+                        {
                         dynamic asyncio = Py.Import("asyncio");
                         dynamic loop = asyncio.new_event_loop();
                         asyncio.set_event_loop(loop);
@@ -183,6 +198,13 @@ namespace UnityAIAgent.Editor
                                     EditorApplication.delayCall += () => onComplete?.Invoke();
                                     break;
                                 }
+                                catch (System.Threading.ThreadAbortException)
+                                {
+                                    // Unity进入播放模式或重新编译时的正常行为
+                                    Debug.LogWarning($"[Unity] 线程被中止（通常因为Unity进入播放模式）");
+                                    EditorApplication.delayCall += () => onError?.Invoke("AI响应被中断（Unity进入播放模式）");
+                                    break;
+                                }
                                 catch (Exception chunkError)
                                 {
                                     Debug.LogError($"[Unity] 处理第 {chunkIndex} 个chunk时出错: {chunkError.Message}");
@@ -195,8 +217,42 @@ namespace UnityAIAgent.Editor
                         {
                             loop.close();
                         }
+                        } // 关闭 using (Py.GIL())
+                    }
+                    catch (System.Threading.ThreadAbortException)
+                    {
+                        Debug.LogWarning("[Unity] Python处理线程被中止");
+                        processError = "处理被中断（Unity模式切换）";
+                        System.Threading.Thread.ResetAbort(); // 重置中止状态
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[Unity] 处理线程异常: {ex}");
+                        processError = ex.Message;
+                    }
+                    finally
+                    {
+                        processCompleted = true;
                     }
                 });
+                
+                // 设置为后台线程
+                thread.IsBackground = true;
+                thread.Start();
+                
+                // 等待线程完成
+                await Task.Run(() =>
+                {
+                    while (!processCompleted && thread.IsAlive)
+                    {
+                        System.Threading.Thread.Sleep(100);
+                    }
+                });
+                
+                if (!string.IsNullOrEmpty(processError))
+                {
+                    EditorApplication.delayCall += () => onError?.Invoke(processError);
+                }
             }
             catch (Exception e)
             {

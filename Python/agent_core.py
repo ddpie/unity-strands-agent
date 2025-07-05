@@ -147,6 +147,288 @@ except ImportError as e:
     print("[Python] 将使用无工具模式")
     TOOLS_AVAILABLE = False
 
+# 尝试导入MCP支持
+MCP_AVAILABLE = False
+try:
+    from mcp import StdioServerParameters, stdio_client
+    from strands.tools.mcp import MCPClient as StrandsMCPClient
+    import asyncio
+    import subprocess
+    import threading
+    from datetime import timedelta
+    from concurrent.futures import Future, ThreadPoolExecutor
+    import weakref
+    
+    class MCPClientInitializationError(Exception):
+        """MCP客户端初始化错误"""
+        pass
+    
+    class MCPClient:
+        """基于strands实现的MCP客户端，支持stdio、http和sse传输"""
+        
+        def __init__(self, client_factory, timeout_seconds=30):
+            self.client_factory = client_factory
+            self.timeout_seconds = timeout_seconds
+            self.client = None
+            self.background_thread = None
+            self.loop = None
+            self.executor = ThreadPoolExecutor(max_workers=1)
+            self._started = False
+            self._subprocess = None  # 存储subprocess引用用于清理
+            self._client_context = None  # 存储异步上下文管理器
+        
+        def __enter__(self):
+            self.start()
+            return self
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.stop()
+            return False  # 允许异常传播
+        
+        def start(self):
+            """启动MCP客户端连接"""
+            if self._started:
+                return
+            
+            try:
+                # 在后台线程中启动异步客户端
+                future = Future()
+                
+                def background_worker():
+                    try:
+                        self.loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(self.loop)
+                        
+                        async def init_client():
+                            # 对于异步上下文管理器，使用 async with
+                            client_context = self.client_factory()
+                            self.client = await client_context.__aenter__()
+                            # 保存上下文管理器以便后续清理
+                            self._client_context = client_context
+                            # 如果客户端有subprocess引用，保存它
+                            if hasattr(self.client, '_subprocess'):
+                                self._subprocess = self.client._subprocess
+                            elif hasattr(self.client, 'process'):
+                                self._subprocess = self.client.process
+                            return self.client
+                        
+                        client = self.loop.run_until_complete(init_client())
+                        future.set_result(client)
+                        
+                        # 保持事件循环运行
+                        self.loop.run_forever()
+                    except Exception as e:
+                        future.set_exception(e)
+                    finally:
+                        # 确保事件循环正确关闭
+                        try:
+                            if self.loop and not self.loop.is_closed():
+                                # 取消所有挂起的任务
+                                pending = asyncio.all_tasks(self.loop)
+                                for task in pending:
+                                    task.cancel()
+                                if pending:
+                                    self.loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                                self.loop.close()
+                        except Exception as e:
+                            logger.warning(f"关闭事件循环时出错: {e}")
+                
+                self.background_thread = threading.Thread(target=background_worker, daemon=True)
+                self.background_thread.start()
+                
+                # 等待初始化完成
+                self.client = future.result(timeout=self.timeout_seconds)
+                self._started = True
+                
+            except Exception as e:
+                raise MCPClientInitializationError(f"MCP客户端初始化失败: {e}")
+        
+        def stop(self):
+            """停止MCP客户端连接"""
+            if not self._started:
+                return
+            
+            try:
+                # 1. 关闭异步上下文管理器
+                if hasattr(self, '_client_context') and self._client_context:
+                    try:
+                        if self.loop and not self.loop.is_closed():
+                            async def cleanup_context():
+                                await self._client_context.__aexit__(None, None, None)
+                            asyncio.run_coroutine_threadsafe(cleanup_context(), self.loop).result(timeout=3)
+                    except Exception as e:
+                        logger.warning(f"关闭MCP上下文管理器时出错: {e}")
+                
+                # 2. 关闭MCP客户端连接
+                if self.client:
+                    try:
+                        if hasattr(self.client, 'close'):
+                            if asyncio.iscoroutinefunction(self.client.close):
+                                if self.loop and not self.loop.is_closed():
+                                    asyncio.run_coroutine_threadsafe(self.client.close(), self.loop)
+                            else:
+                                self.client.close()
+                    except Exception as e:
+                        logger.warning(f"关闭MCP客户端时出错: {e}")
+                
+                # 3. 关闭subprocess（如果存在）
+                if self._subprocess:
+                    try:
+                        if self._subprocess.poll() is None:  # 进程仍在运行
+                            self._subprocess.terminate()  # 温和终止
+                            try:
+                                self._subprocess.wait(timeout=3)  # 等待3秒
+                            except subprocess.TimeoutExpired:
+                                self._subprocess.kill()  # 强制终止
+                                self._subprocess.wait()
+                        
+                        # 确保所有文件描述符都关闭
+                        if hasattr(self._subprocess, 'stdin') and self._subprocess.stdin:
+                            self._subprocess.stdin.close()
+                        if hasattr(self._subprocess, 'stdout') and self._subprocess.stdout:
+                            self._subprocess.stdout.close()
+                        if hasattr(self._subprocess, 'stderr') and self._subprocess.stderr:
+                            self._subprocess.stderr.close()
+                            
+                    except Exception as e:
+                        logger.warning(f"关闭subprocess时出错: {e}")
+                    finally:
+                        self._subprocess = None
+                
+                # 4. 停止事件循环
+                if self.loop and not self.loop.is_closed():
+                    self.loop.call_soon_threadsafe(self.loop.stop)
+                
+                # 5. 等待后台线程结束
+                if self.background_thread and self.background_thread.is_alive():
+                    self.background_thread.join(timeout=5)
+                    if self.background_thread.is_alive():
+                        logger.warning("后台线程未能在5秒内结束")
+                
+                # 6. 关闭线程池
+                if self.executor:
+                    self.executor.shutdown(wait=True, timeout=3)
+                    
+                self._started = False
+                
+            except Exception as e:
+                logger.warning(f"MCP客户端停止时出错: {e}")
+        
+        def list_tools_sync(self, timeout_seconds=30):
+            """同步获取工具列表"""
+            if not self._started or not self.client:
+                logger.warning("客户端未启动或不存在")
+                return []
+            
+            try:
+                logger.info(f"开始获取MCP工具列表，超时{timeout_seconds}秒")
+                future = Future()
+                
+                def run_async():
+                    try:
+                        async def get_tools():
+                            logger.info("调用client.list_tools()")
+                            
+                            # 调试：检查客户端对象类型和方法
+                            logger.info(f"客户端对象类型: {type(self.client)}")
+                            logger.info(f"客户端对象: {self.client}")
+                            
+                            # 列出所有可用方法
+                            methods = [method for method in dir(self.client) if not method.startswith('_')]
+                            logger.info(f"客户端可用方法: {methods}")
+                            
+                            if hasattr(self.client, 'list_tools'):
+                                result = await self.client.list_tools()
+                                logger.info(f"获取到结果类型: {type(result)}")
+                                logger.info(f"结果内容: {result}")
+                                
+                                if hasattr(result, 'tools'):
+                                    tools = result.tools
+                                    logger.info(f"找到 {len(tools)} 个工具")
+                                    for i, tool in enumerate(tools):
+                                        logger.info(f"工具 {i+1}: {tool}")
+                                    return tools
+                                else:
+                                    logger.warning("结果对象没有tools属性")
+                                    return []
+                            else:
+                                logger.warning("客户端没有list_tools方法")
+                                # 检查是否有其他可能的方法
+                                possible_methods = [m for m in methods if 'tool' in m.lower()]
+                                logger.info(f"包含'tool'的方法: {possible_methods}")
+                                return []
+                        
+                        if self.loop and not self.loop.is_closed():
+                            tools = asyncio.run_coroutine_threadsafe(get_tools(), self.loop).result(timeout=timeout_seconds)
+                            future.set_result(tools)
+                        else:
+                            logger.warning("事件循环不可用")
+                            future.set_result([])
+                            
+                    except Exception as e:
+                        logger.error(f"获取工具异步操作失败: {e}")
+                        future.set_exception(e)
+                
+                self.executor.submit(run_async)
+                result = future.result(timeout=timeout_seconds)
+                logger.info(f"最终返回 {len(result)} 个工具")
+                return result
+                
+            except Exception as e:
+                logger.error(f"获取MCP工具失败: {e}")
+                import traceback
+                logger.error(f"堆栈跽踪: {traceback.format_exc()}")
+                return []
+        
+        def call_tool_sync(self, tool_use_id, name, arguments, read_timeout_seconds=None):
+            """同步调用MCP工具"""
+            if not self._started or not self.client:
+                return {"status": "error", "error": "MCP客户端未启动"}
+            
+            timeout = read_timeout_seconds or timedelta(seconds=30)
+            if isinstance(timeout, timedelta):
+                timeout = timeout.total_seconds()
+            
+            try:
+                future = Future()
+                
+                def run_async():
+                    try:
+                        async def call_tool():
+                            if hasattr(self.client, 'call_tool'):
+                                result = await self.client.call_tool(
+                                    name=name,
+                                    arguments=arguments
+                                )
+                                return {
+                                    "status": "success",
+                                    "result": result.content if hasattr(result, 'content') else result
+                                }
+                            return {"status": "error", "error": "工具调用方法不可用"}
+                        
+                        if self.loop and not self.loop.is_closed():
+                            result = asyncio.run_coroutine_threadsafe(call_tool(), self.loop).result(timeout=timeout)
+                            future.set_result(result)
+                        else:
+                            future.set_result({"status": "error", "error": "事件循环不可用"})
+                            
+                    except Exception as e:
+                        future.set_exception(e)
+                
+                self.executor.submit(run_async)
+                return future.result(timeout=timeout)
+                
+            except Exception as e:
+                logger.warning(f"调用MCP工具失败: {e}")
+                return {"status": "error", "error": str(e)}
+    
+    print("[Python] MCP支持模块导入成功")
+    MCP_AVAILABLE = True
+except ImportError as e:
+    print(f"[Python] MCP模块导入失败: {e}")
+    print("[Python] 将使用无MCP模式")
+    MCP_AVAILABLE = False
+
 # Configure detailed logging for debugging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -366,6 +648,41 @@ After initial implementation:
                 logger.error("解决方案: 1) 检查网络连接 2) 更新系统证书 3) 联系管理员")
             raise
     
+    def __del__(self):
+        """析构函数，确保资源清理"""
+        try:
+            self._cleanup_resources()
+        except Exception as e:
+            logger.warning(f"析构函数中清理资源时出错: {e}")
+    
+    def _cleanup_resources(self):
+        """清理所有MCP资源"""
+        try:
+            # 清理MCP客户端
+            if hasattr(self, '_mcp_clients'):
+                for client in self._mcp_clients:
+                    try:
+                        # 正确退出上下文管理器
+                        client.__exit__(None, None, None)
+                    except Exception as e:
+                        logger.warning(f"清理MCP客户端时出错: {e}")
+                self._mcp_clients.clear()
+            
+            # 清理MCP工具
+            if hasattr(self, '_mcp_tools'):
+                for tool in self._mcp_tools:
+                    try:
+                        if hasattr(tool, '_cleanup'):
+                            tool._cleanup()
+                    except Exception as e:
+                        logger.warning(f"清理MCP工具时出错: {e}")
+                self._mcp_tools.clear()
+                
+            logger.info("MCP资源清理完成")
+            
+        except Exception as e:
+            logger.warning(f"清理MCP资源时出错: {e}")
+    
     def _get_unity_tools(self):
         """获取适合Unity开发的工具集合"""
         if not TOOLS_AVAILABLE:
@@ -423,9 +740,23 @@ After initial implementation:
         except (NameError, ImportError) as e:
             logger.warning(f"HTTP工具不可用: {e}")
         
+        # MCP工具 - 外部工具和服务集成
+        if MCP_AVAILABLE:
+            try:
+                mcp_tools = self._load_mcp_tools()
+                if mcp_tools:
+                    unity_tools.extend(mcp_tools)
+                    logger.info(f"✓ 添加MCP工具: {len(mcp_tools)} 个工具")
+                    # 存储MCP工具引用
+                    self._mcp_tools = mcp_tools
+            except Exception as e:
+                logger.warning(f"MCP工具加载失败: {e}")
+        else:
+            logger.info("ℹ️ MCP支持不可用，跳过MCP工具加载")
+        
         if unity_tools:
             logger.info(f"🎉 成功配置 {len(unity_tools)} 个Unity开发工具")
-            logger.info(f"可用工具列表: {[tool.__name__ for tool in unity_tools]}")
+            logger.info(f"可用工具列表: {[tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in unity_tools]}")
         else:
             logger.warning("⚠️ 没有可用的Unity开发工具")
         
@@ -871,6 +1202,24 @@ After initial implementation:
                 logger.info("工具跟踪器状态已重置")
             except Exception as cleanup_error:
                 logger.warning(f"清理工具跟踪器时出错: {cleanup_error}")
+            
+            # 清理MCP客户端连接和文件描述符
+            try:
+                if hasattr(self, '_mcp_clients'):
+                    for client in self._mcp_clients:
+                        try:
+                            # 正确退出上下文管理器
+                            client.__exit__(None, None, None)
+                        except Exception as e:
+                            logger.warning(f"清理MCP客户端时出错: {e}")
+                    self._mcp_clients.clear()
+                    
+                # 强制垃圾回收以清理未关闭的资源
+                import gc
+                gc.collect()
+                
+            except Exception as cleanup_error:
+                logger.warning(f"清理MCP资源时出错: {cleanup_error}")
     
     def _log_chunk_details(self, chunk, chunk_count):
         """记录chunk的详细信息，特别是工具调用相关的信息"""
@@ -1099,6 +1448,454 @@ After initial implementation:
             logger.warning(f"提取chunk文本时出错: {e}")
             return None
     
+    def _load_mcp_tools(self):
+        """加载MCP工具"""
+        if not MCP_AVAILABLE:
+            logger.warning("MCP支持不可用")
+            return []
+        
+        mcp_tools = []
+        
+        try:
+            # 尝试读取Unity MCP配置
+            mcp_config = self._load_unity_mcp_config()
+            
+            if not mcp_config:
+                logger.warning("MCP配置加载失败")
+                return []
+            
+            logger.info(f"MCP配置内容: enable_mcp={mcp_config.get('enable_mcp')}, servers数量={len(mcp_config.get('servers', []))}")
+            
+            if not mcp_config.get('enable_mcp', False):
+                logger.info("MCP未启用")
+                return []
+            
+            enabled_servers = [server for server in mcp_config.get('servers', []) if server.get('enabled', False)]
+            
+            if not enabled_servers:
+                logger.info("没有启用的MCP服务器")
+                return []
+            
+            logger.info(f"发现 {len(enabled_servers)} 个启用的MCP服务器")
+            
+            for server_config in enabled_servers:
+                try:
+                    server_name = server_config.get('name', 'unknown')
+                    logger.info(f"连接到MCP服务器 '{server_name}'...")
+                    
+                    # 创建Strands MCPClient
+                    mcp_client = self._create_strands_mcp_client(server_config)
+                    
+                    if mcp_client:
+                        # 手动进入上下文管理器并保持连接
+                        mcp_client.__enter__()
+                        
+                        # 保存客户端引用以便后续使用和清理
+                        if not hasattr(self, '_mcp_clients'):
+                            self._mcp_clients = []
+                        self._mcp_clients.append(mcp_client)
+                        
+                        try:
+                            logger.info(f"获取MCP服务器 '{server_name}' 的工具列表...")
+                            # 使用Strands MCPClient的正确方法
+                            raw_tools = mcp_client.list_tools_sync()
+                            
+                            logger.info(f"MCP客户端类型: {type(mcp_client)}")
+                            logger.info(f"返回的工具类型: {type(raw_tools)}")
+                            logger.info(f"工具内容: {raw_tools}")
+                            
+                            if raw_tools:
+                                logger.info(f"找到 {len(raw_tools)} 个工具:")
+                                for i, tool in enumerate(raw_tools):
+                                    tool_name = getattr(tool, 'name', f'tool_{i}')
+                                    tool_desc = getattr(tool, 'description', 'No description')
+                                    logger.info(f"  - {tool_name}: {tool_desc}")
+                                
+                                # 添加工具到列表 - Strands MCPClient返回的工具可以直接使用
+                                mcp_tools.extend(raw_tools)
+                                logger.info(f"从 '{server_name}' 加载了 {len(raw_tools)} 个工具")
+                            else:
+                                logger.warning(f"MCP服务器 '{server_name}' 没有可用工具")
+                        except Exception as tool_error:
+                            logger.error(f"获取工具列表失败: {tool_error}")
+                            # 如果获取工具失败，从客户端列表中移除并关闭
+                            if mcp_client in self._mcp_clients:
+                                self._mcp_clients.remove(mcp_client)
+                            try:
+                                mcp_client.__exit__(None, None, None)
+                            except:
+                                pass
+                            raise
+                except Exception as e:
+                    logger.error(f"加载MCP服务器 '{server_config.get('name', 'unknown')}' 失败: {e}")
+                    logger.error(f"错误类型: {type(e).__name__}")
+                    import traceback
+                    logger.error(f"堆栈跽踪:\n{traceback.format_exc()}")
+                    continue
+            
+            logger.info(f"总共加载了 {len(mcp_tools)} 个MCP工具")
+            
+            # 存储MCP客户端引用以便后续清理
+            if not hasattr(self, '_mcp_clients'):
+                self._mcp_clients = []
+            
+            # 注意：这里不能直接存储客户端，因为with语句已经关闭了它们
+            # 但我们可以在工具包装器中添加清理逻辑
+            
+        except Exception as e:
+            logger.error(f"MCP工具加载过程中出现错误: {e}")
+        
+        return mcp_tools
+    
+    def _convert_mcp_tools_to_unity_tools(self, mcp_tools, mcp_client, server_name):
+        """将MCP工具转换为Unity可用的工具"""
+        converted_tools = []
+        
+        try:
+            for mcp_tool in mcp_tools:
+                # 提取工具信息
+                tool_name = getattr(mcp_tool, 'name', str(mcp_tool))
+                tool_description = getattr(mcp_tool, 'description', f"MCP工具来自 {server_name}")
+                tool_schema = getattr(mcp_tool, 'inputSchema', {})
+                
+                # 创建Unity工具包装器
+                def create_unity_tool_wrapper(name, description, schema, client):
+                    def unity_tool_function(**kwargs):
+                        """Unity工具包装器，调用MCP工具"""
+                        try:
+                            # 生成唯一的工具使用ID
+                            import uuid
+                            tool_use_id = str(uuid.uuid4())
+                            
+                            # 调用MCP工具
+                            result = client.call_tool_sync(
+                                tool_use_id=tool_use_id,
+                                name=name,
+                                arguments=kwargs,
+                                read_timeout_seconds=30
+                            )
+                            
+                            if result.get("status") == "success":
+                                return result.get("result", "工具执行成功，但无返回结果")
+                            else:
+                                error_msg = result.get("error", "未知错误")
+                                return f"MCP工具执行失败: {error_msg}"
+                                
+                        except Exception as e:
+                            logger.error(f"调用MCP工具 '{name}' 失败: {e}")
+                            return f"工具调用异常: {e}"
+                    
+                    # 设置函数属性
+                    unity_tool_function.__name__ = f"mcp_{server_name}_{name}".replace("-", "_")
+                    unity_tool_function.__doc__ = description
+                    
+                    # 添加工具元数据
+                    unity_tool_function._tool_info = {
+                        "name": name,
+                        "description": description,
+                        "schema": schema,
+                        "server": server_name,
+                        "type": "mcp_tool"
+                    }
+                    
+                    return unity_tool_function
+                
+                # 创建包装器并添加到列表
+                unity_tool = create_unity_tool_wrapper(tool_name, tool_description, tool_schema, mcp_client)
+                converted_tools.append(unity_tool)
+                logger.debug(f"转换MCP工具: {tool_name} -> {unity_tool.__name__}")
+                
+                # 为工具添加清理方法
+                def cleanup_tool():
+                    try:
+                        if hasattr(mcp_client, 'stop'):
+                            mcp_client.stop()
+                    except Exception as e:
+                        logger.warning(f"清理工具 {tool_name} 的MCP客户端时出错: {e}")
+                
+                unity_tool._cleanup = cleanup_tool
+                
+        except Exception as e:
+            logger.error(f"转换MCP工具时出错: {e}")
+        
+        return converted_tools
+    
+    def _load_unity_mcp_config(self):
+        """从Unity加载MCP配置"""
+        try:
+            # 尝试从Unity Assets目录加载配置
+            import json
+            import os
+            
+            # 调试：打印当前工作目录
+            current_dir = os.getcwd()
+            logger.info(f"当前Python工作目录: {current_dir}")
+            logger.info(f"Python脚本位置: {__file__}")
+            
+            # Unity项目的MCP配置路径
+            config_paths = [
+                "Assets/UnityAIAgent/mcp_config.json",
+                "../Assets/UnityAIAgent/mcp_config.json",
+                "../../Assets/UnityAIAgent/mcp_config.json",
+                "../../../CubeVerse/Assets/UnityAIAgent/mcp_config.json",  # CubeVerse项目
+                "/Users/caobao/projects/unity/CubeVerse/Assets/UnityAIAgent/mcp_config.json",  # 绝对路径
+                "mcp_config.json"
+            ]
+            
+            for config_path in config_paths:
+                abs_path = os.path.abspath(config_path)
+                logger.debug(f"检查配置路径: {config_path} -> {abs_path} (存在: {os.path.exists(config_path)})")
+                if os.path.exists(config_path):
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        logger.info(f"从 {config_path} 加载MCP配置")
+                        logger.debug(f"JSON内容预览: {content[:200]}...")
+                        
+                        raw_config = json.loads(content)
+                        
+                        # 检测配置格式并转换
+                        if 'mcpServers' in raw_config:
+                            # Anthropic格式，需要转换为内部格式
+                            logger.info("检测到Anthropic MCP配置格式")
+                            logger.info(f"mcpServers数量: {len(raw_config.get('mcpServers', {}))}")
+                            return self._convert_anthropic_config(raw_config)
+                        else:
+                            # Legacy格式，直接使用
+                            logger.info("检测到Legacy MCP配置格式")
+                            return raw_config
+            
+            # 如果找不到配置文件，返回默认配置
+            logger.info("未找到MCP配置文件，使用默认配置")
+            return {
+                "enable_mcp": False,
+                "max_concurrent_connections": 3,
+                "default_timeout_seconds": 30,
+                "servers": []
+            }
+            
+        except Exception as e:
+            logger.warning(f"加载Unity MCP配置失败: {e}")
+            return None
+    
+    def _convert_anthropic_config(self, anthropic_config):
+        """将Anthropic MCP格式转换为内部格式"""
+        try:
+            mcp_servers = anthropic_config.get('mcpServers', {})
+            converted_servers = []
+            
+            for server_name, server_config in mcp_servers.items():
+                logger.info(f"转换服务器: {server_name}")
+                logger.debug(f"服务器配置: {server_config}")
+                
+                converted_server = {
+                    'name': server_name,
+                    'enabled': True,  # Anthropic格式中启用的服务器默认为enabled
+                    'description': f'MCP服务器: {server_name}',
+                }
+                
+                # 处理不同的传输类型
+                if 'command' in server_config:
+                    # Stdio传输
+                    converted_server.update({
+                        'transport_type': 'stdio',
+                        'command': server_config.get('command', ''),
+                        'args': server_config.get('args', []),
+                        'working_directory': server_config.get('working_directory', ''),
+                        'env_vars': server_config.get('env', {})
+                    })
+                elif 'transport' in server_config and 'url' in server_config:
+                    # 远程传输
+                    transport = server_config.get('transport', 'streamable_http')
+                    
+                    # 映射传输类型
+                    transport_mapping = {
+                        'sse': 'sse',
+                        'streamable_http': 'streamable_http',
+                        'http': 'streamable_http',  # 默认使用streamable_http
+                        'https': 'streamable_http'
+                    }
+                    
+                    mapped_transport = transport_mapping.get(transport, 'streamable_http')
+                    
+                    converted_server.update({
+                        'transport_type': mapped_transport,
+                        'url': server_config.get('url', ''),
+                        'timeout': 30,  # 默认超时
+                        'headers': server_config.get('headers', {})
+                    })
+                    
+                elif 'url' in server_config:
+                    # 只有URL的情况，默认使用streamable_http
+                    converted_server.update({
+                        'transport_type': 'streamable_http',
+                        'url': server_config.get('url', ''),
+                        'timeout': 30,
+                        'headers': server_config.get('headers', {})
+                    })
+                
+                converted_servers.append(converted_server)
+            
+            # 返回转换后的配置
+            converted_config = {
+                'enable_mcp': len(converted_servers) > 0,
+                'max_concurrent_connections': 5,
+                'default_timeout_seconds': 30,
+                'servers': converted_servers
+            }
+            
+            logger.info(f"Anthropic格式转换完成，共 {len(converted_servers)} 个服务器")
+            return converted_config
+            
+        except Exception as e:
+            logger.error(f"转换Anthropic MCP配置失败: {e}")
+            return {
+                "enable_mcp": False,
+                "max_concurrent_connections": 3,
+                "default_timeout_seconds": 30,
+                "servers": []
+            }
+    
+    def _create_strands_mcp_client(self, server_config):
+        """使用Strands MCPClient创建MCP客户端"""
+        try:
+            server_name = server_config.get('name', 'unknown')
+            transport_type = server_config.get('transport_type', 'stdio')
+            
+            if transport_type == 'stdio':
+                # 创建stdio MCP客户端 - 按照示例方式
+                command = server_config.get('command')
+                args = server_config.get('args', [])
+                env = server_config.get('env', {}) or server_config.get('env_vars', {})
+                
+                if not command:
+                    logger.warning(f"MCP服务器 '{server_name}' 缺少命令配置")
+                    return None
+                
+                logger.info(f"=== 启动MCP服务器: {server_name} ===")
+                logger.info(f"命令: {command}")
+                logger.info(f"参数: {args}")
+                logger.info(f"工作目录: 当前目录")
+                logger.info(f"环境变量: {env}")
+                
+                # 创建stdio客户端工厂函数
+                def stdio_factory():
+                    return stdio_client(
+                        StdioServerParameters(
+                            command=command,
+                            args=args,
+                            env=env
+                        )
+                    )
+                
+                # 使用Strands MCPClient
+                client = StrandsMCPClient(stdio_factory)
+                logger.info(f"创建Strands MCP客户端: {command} {' '.join(args)}")
+                return client
+            else:
+                logger.warning(f"暂不支持的传输类型: {transport_type}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"创建Strands MCP客户端失败: {e}")
+            import traceback
+            logger.error(f"详细错误: {traceback.format_exc()}")
+            return None
+
+    def _create_mcp_client(self, server_config):
+        """根据配置创建MCP客户端"""
+        try:
+            transport_type = server_config.get('transport_type', 'stdio')
+            server_name = server_config.get('name', 'unknown')
+            
+            if transport_type == 'stdio':
+                # 创建stdio MCP客户端
+                command = server_config.get('command', '')
+                args = server_config.get('args', [])
+                working_dir = server_config.get('working_directory', '')
+                env_vars = server_config.get('env_vars', {})
+                
+                if not command:
+                    logger.warning(f"MCP服务器 '{server_name}' 缺少命令配置")
+                    return None
+                
+                # 设置环境变量
+                import os
+                env = os.environ.copy()
+                env.update(env_vars)
+                
+                # 创建stdio客户端工厂
+                def stdio_factory():
+                    logger.info(f"=== 启动MCP服务器: {server_name} ===")
+                    logger.info(f"命令: {command}")
+                    logger.info(f"参数: {args}")
+                    logger.info(f"工作目录: {working_dir if working_dir else '当前目录'}")
+                    logger.info(f"环境变量: {env_vars}")
+                    
+                    # stdio_client返回的是一个异步上下文管理器
+                    return stdio_client(
+                        StdioServerParameters(
+                            command=command,
+                            args=args,
+                            env=env,
+                            cwd=working_dir if working_dir else None
+                        )
+                    )
+                
+                client = MCPClient(stdio_factory, timeout_seconds=30)
+                logger.info(f"创建stdio MCP客户端: {command} {' '.join(args)}")
+                return client
+                
+            elif transport_type == 'streamable_http':
+                # 创建streamable HTTP MCP客户端
+                url = server_config.get('url', '')
+                if not url:
+                    logger.warning(f"MCP服务器 '{server_name}' 缺少URL配置")
+                    return None
+                
+                async def http_factory():
+                    return await streamablehttp_client(url)
+                
+                client = MCPClient(http_factory, timeout_seconds=30)
+                logger.info(f"创建streamable HTTP MCP客户端: {url}")
+                return client
+                
+            elif transport_type == 'sse':
+                # 创建SSE MCP客户端（Legacy支持）
+                url = server_config.get('url', '')
+                if not url:
+                    logger.warning(f"MCP服务器 '{server_name}' 缺少URL配置")
+                    return None
+                
+                async def sse_factory():
+                    return await sse_client(url)
+                
+                client = MCPClient(sse_factory, timeout_seconds=30)
+                logger.info(f"创建SSE MCP客户端: {url}")
+                return client
+                
+            elif transport_type in ['http', 'https']:
+                # 向后兼容：http类型默认使用streamable_http
+                url = server_config.get('url', '')
+                if not url:
+                    logger.warning(f"MCP服务器 '{server_name}' 缺少URL配置")
+                    return None
+                
+                async def http_factory():
+                    return await streamablehttp_client(url)
+                
+                client = MCPClient(http_factory, timeout_seconds=30)
+                logger.info(f"创建HTTP MCP客户端 (streamable): {url}")
+                return client
+            
+            else:
+                logger.warning(f"不支持的MCP传输类型: {transport_type}")
+                logger.info(f"支持的传输类型: stdio, streamable_http, sse, http")
+                return None
+                
+        except Exception as e:
+            logger.error(f"创建MCP客户端失败: {e}")
+            return None
+    
     def health_check(self) -> Dict[str, Any]:
         """
         检查代理是否健康且就绪
@@ -1161,6 +1958,99 @@ def health_check() -> str:
     result = agent.health_check()
     return json.dumps(result, ensure_ascii=False, separators=(',', ':'))
 
+def test_unity_directory() -> str:
+    """测试Unity调用时的工作目录"""
+    import os
+    import json
+    try:
+        current_dir = os.getcwd()
+        script_dir = os.path.dirname(__file__)
+        
+        result = {
+            "current_dir": current_dir,
+            "script_dir": script_dir,
+            "script_file": __file__,
+            "files_in_current": os.listdir(current_dir)[:10],  # 只显示前10个文件避免太长
+            "config_paths_exist": {}
+        }
+        
+        # 检查所有配置路径
+        config_paths = [
+            "Assets/UnityAIAgent/mcp_config.json",
+            "../Assets/UnityAIAgent/mcp_config.json",
+            "../../Assets/UnityAIAgent/mcp_config.json",
+            "../../../CubeVerse/Assets/UnityAIAgent/mcp_config.json",
+            "/Users/caobao/projects/unity/CubeVerse/Assets/UnityAIAgent/mcp_config.json",
+            "mcp_config.json"
+        ]
+        
+        for path in config_paths:
+            result["config_paths_exist"][path] = {
+                "exists": os.path.exists(path),
+                "absolute_path": os.path.abspath(path)
+            }
+        
+        return json.dumps(result, indent=2, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"error": str(e)}, ensure_ascii=False)
+
+def reload_mcp_config() -> str:
+    """
+    重新加载MCP配置（供Unity调用）
+    
+    返回:
+        包含结果的JSON字符串
+    """
+    global _agent_instance
+    
+    try:
+        logger.info("=== 开始重新加载MCP配置 ===")
+        
+        # 清理现有的MCP资源
+        if _agent_instance is not None:
+            logger.info("清理现有MCP资源...")
+            _agent_instance._cleanup_resources()
+        
+        # 重新创建代理实例
+        logger.info("重新创建Unity代理实例...")
+        _agent_instance = UnityAgent()
+        
+        # 获取新的MCP配置信息
+        mcp_config = _agent_instance._load_unity_mcp_config()
+        
+        if mcp_config:
+            enabled_servers = [s for s in mcp_config.get('servers', []) if s.get('enabled', False)]
+            result = {
+                "success": True,
+                "message": "MCP配置重新加载成功",
+                "mcp_enabled": mcp_config.get('enable_mcp', False),
+                "server_count": len(mcp_config.get('servers', [])),
+                "enabled_server_count": len(enabled_servers),
+                "servers": [{
+                    "name": s.get('name'),
+                    "transport_type": s.get('transport_type'),
+                    "enabled": s.get('enabled')
+                } for s in mcp_config.get('servers', [])]
+            }
+        else:
+            result = {
+                "success": False,
+                "message": "MCP配置加载失败",
+                "mcp_enabled": False,
+                "server_count": 0
+            }
+        
+        logger.info(f"MCP配置重新加载结果: {result}")
+        return json.dumps(result, ensure_ascii=False, separators=(',', ':'))
+        
+    except Exception as e:
+        logger.error(f"重新加载MCP配置失败: {e}")
+        return json.dumps({
+            "success": False,
+            "message": f"重新加载MCP配置失败: {str(e)}",
+            "error": str(e)
+        }, ensure_ascii=False, separators=(',', ':'))
+
 if __name__ == "__main__":
     # 测试代理
     print("测试Unity代理...")
@@ -1173,3 +2063,297 @@ if __name__ == "__main__":
     # 测试健康检查
     health = agent.health_check()
     print(f"健康检查: {health}")
+
+def diagnose_unity_mcp_issue() -> str:
+    """诊断Unity环境下MCP连接问题"""
+    try:
+        import subprocess
+        import sys
+        import threading
+        
+        logger.info("=== Unity环境MCP连接诊断 ===")
+        
+        result = {
+            "success": True,
+            "environment": {
+                "python_version": sys.version,
+                "current_thread": threading.current_thread().name,
+                "is_main_thread": threading.current_thread() == threading.main_thread(),
+                "working_directory": os.getcwd()
+            },
+            "subprocess_tests": [],
+            "mcp_tests": [],
+            "asyncio_tests": [],
+            "diagnosis": []
+        }
+        
+        # 测试1: 基本子进程功能
+        try:
+            proc_result = subprocess.run(['echo', 'test'], capture_output=True, text=True, timeout=5)
+            result["subprocess_tests"].append({
+                "name": "基本echo测试",
+                "success": True,
+                "output": proc_result.stdout.strip(),
+                "returncode": proc_result.returncode
+            })
+            logger.info("✅ 基本子进程功能正常")
+        except Exception as e:
+            result["subprocess_tests"].append({
+                "name": "基本echo测试", 
+                "success": False,
+                "error": str(e)
+            })
+            result["diagnosis"].append("❌ Unity环境无法创建基本子进程")
+            logger.error(f"❌ 基本子进程测试失败: {e}")
+        
+        # 测试1.5: 测试PATH环境变量
+        try:
+            path_env = os.environ.get('PATH', '')
+            result["environment"]["path_env"] = path_env[:200] + "..." if len(path_env) > 200 else path_env
+            logger.info(f"PATH环境变量: {path_env[:100]}...")
+            
+            # 测试which node
+            proc_result = subprocess.run(['which', 'node'], capture_output=True, text=True, timeout=5)
+            result["subprocess_tests"].append({
+                "name": "which node测试",
+                "success": proc_result.returncode == 0,
+                "output": proc_result.stdout.strip() if proc_result.returncode == 0 else proc_result.stderr.strip(),
+                "returncode": proc_result.returncode
+            })
+            if proc_result.returncode == 0:
+                logger.info(f"✅ 找到node路径: {proc_result.stdout.strip()}")
+            else:
+                logger.warning(f"⚠️ 找不到node命令: {proc_result.stderr}")
+        except Exception as e:
+            result["subprocess_tests"].append({
+                "name": "which node测试",
+                "success": False,
+                "error": str(e)
+            })
+            logger.error(f"❌ which node测试失败: {e}")
+        
+        # 测试2: Node.js可用性
+        try:
+            proc_result = subprocess.run(['node', '--version'], capture_output=True, text=True, timeout=5)
+            node_success = proc_result.returncode == 0
+            result["subprocess_tests"].append({
+                "name": "Node.js版本检测",
+                "success": node_success,
+                "output": proc_result.stdout.strip() if node_success else proc_result.stderr.strip(),
+                "returncode": proc_result.returncode
+            })
+            if node_success:
+                logger.info(f"✅ Node.js可用: {proc_result.stdout.strip()}")
+            else:
+                logger.error(f"❌ Node.js不可用: {proc_result.stderr}")
+                result["diagnosis"].append("❌ Node.js在Unity环境下不可用")
+        except Exception as e:
+            result["subprocess_tests"].append({
+                "name": "Node.js版本检测",
+                "success": False,
+                "error": str(e)
+            })
+            result["diagnosis"].append("❌ 无法在Unity环境下执行Node.js")
+            logger.error(f"❌ Node.js测试失败: {e}")
+        
+        # 测试2.5: 使用绝对路径的Node.js测试
+        node_paths = [
+            '/usr/local/bin/node',
+            '/opt/homebrew/bin/node',
+            '/usr/bin/node',
+            '/Users/caobao/.nvm/current/bin/node'
+        ]
+        
+        for node_path in node_paths:
+            if os.path.exists(node_path):
+                try:
+                    proc_result = subprocess.run([node_path, '--version'], capture_output=True, text=True, timeout=5)
+                    node_abs_success = proc_result.returncode == 0
+                    result["subprocess_tests"].append({
+                        "name": f"Node.js绝对路径测试 ({node_path})",
+                        "success": node_abs_success,
+                        "output": proc_result.stdout.strip() if node_abs_success else proc_result.stderr.strip(),
+                        "returncode": proc_result.returncode
+                    })
+                    if node_abs_success:
+                        logger.info(f"✅ Node.js绝对路径可用: {node_path} -> {proc_result.stdout.strip()}")
+                        break  # 找到一个可用的就停止
+                    else:
+                        logger.warning(f"⚠️ Node.js绝对路径失败: {node_path}")
+                except Exception as e:
+                    result["subprocess_tests"].append({
+                        "name": f"Node.js绝对路径测试 ({node_path})",
+                        "success": False,
+                        "error": str(e)
+                    })
+                    logger.error(f"❌ Node.js绝对路径测试失败: {node_path} -> {e}")
+                break  # 只测试第一个存在的路径
+        
+        # 测试3: MCP服务器文件存在性
+        mcp_server_path = "/Users/caobao/projects/unity/CubeVerse/Library/PackageCache/com.gamelovers.mcp-unity@fe27f2b491/Server/build/index.js"
+        mcp_server_exists = os.path.exists(mcp_server_path)
+        result["mcp_tests"].append({
+            "name": "MCP服务器文件检查",
+            "success": mcp_server_exists,
+            "path": mcp_server_path,
+            "exists": mcp_server_exists
+        })
+        
+        if not mcp_server_exists:
+            result["diagnosis"].append("❌ MCP服务器文件不存在")
+            logger.error("❌ MCP服务器文件不存在")
+        else:
+            logger.info("✅ MCP服务器文件存在")
+        
+        # 测试4: MCP服务器启动测试（只有在前面测试通过时才执行）
+        if len([t for t in result["subprocess_tests"] if t["success"]]) > 0 and mcp_server_exists:
+            try:
+                env = os.environ.copy()
+                env['UNITY_PORT'] = '8090'
+                
+                # 使用Popen来测试stdio通信
+                proc = subprocess.Popen(
+                    ['node', mcp_server_path],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                    text=True
+                )
+                
+                # 等待短时间
+                import time
+                time.sleep(1)
+                
+                if proc.poll() is None:
+                    # 进程仍在运行，这是好兆头
+                    result["mcp_tests"].append({
+                        "name": "MCP服务器启动测试",
+                        "success": True,
+                        "message": "MCP服务器成功启动并保持运行"
+                    })
+                    logger.info("✅ MCP服务器可以在Unity环境下启动")
+                    
+                    # 尝试简单的stdio通信
+                    try:
+                        init_msg = '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "unity-test", "version": "1.0"}}}\n'
+                        proc.stdin.write(init_msg)
+                        proc.stdin.flush()
+                        time.sleep(0.5)
+                        
+                        result["mcp_tests"].append({
+                            "name": "MCP stdio通信测试",
+                            "success": True,
+                            "message": "成功发送初始化消息"
+                        })
+                        logger.info("✅ MCP stdio通信正常")
+                    except Exception as stdio_e:
+                        result["mcp_tests"].append({
+                            "name": "MCP stdio通信测试",
+                            "success": False,
+                            "error": str(stdio_e)
+                        })
+                        result["diagnosis"].append(f"❌ MCP stdio通信失败: {str(stdio_e)}")
+                        logger.error(f"❌ MCP stdio通信失败: {stdio_e}")
+                else:
+                    # 进程已经退出
+                    stdout, stderr = proc.communicate()
+                    result["mcp_tests"].append({
+                        "name": "MCP服务器启动测试",
+                        "success": False,
+                        "returncode": proc.returncode,
+                        "stdout": stdout[:200] if stdout else "",
+                        "stderr": stderr[:200] if stderr else ""
+                    })
+                    result["diagnosis"].append(f"❌ MCP服务器启动后立即退出，返回码: {proc.returncode}")
+                    logger.error(f"❌ MCP服务器启动失败，返回码: {proc.returncode}")
+                
+                # 清理进程
+                try:
+                    if proc.poll() is None:
+                        proc.terminate()
+                        proc.wait(timeout=2)
+                except:
+                    try:
+                        proc.kill()
+                    except:
+                        pass
+                        
+            except Exception as e:
+                result["mcp_tests"].append({
+                    "name": "MCP服务器启动测试",
+                    "success": False,
+                    "error": str(e)
+                })
+                result["diagnosis"].append(f"❌ MCP服务器启动异常: {str(e)}")
+                logger.error(f"❌ MCP服务器启动异常: {e}")
+        
+        # 测试5: 异步环境检查
+        try:
+            import asyncio
+            
+            # 检查当前事件循环
+            try:
+                loop = asyncio.get_event_loop()
+                result["asyncio_tests"].append({
+                    "name": "当前事件循环检查",
+                    "success": True,
+                    "running": loop.is_running(),
+                    "closed": loop.is_closed()
+                })
+                logger.info(f"✅ 当前事件循环状态: 运行={loop.is_running()}, 关闭={loop.is_closed()}")
+            except RuntimeError as e:
+                result["asyncio_tests"].append({
+                    "name": "当前事件循环检查",
+                    "success": False,
+                    "error": str(e)
+                })
+                logger.info(f"ℹ️ 无当前事件循环: {e}")
+            
+            # 测试创建新事件循环
+            try:
+                new_loop = asyncio.new_event_loop()
+                result["asyncio_tests"].append({
+                    "name": "新事件循环创建",
+                    "success": True,
+                    "message": "可以创建新的事件循环"
+                })
+                new_loop.close()
+                logger.info("✅ 可以创建新的事件循环")
+            except Exception as e:
+                result["asyncio_tests"].append({
+                    "name": "新事件循环创建",
+                    "success": False,
+                    "error": str(e)
+                })
+                result["diagnosis"].append(f"❌ 无法创建异步事件循环: {str(e)}")
+                logger.error(f"❌ 无法创建异步事件循环: {e}")
+                
+        except Exception as e:
+            result["asyncio_tests"].append({
+                "name": "asyncio模块检查",
+                "success": False,
+                "error": str(e)
+            })
+            result["diagnosis"].append(f"❌ asyncio模块检查失败: {str(e)}")
+            logger.error(f"❌ asyncio模块检查失败: {e}")
+        
+        # 生成最终诊断
+        if not result["diagnosis"]:
+            result["diagnosis"].append("✅ Unity环境支持MCP所需的所有功能")
+            logger.info("✅ Unity环境MCP支持正常")
+        else:
+            logger.warning(f"⚠️ 发现 {len(result['diagnosis'])} 个问题")
+        
+        logger.info(f"Unity MCP诊断完成: {len(result['diagnosis'])} 个问题")
+        return json.dumps(result, ensure_ascii=False, indent=2)
+        
+    except Exception as e:
+        logger.error(f"诊断过程失败: {e}")
+        import traceback
+        logger.error(f"诊断异常堆栈: {traceback.format_exc()}")
+        return json.dumps({
+            "success": False, 
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, ensure_ascii=False)

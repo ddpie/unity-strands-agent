@@ -19,6 +19,33 @@ namespace UnityAIAgent.Editor
         private Queue<StreamChunk> chunkQueue = new Queue<StreamChunk>();
         private readonly object queueLock = new object();
         
+        // 构造函数 - 注册播放模式状态变化监听
+        public StreamingHandler()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+        
+        // 析构函数 - 取消注册
+        ~StreamingHandler()
+        {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        }
+        
+        // 播放模式状态变化处理
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.ExitingPlayMode)
+            {
+                Debug.LogWarning($"[StreamingHandler] 检测到Unity模式切换: {state}");
+                if (isStreaming)
+                {
+                    Debug.LogWarning("[StreamingHandler] 强制停止流式处理");
+                    StopStreaming();
+                    OnStreamError?.Invoke("Unity模式切换，流式处理被中断");
+                }
+            }
+        }
+        
         // 事件回调
         public event Action<string> OnChunkReceived;
         public event Action OnStreamStarted;
@@ -119,23 +146,37 @@ namespace UnityAIAgent.Editor
                     onChunk: (chunk) => {
                         try
                         {
-                            Debug.Log($"[StreamingHandler] 接收到chunk: {chunk}");
-                            EnqueueChunk(new StreamChunk { Type = "chunk", Content = chunk });
+                            if (!isCompleted && isStreaming)
+                            {
+                                Debug.Log($"[StreamingHandler] 接收到chunk: {chunk?.Substring(0, Math.Min(chunk?.Length ?? 0, 100))}...");
+                                EnqueueChunk(new StreamChunk { Type = "chunk", Content = chunk });
+                            }
                         }
                         catch (ObjectDisposedException)
                         {
                             // CancellationTokenSource已被释放，忽略此回调
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[StreamingHandler] 处理chunk时出错: {ex.Message}");
                         }
                     },
                     onComplete: () => {
                         try
                         {
-                            Debug.Log("[StreamingHandler] 接收到complete");
-                            EnqueueChunk(new StreamChunk { Type = "complete" });
+                            if (!isCompleted && isStreaming)
+                            {
+                                Debug.Log("[StreamingHandler] 接收到complete");
+                                EnqueueChunk(new StreamChunk { Type = "complete" });
+                            }
                         }
                         catch (ObjectDisposedException)
                         {
                             // CancellationTokenSource已被释放，忽略此回调
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[StreamingHandler] 处理complete时出错: {ex.Message}");
                         }
                     },
                     onError: (error) => {

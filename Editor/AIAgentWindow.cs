@@ -1040,6 +1040,36 @@ namespace UnityAIAgent.Editor
             hasActiveStream = true;
             isProcessing = true;
             
+            // 添加超时保护机制 - 90秒后自动重置状态
+            EditorApplication.delayCall += () => {
+                System.Threading.Tasks.Task.Delay(90000).ContinueWith(_ => {
+                    if (isProcessing)
+                    {
+                        Debug.LogWarning("[AIAgentWindow] 响应超时，自动重置状态");
+                        EditorApplication.delayCall += () => {
+                            if (this != null && isProcessing)
+                            {
+                                hasActiveStream = false;
+                                isProcessing = false;
+                                currentStreamText = "";
+                                currentStreamingMessageIndex = -1;
+                                
+                                // 添加超时提示消息
+                                messages.Add(new ChatMessage
+                                {
+                                    content = "⏰ AI响应超时，界面已自动重置。您可以继续发送新消息。",
+                                    isUser = false,
+                                    timestamp = DateTime.Now
+                                });
+                                
+                                SaveChatHistory();
+                                Repaint();
+                            }
+                        };
+                    }
+                });
+            };
+            
             Repaint();
 
             try
