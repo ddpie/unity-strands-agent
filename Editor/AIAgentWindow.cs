@@ -135,7 +135,8 @@ namespace UnityAIAgent.Editor
             InitializeStyles();
             InitializeStreamingHandler();
             
-            // Initialize MCP configuration
+            // Initialize MCP configuration - 强制重新加载
+            mcpJsonConfig = null; // 清除缓存，强制重新加载
             LoadMCPConfiguration();
             CheckSetupStatus();
             
@@ -2423,16 +2424,32 @@ namespace UnityAIAgent.Editor
                 return;
             }
             
-            // JSON configuration area
+            // JSON configuration area with reload button
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("JSON配置", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("重新加载", EditorStyles.miniButton, GUILayout.Width(80)))
+            {
+                mcpJsonConfig = null; // 清除缓存
+                LoadMCPConfiguration();
+                Debug.Log("MCP配置已重新加载");
+            }
+            EditorGUILayout.EndHorizontal();
+            
             mcpScrollPosition = EditorGUILayout.BeginScrollView(mcpScrollPosition, GUILayout.Height(200));
             mcpJsonConfig = EditorGUILayout.TextArea(mcpJsonConfig, GUILayout.ExpandHeight(true));
             EditorGUILayout.EndScrollView();
             
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("保存配置"))
             {
                 SaveMCPConfiguration();
             }
+            if (GUILayout.Button("重置为默认"))
+            {
+                mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+            }
+            EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();
             
@@ -2463,15 +2480,36 @@ namespace UnityAIAgent.Editor
         // Settings helper methods
         private void LoadMCPConfiguration()
         {
-            string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
-            mcpConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MCPConfiguration>(configPath);
-            if (mcpConfig != null)
+            // 优先从JSON文件加载（这是实际使用的配置）
+            string jsonConfigPath = "Assets/UnityAIAgent/mcp_config.json";
+            if (System.IO.File.Exists(jsonConfigPath))
             {
-                mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
+                try
+                {
+                    mcpJsonConfig = System.IO.File.ReadAllText(jsonConfigPath);
+                    Debug.Log($"MCP配置已从JSON文件加载: {jsonConfigPath}");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"无法读取MCP JSON配置: {e.Message}");
+                    mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+                }
             }
             else
             {
-                mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+                // 备用方案：从Unity Asset加载
+                string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
+                mcpConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MCPConfiguration>(configPath);
+                if (mcpConfig != null)
+                {
+                    mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
+                    Debug.Log("MCP配置已从Unity Asset加载");
+                }
+                else
+                {
+                    mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+                    Debug.Log("未找到MCP配置，使用默认空配置");
+                }
             }
         }
         
