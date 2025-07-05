@@ -587,7 +587,9 @@ namespace UnityAIAgent.Editor
                 
                 if (GUILayout.Button("查看日志", EditorStyles.linkLabel))
                 {
-                    LogWindow.ShowWindow();
+                    // 打开Unity的Console窗口查看日志
+                    var consoleWindowType = typeof(EditorWindow).Assembly.GetType("UnityEditor.ConsoleWindow");
+                    EditorWindow.GetWindow(consoleWindowType);
                 }
                 
                 GUILayout.Label("|", GUILayout.Width(10));
