@@ -71,7 +71,7 @@ namespace UnityAIAgent.Editor
         public static void ShowWindow()
         {
             var window = GetWindow<AIAgentWindow>("AI助手");
-            window.minSize = new Vector2(450, 600);
+            window.minSize = new Vector2(500, 700);
         }
 
         private void OnEnable()
@@ -113,28 +113,40 @@ namespace UnityAIAgent.Editor
 
         private void InitializeStyles()
         {
-            // Styles will be initialized in OnGUI when skin is available
+            // Clean modern styles
         }
 
         private void OnGUI()
         {
-            // Initialize styles if needed
+            // Initialize clean modern styles
             if (userMessageStyle == null)
             {
+                // User message - clean card style
                 userMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                userMessageStyle.normal.background = MakeColorTexture(new Color(0.2f, 0.3f, 0.4f, 0.3f));
-                userMessageStyle.padding = new RectOffset(10, 10, 10, 10);
-                userMessageStyle.margin = new RectOffset(50, 10, 5, 5);
+                userMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.25f, 0.25f, 0.3f, 0.4f) : new Color(0.9f, 0.9f, 0.95f, 0.8f));
+                userMessageStyle.padding = new RectOffset(16, 16, 12, 12);
+                userMessageStyle.margin = new RectOffset(40, 8, 4, 4);
+                userMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.1f, 0.1f, 0.1f);
 
+                // AI message - clean card style
                 aiMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                aiMessageStyle.normal.background = MakeColorTexture(new Color(0.1f, 0.2f, 0.3f, 0.3f));
-                aiMessageStyle.padding = new RectOffset(10, 10, 10, 10);
-                aiMessageStyle.margin = new RectOffset(10, 50, 5, 5);
+                aiMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.18f, 0.18f, 0.18f, 0.6f) : new Color(0.98f, 0.98f, 0.98f, 0.9f));
+                aiMessageStyle.padding = new RectOffset(16, 16, 12, 12);
+                aiMessageStyle.margin = new RectOffset(8, 40, 4, 4);
+                aiMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.1f, 0.1f, 0.1f);
 
+                // Code blocks - clean monospace
                 codeStyle = new GUIStyle(EditorStyles.textArea);
-                codeStyle.font = Font.CreateDynamicFontFromOSFont("Courier New", 12);
-                codeStyle.normal.background = MakeColorTexture(new Color(0.1f, 0.1f, 0.1f, 0.5f));
-                codeStyle.padding = new RectOffset(10, 10, 10, 10);
+                codeStyle.font = Font.CreateDynamicFontFromOSFont("Monaco", 11);
+                codeStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.12f, 0.12f, 0.12f, 0.9f) : new Color(0.95f, 0.95f, 0.95f, 0.9f));
+                codeStyle.padding = new RectOffset(12, 12, 8, 8);
+                codeStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.85f, 0.85f, 0.85f) : new Color(0.2f, 0.2f, 0.2f);
                 
                 stepStyle = new GUIStyle(EditorStyles.label);
                 statusStyle = new GUIStyle(EditorStyles.helpBox);
@@ -156,66 +168,101 @@ namespace UnityAIAgent.Editor
         
         private void DrawTabSelector()
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            var tabBarStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.18f, 0.18f, 0.18f, 1f) : new Color(0.93f, 0.93f, 0.93f, 1f)) },
+                padding = new RectOffset(8, 8, 8, 8)
+            };
+            
+            EditorGUILayout.BeginHorizontal(tabBarStyle);
             
             for (int i = 0; i < tabNames.Length; i++)
             {
                 bool isSelected = selectedTab == i;
                 
-                // 使用不同的样式来区分选中和未选中状态
-                var style = isSelected ? "toolbarbutton" : "toolbarbutton";
+                var tabStyle = new GUIStyle(EditorStyles.miniButton)
+                {
+                    fontSize = 12,
+                    padding = new RectOffset(20, 20, 8, 8),
+                    margin = new RectOffset(2, 2, 0, 0),
+                    fixedHeight = 30
+                };
                 
-                // 设置颜色
                 var originalColor = GUI.backgroundColor;
                 var originalContentColor = GUI.contentColor;
                 
                 if (isSelected)
                 {
-                    // 选中状态：深蓝色背景，白色文字
-                    GUI.backgroundColor = new Color(0.2f, 0.4f, 0.8f, 1f);
+                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.3f, 0.5f, 0.8f, 1f) : new Color(0.2f, 0.4f, 0.8f, 1f);
                     GUI.contentColor = Color.white;
                 }
                 else
                 {
-                    // 未选中状态：正常颜色，灰色文字
-                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? new Color(0.3f, 0.3f, 0.3f, 1f) : new Color(0.8f, 0.8f, 0.8f, 1f);
-                    GUI.contentColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.4f, 0.4f, 0.4f, 1f);
+                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.25f, 0.25f, 0.25f, 1f) : new Color(0.88f, 0.88f, 0.88f, 1f);
+                    GUI.contentColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.7f, 0.7f, 0.7f) : new Color(0.4f, 0.4f, 0.4f);
                 }
                 
-                if (GUILayout.Button(tabNames[i], style, GUILayout.Height(25)))
+                if (GUILayout.Button(tabNames[i], tabStyle))
                 {
                     selectedTab = i;
                 }
                 
-                // 恢复颜色
                 GUI.backgroundColor = originalColor;
                 GUI.contentColor = originalContentColor;
             }
             
             EditorGUILayout.EndHorizontal();
             
-            // 添加一条分隔线
-            EditorGUILayout.Space(2);
+            // Clean separator
+            GUILayout.Space(1);
             var rect = EditorGUILayout.GetControlRect(false, 1);
-            EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? new Color(0.1f, 0.1f, 0.1f, 1f) : new Color(0.6f, 0.6f, 0.6f, 1f));
-            EditorGUILayout.Space(5);
+            EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? 
+                new Color(0.3f, 0.3f, 0.3f, 0.5f) : new Color(0.8f, 0.8f, 0.8f, 0.5f));
+            GUILayout.Space(8);
         }
         
         private void DrawChatInterface()
         {
-
-            // Header
-            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            GUILayout.Label("Unity AI Assistant", EditorStyles.boldLabel);
+            // Clean header with minimal design
+            var headerStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.2f, 0.2f, 0.2f, 0.8f) : new Color(0.95f, 0.95f, 0.95f, 0.8f)) },
+                padding = new RectOffset(16, 16, 12, 12)
+            };
+            
+            EditorGUILayout.BeginHorizontal(headerStyle);
+            
+            var titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.2f, 0.2f, 0.2f) }
+            };
+            GUILayout.Label("AI助手", titleStyle);
             GUILayout.FlexibleSpace();
             
-            if (GUILayout.Button("Clear", EditorStyles.toolbarButton, GUILayout.Width(50)))
+            var clearButtonStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.7f, 0.7f, 0.7f) : new Color(0.4f, 0.4f, 0.4f) }
+            };
+            if (GUILayout.Button("清空", clearButtonStyle, GUILayout.Width(50)))
             {
                 messages.Clear();
                 SaveChatHistory();
             }
             
             EditorGUILayout.EndHorizontal();
+            
+            // Subtle separator
+            var separatorRect = EditorGUILayout.GetControlRect(false, 1);
+            EditorGUI.DrawRect(separatorRect, EditorGUIUtility.isProSkin ? 
+                new Color(0.3f, 0.3f, 0.3f, 0.5f) : new Color(0.8f, 0.8f, 0.8f, 0.5f));
 
             // Chat messages area
             Event e = Event.current;
@@ -246,7 +293,15 @@ namespace UnityAIAgent.Editor
                 Repaint();
             }
             
-            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, GUILayout.ExpandHeight(true));
+            // Calculate available height for messages area
+            float windowHeight = position.height;
+            float headerHeight = 50; // Approximate header height
+            float inputAreaHeight = 140; // Increased height for input area
+            float statusHeight = isProcessing ? 40 : 0;
+            float availableHeight = windowHeight - headerHeight - inputAreaHeight - statusHeight - 30; // 30px margin
+            
+            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, 
+                GUILayout.Height(Mathf.Max(200, availableHeight))); // Minimum 200px height
             
             foreach (var message in messages)
             {
@@ -267,18 +322,51 @@ namespace UnityAIAgent.Editor
 
             EditorGUILayout.EndScrollView();
 
-            // Input area
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            // Clean input area with fixed height
+            var inputAreaStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.22f, 0.22f, 0.22f, 0.8f) : new Color(0.96f, 0.96f, 0.96f, 0.8f)) },
+                padding = new RectOffset(16, 16, 14, 14),
+                fixedHeight = 0 // Let content determine height
+            };
+            
+            EditorGUILayout.BeginVertical(inputAreaStyle, GUILayout.Height(120));
             
             GUI.enabled = !isProcessing;
-            userInput = EditorGUILayout.TextArea(userInput, GUILayout.MinHeight(60));
+            
+            var textAreaStyle = new GUIStyle(EditorStyles.textArea)
+            {
+                fontSize = 12,
+                normal = { 
+                    background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                        new Color(0.15f, 0.15f, 0.15f, 0.9f) : new Color(1f, 1f, 1f, 0.9f)),
+                    textColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.9f, 0.9f, 0.9f) : new Color(0.1f, 0.1f, 0.1f)
+                },
+                padding = new RectOffset(12, 12, 8, 8)
+            };
+            
+            userInput = EditorGUILayout.TextArea(userInput, textAreaStyle, 
+                GUILayout.MinHeight(40), GUILayout.MaxHeight(60));
+            
+            GUILayout.Space(12);
             
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             
+            var buttonStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                fontSize = 12,
+                padding = new RectOffset(20, 20, 10, 10),
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.2f, 0.2f, 0.2f) },
+                fixedHeight = 32
+            };
+            
             if (streamingHandler != null && streamingHandler.IsStreaming)
             {
-                if (GUILayout.Button("停止", GUILayout.Width(100), GUILayout.Height(30)))
+                if (GUILayout.Button("停止", buttonStyle, GUILayout.Width(90)))
                 {
                     streamingHandler.StopStreaming();
                 }
@@ -286,7 +374,7 @@ namespace UnityAIAgent.Editor
             else
             {
                 GUI.enabled = !isProcessing && !string.IsNullOrWhiteSpace(userInput);
-                if (GUILayout.Button("发送", GUILayout.Width(100), GUILayout.Height(30)) || 
+                if (GUILayout.Button("发送", buttonStyle, GUILayout.Width(90)) || 
                     (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return && Event.current.control))
                 {
                     SendMessage();
@@ -296,21 +384,45 @@ namespace UnityAIAgent.Editor
             GUI.enabled = true;
             EditorGUILayout.EndHorizontal();
             
+            GUILayout.Space(8);
+            
             EditorGUILayout.EndVertical();
 
-            // 状态栏
+            // Clean status indicator
             if (isProcessing)
             {
-                string statusText = "🤔 AI正在思考...";
+                var statusStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                        new Color(0.2f, 0.3f, 0.4f, 0.3f) : new Color(0.9f, 0.95f, 1f, 0.8f)) },
+                    padding = new RectOffset(12, 12, 8, 8)
+                };
+                
+                string statusText = "AI正在思考...";
                 if (streamingHandler != null && streamingHandler.IsStreaming)
                 {
-                    statusText = "📡 正在接收响应... (如果长时间无响应，系统将自动超时)";
+                    statusText = "正在接收响应...";
                 }
-                EditorGUILayout.HelpBox(statusText, MessageType.Info);
+                
+                EditorGUILayout.BeginHorizontal(statusStyle);
+                var loadingStyle = new GUIStyle(EditorStyles.label)
+                {
+                    normal = { textColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.7f, 0.8f, 0.9f) : new Color(0.3f, 0.5f, 0.7f) }
+                };
+                GUILayout.Label(statusText, loadingStyle);
+                EditorGUILayout.EndHorizontal();
             }
             else if (!PythonManager.IsInitialized)
             {
-                EditorGUILayout.HelpBox("⚠️ 请先进行设置", MessageType.Warning);
+                var warningStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                        new Color(0.4f, 0.3f, 0.2f, 0.3f) : new Color(1f, 0.95f, 0.9f, 0.8f)) }
+                };
+                EditorGUILayout.BeginHorizontal(warningStyle);
+                GUILayout.Label("请先完成设置", EditorStyles.label);
+                EditorGUILayout.EndHorizontal();
             }
             
             // 只有在用户没有主动向上滚动时才自动滚动到底部
@@ -330,31 +442,60 @@ namespace UnityAIAgent.Editor
         {
             var style = message.isUser ? userMessageStyle : aiMessageStyle;
             
+            // Add subtle spacing
+            GUILayout.Space(4);
+            
             EditorGUILayout.BeginVertical(style);
             
-            // 头部
+            // Clean message header
             EditorGUILayout.BeginHorizontal();
-            string userLabel = message.isUser ? "😊 您" : "🤖 AI";
-            GUILayout.Label(userLabel, EditorStyles.boldLabel, GUILayout.Width(50));
+            
+            var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.7f, 0.7f, 0.7f) : new Color(0.5f, 0.5f, 0.5f) }
+            };
+            
+            string userLabel = message.isUser ? "您" : "助手";
+            GUILayout.Label(userLabel, labelStyle);
             GUILayout.FlexibleSpace();
-            GUILayout.Label(message.timestamp.ToString("HH:mm"), EditorStyles.miniLabel);
+            
+            // Only show timestamp for user messages
+            if (message.isUser)
+            {
+                var timeStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    normal = { textColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.6f, 0.6f, 0.6f) : new Color(0.6f, 0.6f, 0.6f) }
+                };
+                GUILayout.Label(message.timestamp.ToString("HH:mm"), timeStyle);
+            }
             EditorGUILayout.EndHorizontal();
             
-            // 内容 - 统一使用Markdown渲染
+            GUILayout.Space(6);
+            
+            // Content with proper styling
             RenderMarkdownContent(message.content);
             
-            // 操作按钮
+            // Clean copy button
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("📋 复制", EditorStyles.miniButton, GUILayout.Width(60)))
+            
+            var copyButtonStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.6f, 0.6f, 0.6f) : new Color(0.5f, 0.5f, 0.5f) }
+            };
+            
+            if (GUILayout.Button("复制", copyButtonStyle, GUILayout.Width(50)))
             {
                 EditorGUIUtility.systemCopyBuffer = message.content;
-                Debug.Log("已复制到剪贴板");
             }
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.EndVertical();
-            GUILayout.Space(5);
+            GUILayout.Space(2);
         }
 
         private void RenderMarkdownContent(string content)
@@ -380,20 +521,34 @@ namespace UnityAIAgent.Editor
                     
                     if (!string.IsNullOrWhiteSpace(code))
                     {
-                        // 显示语言标签
+                        GUILayout.Space(4);
+                        
+                        // Clean language label
                         if (!string.IsNullOrEmpty(language))
                         {
                             var langStyle = new GUIStyle(EditorStyles.miniLabel)
                             {
-                                normal = { textColor = Color.gray }
+                                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                                    new Color(0.6f, 0.6f, 0.6f) : new Color(0.5f, 0.5f, 0.5f) },
+                                padding = new RectOffset(0, 0, 2, 4)
                             };
-                            GUILayout.Label($"[{language}]", langStyle);
+                            GUILayout.Label(language.ToUpper(), langStyle);
                         }
                         
-                        // 代码块背景
-                        var rect = EditorGUILayout.GetControlRect(false, EditorStyles.textArea.CalcHeight(new GUIContent(code), Screen.width - 40));
-                        GUI.Box(rect, "", codeStyle);
-                        GUI.Label(rect, code, codeStyle);
+                        // Clean code block with rounded corners effect
+                        var codeBlockStyle = new GUIStyle(codeStyle)
+                        {
+                            normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                                new Color(0.12f, 0.12f, 0.12f, 0.95f) : new Color(0.97f, 0.97f, 0.97f, 0.95f)) },
+                            padding = new RectOffset(12, 12, 10, 10),
+                            margin = new RectOffset(0, 0, 2, 4)
+                        };
+                        
+                        var rect = EditorGUILayout.GetControlRect(false, codeBlockStyle.CalcHeight(new GUIContent(code), Screen.width - 60));
+                        GUI.Box(rect, "", codeBlockStyle);
+                        GUI.Label(rect, code, codeBlockStyle);
+                        
+                        GUILayout.Space(4);
                     }
                 }
             }
@@ -415,7 +570,7 @@ namespace UnityAIAgent.Editor
         
         private void RenderBoldText(string text)
         {
-            // 简单的粗体文本处理
+            // Clean bold text rendering
             var regex = new System.Text.RegularExpressions.Regex(@"\*\*(.*?)\*\*");
             var matches = regex.Matches(text);
             
@@ -426,34 +581,45 @@ namespace UnityAIAgent.Editor
                 int lastIndex = 0;
                 foreach (System.Text.RegularExpressions.Match match in matches)
                 {
-                    // 添加前面的普通文本
+                    // Normal text before bold
                     if (match.Index > lastIndex)
                     {
                         string beforeText = text.Substring(lastIndex, match.Index - lastIndex);
                         if (!string.IsNullOrEmpty(beforeText))
                         {
-                            GUILayout.Label(beforeText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                            var normalStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                            {
+                                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.15f, 0.15f, 0.15f) }
+                            };
+                            GUILayout.Label(beforeText, normalStyle, GUILayout.ExpandWidth(false));
                         }
                     }
                     
-                    // 添加粗体文本
+                    // Clean bold text
                     var boldStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
                     {
                         fontStyle = FontStyle.Bold,
-                        normal = { textColor = new Color(1f, 1f, 0.8f) } // 轻微高亮
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.95f, 0.95f, 1f) : new Color(0.1f, 0.1f, 0.2f) }
                     };
                     GUILayout.Label(match.Groups[1].Value, boldStyle, GUILayout.ExpandWidth(false));
                     
                     lastIndex = match.Index + match.Length;
                 }
                 
-                // 添加后面的普通文本
+                // Normal text after bold
                 if (lastIndex < text.Length)
                 {
                     string afterText = text.Substring(lastIndex);
                     if (!string.IsNullOrEmpty(afterText))
                     {
-                        GUILayout.Label(afterText, EditorStyles.wordWrappedLabel, GUILayout.ExpandWidth(false));
+                        var normalStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                        {
+                            normal = { textColor = EditorGUIUtility.isProSkin ? 
+                                new Color(0.9f, 0.9f, 0.9f) : new Color(0.15f, 0.15f, 0.15f) }
+                        };
+                        GUILayout.Label(afterText, normalStyle, GUILayout.ExpandWidth(false));
                     }
                 }
                 
@@ -461,7 +627,12 @@ namespace UnityAIAgent.Editor
             }
             else
             {
-                GUILayout.Label(text, EditorStyles.wordWrappedLabel);
+                var textStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                {
+                    normal = { textColor = EditorGUIUtility.isProSkin ? 
+                        new Color(0.9f, 0.9f, 0.9f) : new Color(0.15f, 0.15f, 0.15f) }
+                };
+                GUILayout.Label(text, textStyle);
             }
         }
         
@@ -843,7 +1014,7 @@ namespace UnityAIAgent.Editor
             {
                 if (string.IsNullOrEmpty(line))
                 {
-                    GUILayout.Space(3);
+                    GUILayout.Space(4);
                     continue;
                 }
                 
@@ -859,78 +1030,112 @@ namespace UnityAIAgent.Editor
                     // 工具进度信息
                     RenderToolProgress(line);
                 }
-                // 标题处理
+                // Clean header styling
                 else if (line.StartsWith("### "))
                 {
+                    GUILayout.Space(6);
+                    var headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                    {
+                        fontSize = 12,
+                        wordWrap = true,
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.85f, 0.85f, 0.9f) : new Color(0.2f, 0.2f, 0.3f) }
+                    };
+                    GUILayout.Label(line.Substring(4), headerStyle);
+                    GUILayout.Space(3);
+                }
+                else if (line.StartsWith("## "))
+                {
+                    GUILayout.Space(8);
                     var headerStyle = new GUIStyle(EditorStyles.boldLabel)
                     {
                         fontSize = 13,
                         wordWrap = true,
-                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
-                    };
-                    GUILayout.Label(line.Substring(4), headerStyle);
-                    GUILayout.Space(2);
-                }
-                else if (line.StartsWith("## "))
-                {
-                    var headerStyle = new GUIStyle(EditorStyles.boldLabel)
-                    {
-                        fontSize = 15,
-                        wordWrap = true,
-                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.9f, 0.9f, 0.95f) : new Color(0.15f, 0.15f, 0.25f) }
                     };
                     GUILayout.Label(line.Substring(3), headerStyle);
-                    GUILayout.Space(3);
+                    GUILayout.Space(4);
                 }
                 else if (line.StartsWith("# "))
                 {
+                    GUILayout.Space(10);
                     var headerStyle = new GUIStyle(EditorStyles.boldLabel)
-                    {
-                        fontSize = 17,
-                        wordWrap = true,
-                        normal = { textColor = new Color(0.8f, 0.8f, 1f) }
-                    };
-                    GUILayout.Label(line.Substring(2), headerStyle);
-                    GUILayout.Space(4);
-                }
-                // 列表项处理
-                else if (line.Trim().StartsWith("- ") || line.Trim().StartsWith("* "))
-                {
-                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Space(15);
-                    GUILayout.Label("•", listStyle, GUILayout.Width(10));
-                    GUILayout.Label(line.Trim().Substring(2), listStyle);
-                    GUILayout.EndHorizontal();
-                }
-                // 数字列表处理
-                else if (System.Text.RegularExpressions.Regex.IsMatch(line.Trim(), @"^\d+\. "))
-                {
-                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Space(15);
-                    GUILayout.Label(line.Trim(), listStyle);
-                    GUILayout.EndHorizontal();
-                }
-                // Python错误信息处理
-                else if (line.StartsWith("❌"))
-                {
-                    var errorStyle = new GUIStyle(EditorStyles.boldLabel)
                     {
                         fontSize = 14,
                         wordWrap = true,
-                        normal = { textColor = new Color(1f, 0.3f, 0.3f) }
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.95f, 0.95f, 1f) : new Color(0.1f, 0.1f, 0.2f) }
+                    };
+                    GUILayout.Label(line.Substring(2), headerStyle);
+                    GUILayout.Space(5);
+                }
+                // Clean list styling
+                else if (line.Trim().StartsWith("- ") || line.Trim().StartsWith("* "))
+                {
+                    var bulletStyle = new GUIStyle(EditorStyles.label)
+                    {
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.6f, 0.7f, 0.8f) : new Color(0.4f, 0.5f, 0.6f) }
+                    };
+                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.85f, 0.85f, 0.85f) : new Color(0.2f, 0.2f, 0.2f) }
+                    };
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(16);
+                    GUILayout.Label("•", bulletStyle, GUILayout.Width(12));
+                    GUILayout.Label(line.Trim().Substring(2), listStyle);
+                    GUILayout.EndHorizontal();
+                }
+                // Clean numbered list styling
+                else if (System.Text.RegularExpressions.Regex.IsMatch(line.Trim(), @"^\d+\. "))
+                {
+                    var listStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.85f, 0.85f, 0.85f) : new Color(0.2f, 0.2f, 0.2f) }
+                    };
+                    
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(16);
+                    GUILayout.Label(line.Trim(), listStyle);
+                    GUILayout.EndHorizontal();
+                }
+                // Clean error message styling
+                else if (line.StartsWith("❌"))
+                {
+                    GUILayout.Space(4);
+                    var errorBgStyle = new GUIStyle()
+                    {
+                        normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                            new Color(0.4f, 0.2f, 0.2f, 0.3f) : new Color(1f, 0.95f, 0.95f, 0.8f)) },
+                        padding = new RectOffset(12, 12, 8, 8)
+                    };
+                    
+                    EditorGUILayout.BeginHorizontal(errorBgStyle);
+                    var errorStyle = new GUIStyle(EditorStyles.label)
+                    {
+                        fontSize = 12,
+                        wordWrap = true,
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(1f, 0.7f, 0.7f) : new Color(0.8f, 0.2f, 0.2f) }
                     };
                     GUILayout.Label(line, errorStyle);
-                    GUILayout.Space(3);
+                    EditorGUILayout.EndHorizontal();
+                    GUILayout.Space(4);
                 }
-                // 错误详情行
+                // Clean error details
                 else if (line.StartsWith("**错误") || line.StartsWith("**已处理"))
                 {
                     var errorDetailStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
                     {
-                        normal = { textColor = new Color(1f, 0.6f, 0.6f) },
-                        fontStyle = FontStyle.Bold
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(1f, 0.8f, 0.8f) : new Color(0.7f, 0.3f, 0.3f) },
+                        fontStyle = FontStyle.Bold,
+                        padding = new RectOffset(16, 0, 0, 0)
                     };
                     GUILayout.Label(line, errorDetailStyle);
                 }
@@ -939,17 +1144,22 @@ namespace UnityAIAgent.Editor
                 {
                     RenderBoldText(line);
                 }
-                // 普通文本
+                // Clean normal text
                 else
                 {
-                    GUILayout.Label(line, EditorStyles.wordWrappedLabel);
+                    var textStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                    {
+                        normal = { textColor = EditorGUIUtility.isProSkin ? 
+                            new Color(0.9f, 0.9f, 0.9f) : new Color(0.15f, 0.15f, 0.15f) }
+                    };
+                    GUILayout.Label(line, textStyle);
                 }
             }
         }
         
         private void RenderDetailsBlock(string detailsBlock)
         {
-            // 提取summary和content
+            // Extract summary and content
             var summaryMatch = System.Text.RegularExpressions.Regex.Match(
                 detailsBlock, @"<summary>(.*?)</summary>", 
                 System.Text.RegularExpressions.RegexOptions.Singleline);
@@ -963,26 +1173,36 @@ namespace UnityAIAgent.Editor
                 .Replace("</details>", "")
                 .Trim();
             
-            // 生成唯一的折叠ID
+            // Generate unique collapse ID
             var collapseId = $"details_{summary.GetHashCode()}_{content.GetHashCode()}";
             
             if (!collapsedStates.ContainsKey(collapseId))
             {
-                collapsedStates[collapseId] = true; // 默认收缩
+                collapsedStates[collapseId] = true; // Default collapsed
             }
             
             var isCollapsed = collapsedStates[collapseId];
             
-            // 渲染可点击的summary标题
-            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(4);
+            
+            // Clean collapsible header
+            var headerBgStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.2f, 0.25f, 0.3f, 0.4f) : new Color(0.92f, 0.94f, 0.96f, 0.8f)) },
+                padding = new RectOffset(12, 12, 8, 8)
+            };
+            
+            EditorGUILayout.BeginHorizontal(headerBgStyle);
             
             var buttonStyle = new GUIStyle(EditorStyles.label)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.8f, 0.9f, 1f) }
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.85f, 0.9f, 0.95f) : new Color(0.2f, 0.3f, 0.4f) }
             };
             
-            // 折叠/展开图标
+            // Clean expand/collapse icon
             var icon = isCollapsed ? "▶" : "▼";
             if (GUILayout.Button($"{icon} {summary}", buttonStyle, GUILayout.ExpandWidth(true)))
             {
@@ -991,50 +1211,72 @@ namespace UnityAIAgent.Editor
             
             EditorGUILayout.EndHorizontal();
             
-            // 如果展开，显示内容
+            // Clean expanded content
             if (!isCollapsed)
             {
-                EditorGUILayout.BeginVertical("box");
-                GUILayout.Space(5);
+                var contentBgStyle = new GUIStyle()
+                {
+                    normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                        new Color(0.15f, 0.15f, 0.15f, 0.6f) : new Color(0.98f, 0.98f, 0.98f, 0.9f)) },
+                    padding = new RectOffset(16, 16, 12, 12),
+                    margin = new RectOffset(0, 0, 0, 4)
+                };
                 
-                // 渲染内容（支持Markdown）
+                EditorGUILayout.BeginVertical(contentBgStyle);
+                
+                // Render content with clean Markdown support
                 var contentLines = content.Split('\n');
                 foreach (var line in contentLines)
                 {
                     if (string.IsNullOrWhiteSpace(line))
                     {
-                        GUILayout.Space(2);
+                        GUILayout.Space(3);
                         continue;
                     }
                     
-                    // 简单的Markdown支持
+                    // Clean markdown styling
                     if (line.StartsWith("**") && line.EndsWith("**"))
                     {
                         var boldText = line.Substring(2, line.Length - 4);
-                        var boldStyle = new GUIStyle(EditorStyles.label) { fontStyle = FontStyle.Bold };
+                        var boldStyle = new GUIStyle(EditorStyles.label) 
+                        { 
+                            fontStyle = FontStyle.Bold,
+                            normal = { textColor = EditorGUIUtility.isProSkin ? 
+                                new Color(0.9f, 0.9f, 0.9f) : new Color(0.2f, 0.2f, 0.2f) }
+                        };
                         GUILayout.Label(boldText, boldStyle);
                     }
                     else if (line.StartsWith("```") && line.EndsWith("```"))
                     {
                         var codeText = line.Substring(3, line.Length - 6);
-                        var codeStyle = new GUIStyle(EditorStyles.textField) 
-                        { 
-                            wordWrap = true,
-                            normal = { background = null }
+                        var inlineCodeStyle = new GUIStyle(EditorStyles.label)
+                        {
+                            font = Font.CreateDynamicFontFromOSFont("Monaco", 10),
+                            normal = { 
+                                background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                                    new Color(0.1f, 0.1f, 0.1f, 0.8f) : new Color(0.93f, 0.93f, 0.93f, 0.8f)),
+                                textColor = EditorGUIUtility.isProSkin ? 
+                                    new Color(0.8f, 0.8f, 0.8f) : new Color(0.3f, 0.3f, 0.3f)
+                            },
+                            padding = new RectOffset(6, 6, 3, 3)
                         };
-                        GUILayout.Label(codeText, codeStyle);
+                        GUILayout.Label(codeText, inlineCodeStyle);
                     }
                     else
                     {
-                        GUILayout.Label(line, EditorStyles.wordWrappedLabel);
+                        var textStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                        {
+                            normal = { textColor = EditorGUIUtility.isProSkin ? 
+                                new Color(0.85f, 0.85f, 0.85f) : new Color(0.25f, 0.25f, 0.25f) }
+                        };
+                        GUILayout.Label(line, textStyle);
                     }
                 }
                 
-                GUILayout.Space(5);
                 EditorGUILayout.EndVertical();
             }
             
-            GUILayout.Space(3);
+            GUILayout.Space(4);
         }
         
         private void RenderToolHeader(string line)
@@ -1340,36 +1582,6 @@ namespace UnityAIAgent.Editor
             hasActiveStream = true;
             isProcessing = true;
             
-            // 添加超时保护机制 - 90秒后自动重置状态
-            EditorApplication.delayCall += () => {
-                System.Threading.Tasks.Task.Delay(90000).ContinueWith(_ => {
-                    if (isProcessing)
-                    {
-                        Debug.LogWarning("[AIAgentWindow] 响应超时，自动重置状态");
-                        EditorApplication.delayCall += () => {
-                            if (this != null && isProcessing)
-                            {
-                                hasActiveStream = false;
-                                isProcessing = false;
-                                currentStreamText = "";
-                                currentStreamingMessageIndex = -1;
-                                
-                                // 添加超时提示消息
-                                messages.Add(new ChatMessage
-                                {
-                                    content = "⏰ AI响应超时，界面已自动重置。您可以继续发送新消息。",
-                                    isUser = false,
-                                    timestamp = DateTime.Now
-                                });
-                                
-                                SaveChatHistory();
-                                Repaint();
-                            }
-                        };
-                    }
-                });
-            };
-            
             Repaint();
 
             try
@@ -1552,11 +1764,7 @@ namespace UnityAIAgent.Editor
             
             // 格式化错误消息
             string errorMessage = error;
-            if (error.Contains("超时"))
-            {
-                errorMessage = $"⏱️ **响应超时**\n\n{error}\n\n💡 **建议**：\n- 尝试简化您的问题\n- 检查网络连接\n- 稍后再试";
-            }
-            else if (error.Contains("SSL") || error.Contains("certificate"))
+            if (error.Contains("SSL") || error.Contains("certificate"))
             {
                 errorMessage = $"🔒 **SSL连接错误**\n\n{error}\n\n💡 **建议**：\n- 检查网络连接\n- 更新系统证书\n- 检查防火墙设置";
             }
@@ -1620,7 +1828,7 @@ namespace UnityAIAgent.Editor
                     GUI.contentColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.7f, 0.7f, 1f) : new Color(0.4f, 0.4f, 0.4f, 1f);
                 }
                 
-                if (GUILayout.Button(settingsTabNames[i], "toolbarbutton", GUILayout.Height(22)))
+                if (GUILayout.Button(settingsTabNames[i], "toolbarbutton", GUILayout.Height(30)))
                 {
                     settingsTab = i;
                 }
