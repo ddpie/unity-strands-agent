@@ -22,6 +22,12 @@ namespace UnityAIAgent.Editor
         private GUIStyle aiMessageStyle;
         private GUIStyle codeStyle;
         private GUIStyle headerStyle;
+        private GUIStyle tabBarStyle;
+        private GUIStyle tabStyle;
+        private GUIStyle activeTabStyle;
+        private GUIStyle titleStyle;
+        private GUIStyle clearButtonStyle;
+        private GUIStyle chatHeaderStyle;
         private StreamingHandler streamingHandler;
         private bool autoScroll = true;
         private bool userScrolledUp = false;
@@ -30,9 +36,15 @@ namespace UnityAIAgent.Editor
         // 折叠状态跟踪
         private Dictionary<string, bool> collapsedStates = new Dictionary<string, bool>();
         
+        // Texture cache for performance
+        private static Dictionary<Color, Texture2D> textureCache = new Dictionary<Color, Texture2D>();
+        
+        // Cached skin check for performance
+        private bool IsProSkin => EditorGUIUtility.isProSkin;
+        
         // Tab system
         private int selectedTab = 0;
-        private string[] tabNames = { "AI智能助手", "AI助手设置" };
+        private readonly string[] tabNames = { "AI智能助手", "AI助手设置" };
         
         // Settings variables from SetupWizard
         private int currentStep = 0;
@@ -45,7 +57,7 @@ namespace UnityAIAgent.Editor
         
         // MCP configuration
         private int settingsTab = 0;
-        private string[] settingsTabNames = { "设置进度", "MCP配置" };
+        private readonly string[] settingsTabNames = { "设置进度", "MCP配置" };
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
@@ -73,21 +85,19 @@ namespace UnityAIAgent.Editor
             var window = GetWindow<AIAgentWindow>(typeof(SceneView));
             window.titleContent = new GUIContent("AI助手");
             window.minSize = new Vector2(500, 700);
+            
+            // 确保窗口组件正确初始化
+            if (window.streamingHandler == null)
+            {
+                window.InitializeStreamingHandler();
+            }
         }
 
         private void OnEnable()
         {
             LoadChatHistory();
             InitializeStyles();
-            
-            // Initialize streaming handler
-            if (streamingHandler == null)
-            {
-                streamingHandler = new StreamingHandler();
-                streamingHandler.OnChunkReceived += OnStreamChunkReceived;
-                streamingHandler.OnStreamCompleted += OnStreamComplete;
-                streamingHandler.OnStreamError += OnStreamError;
-            }
+            InitializeStreamingHandler();
             
             // Initialize MCP configuration
             LoadMCPConfiguration();
@@ -97,6 +107,25 @@ namespace UnityAIAgent.Editor
             EditorApplication.delayCall += () => {
                 PythonManager.EnsureInitialized();
             };
+        }
+        
+        private void InitializeStreamingHandler()
+        {
+            if (streamingHandler == null)
+            {
+                try
+                {
+                    streamingHandler = new StreamingHandler();
+                    streamingHandler.OnChunkReceived += OnStreamChunkReceived;
+                    streamingHandler.OnStreamCompleted += OnStreamComplete;
+                    streamingHandler.OnStreamError += OnStreamError;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"StreamingHandler 初始化失败: {e.Message}");
+                    streamingHandler = null;
+                }
+            }
         }
 
         private void OnDisable()
@@ -110,50 +139,106 @@ namespace UnityAIAgent.Editor
                 streamingHandler.OnStreamCompleted -= OnStreamComplete;
                 streamingHandler.OnStreamError -= OnStreamError;
             }
+            
+            // Clean up texture cache periodically to prevent memory leaks
+            if (textureCache.Count > 20) // Keep cache size reasonable
+            {
+                textureCache.Clear();
+            }
         }
 
         private void InitializeStyles()
         {
-            // Clean modern styles
+            if (userMessageStyle != null) return;
+            
+            // User message - simple clean border
+            userMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
+            userMessageStyle.normal.background = MakeColorTexture(GetThemeColor(
+                new Color(0.22f, 0.24f, 0.28f, 0.8f), new Color(0.95f, 0.96f, 0.98f, 1f)));
+            userMessageStyle.border = new RectOffset(1, 1, 1, 1);
+            userMessageStyle.padding = new RectOffset(16, 16, 12, 12);
+            userMessageStyle.margin = new RectOffset(40, 8, 4, 4);
+            userMessageStyle.normal.textColor = GetThemeColor(
+                new Color(0.95f, 0.95f, 0.95f), new Color(0.1f, 0.1f, 0.15f));
+
+            // AI message - simple clean border
+            aiMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
+            aiMessageStyle.normal.background = MakeColorTexture(GetThemeColor(
+                new Color(0.18f, 0.18f, 0.18f, 0.9f), new Color(0.98f, 0.98f, 0.98f, 1f)));
+            aiMessageStyle.border = new RectOffset(1, 1, 1, 1);
+            aiMessageStyle.padding = new RectOffset(16, 16, 12, 12);
+            aiMessageStyle.margin = new RectOffset(8, 40, 4, 4);
+            aiMessageStyle.normal.textColor = GetThemeColor(
+                new Color(0.95f, 0.95f, 0.95f), new Color(0.1f, 0.1f, 0.15f));
+
+            // Code blocks - clean monospace
+            codeStyle = new GUIStyle(EditorStyles.textArea);
+            codeStyle.font = Font.CreateDynamicFontFromOSFont("Monaco", 11);
+            codeStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                new Color(0.12f, 0.12f, 0.12f, 0.9f) : new Color(0.95f, 0.95f, 0.95f, 0.9f));
+            codeStyle.padding = new RectOffset(12, 12, 8, 8);
+            codeStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
+                new Color(0.85f, 0.85f, 0.85f) : new Color(0.2f, 0.2f, 0.2f);
+                
+            stepStyle = new GUIStyle(EditorStyles.label);
+            statusStyle = new GUIStyle(EditorStyles.helpBox);
+            headerStyle = new GUIStyle(EditorStyles.boldLabel);
+            
+            // Tab styles - modern flat design like Unity's native tabs
+            tabBarStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(GetThemeColor(
+                    new Color(0.22f, 0.22f, 0.22f, 1f), new Color(0.95f, 0.95f, 0.95f, 1f))) },
+                padding = new RectOffset(0, 0, 0, 0)
+            };
+            
+            tabStyle = new GUIStyle()
+            {
+                fontSize = 11,
+                fontStyle = FontStyle.Normal,
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(16, 16, 8, 8),
+                margin = new RectOffset(0, 0, 0, 0),
+                fixedHeight = 28,
+                border = new RectOffset(0, 0, 0, 0),
+                normal = { background = null, textColor = GetThemeColor(
+                    new Color(0.7f, 0.7f, 0.7f), new Color(0.5f, 0.5f, 0.5f)) },
+                hover = { background = MakeColorTexture(GetThemeColor(
+                    new Color(0.24f, 0.24f, 0.24f, 1f), new Color(0.92f, 0.92f, 0.92f, 1f))) }
+            };
+            
+            // Active tab style
+            activeTabStyle = new GUIStyle(tabStyle);
+            activeTabStyle.normal.background = MakeColorTexture(GetThemeColor(
+                new Color(0.26f, 0.26f, 0.26f, 1f), new Color(0.88f, 0.88f, 0.88f, 1f)));
+            activeTabStyle.normal.textColor = GetThemeColor(
+                new Color(0.95f, 0.95f, 0.95f), new Color(0.2f, 0.2f, 0.2f));
+            
+            titleStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                fontSize = 14,
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.2f, 0.2f, 0.2f) }
+            };
+            
+            clearButtonStyle = new GUIStyle(EditorStyles.miniButton)
+            {
+                normal = { textColor = EditorGUIUtility.isProSkin ? 
+                    new Color(0.7f, 0.7f, 0.7f) : new Color(0.4f, 0.4f, 0.4f) }
+            };
+            
+            // Chat interface header style
+            chatHeaderStyle = new GUIStyle()
+            {
+                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
+                    new Color(0.2f, 0.2f, 0.2f, 0.8f) : new Color(0.95f, 0.95f, 0.95f, 0.8f)) },
+                padding = new RectOffset(16, 16, 12, 12)
+            };
         }
 
         private void OnGUI()
         {
-            // Initialize clean modern styles
-            if (userMessageStyle == null)
-            {
-                // User message - simple clean border
-                userMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                userMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.22f, 0.24f, 0.28f, 0.8f) : new Color(0.95f, 0.96f, 0.98f, 1f));
-                userMessageStyle.border = new RectOffset(1, 1, 1, 1);
-                userMessageStyle.padding = new RectOffset(16, 16, 12, 12);
-                userMessageStyle.margin = new RectOffset(40, 8, 4, 4);
-                userMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.95f, 0.95f, 0.95f) : new Color(0.1f, 0.1f, 0.15f);
-
-                // AI message - simple clean border
-                aiMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
-                aiMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.18f, 0.18f, 0.18f, 0.9f) : new Color(0.98f, 0.98f, 0.98f, 1f));
-                aiMessageStyle.border = new RectOffset(1, 1, 1, 1);
-                aiMessageStyle.padding = new RectOffset(16, 16, 12, 12);
-                aiMessageStyle.margin = new RectOffset(8, 40, 4, 4);
-                aiMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.95f, 0.95f, 0.95f) : new Color(0.1f, 0.1f, 0.15f);
-
-                // Code blocks - clean monospace
-                codeStyle = new GUIStyle(EditorStyles.textArea);
-                codeStyle.font = Font.CreateDynamicFontFromOSFont("Monaco", 11);
-                codeStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.12f, 0.12f, 0.12f, 0.9f) : new Color(0.95f, 0.95f, 0.95f, 0.9f));
-                codeStyle.padding = new RectOffset(12, 12, 8, 8);
-                codeStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.85f, 0.85f, 0.85f) : new Color(0.2f, 0.2f, 0.2f);
-                
-                stepStyle = new GUIStyle(EditorStyles.label);
-                statusStyle = new GUIStyle(EditorStyles.helpBox);
-            }
+            InitializeStyles();
             
             // Tab selector
             DrawTabSelector();
@@ -171,51 +256,35 @@ namespace UnityAIAgent.Editor
         
         private void DrawTabSelector()
         {
-            var tabBarStyle = new GUIStyle()
-            {
-                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.18f, 0.18f, 0.18f, 1f) : new Color(0.93f, 0.93f, 0.93f, 1f)) },
-                padding = new RectOffset(8, 8, 8, 8)
-            };
-            
             EditorGUILayout.BeginHorizontal(tabBarStyle);
             
             for (int i = 0; i < tabNames.Length; i++)
             {
                 bool isSelected = selectedTab == i;
-                
-                var tabStyle = new GUIStyle(EditorStyles.miniButton)
-                {
-                    fontSize = 12,
-                    padding = new RectOffset(20, 20, 8, 8),
-                    margin = new RectOffset(2, 2, 0, 0),
-                    fixedHeight = 30
-                };
-                
-                var originalColor = GUI.backgroundColor;
-                var originalContentColor = GUI.contentColor;
+                var currentStyle = isSelected ? activeTabStyle : tabStyle;
                 
                 if (isSelected)
                 {
-                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? 
-                        new Color(0.3f, 0.5f, 0.8f, 1f) : new Color(0.2f, 0.4f, 0.8f, 1f);
-                    GUI.contentColor = Color.white;
+                    // Active tab with bottom indicator
+                    var tabRect = GUILayoutUtility.GetRect(new GUIContent(tabNames[i]), currentStyle);
+                    if (GUI.Button(tabRect, tabNames[i], currentStyle))
+                    {
+                        selectedTab = i;
+                    }
+                    
+                    // Draw active indicator (bottom line)
+                    var indicatorRect = new Rect(tabRect.x, tabRect.yMax - 2, tabRect.width, 2);
+                    EditorGUI.DrawRect(indicatorRect, GetThemeColor(
+                        new Color(0.3f, 0.6f, 1f), new Color(0.2f, 0.5f, 0.9f)));
                 }
                 else
                 {
-                    GUI.backgroundColor = EditorGUIUtility.isProSkin ? 
-                        new Color(0.25f, 0.25f, 0.25f, 1f) : new Color(0.88f, 0.88f, 0.88f, 1f);
-                    GUI.contentColor = EditorGUIUtility.isProSkin ? 
-                        new Color(0.7f, 0.7f, 0.7f) : new Color(0.4f, 0.4f, 0.4f);
+                    // Inactive tab
+                    if (GUILayout.Button(tabNames[i], currentStyle))
+                    {
+                        selectedTab = i;
+                    }
                 }
-                
-                if (GUILayout.Button(tabNames[i], tabStyle))
-                {
-                    selectedTab = i;
-                }
-                
-                GUI.backgroundColor = originalColor;
-                GUI.contentColor = originalContentColor;
             }
             
             EditorGUILayout.EndHorizontal();
@@ -230,30 +299,11 @@ namespace UnityAIAgent.Editor
         
         private void DrawChatInterface()
         {
-            // Clean header with minimal design
-            var headerStyle = new GUIStyle()
-            {
-                normal = { background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.2f, 0.2f, 0.2f, 0.8f) : new Color(0.95f, 0.95f, 0.95f, 0.8f)) },
-                padding = new RectOffset(16, 16, 12, 12)
-            };
+            EditorGUILayout.BeginHorizontal(chatHeaderStyle);
             
-            EditorGUILayout.BeginHorizontal(headerStyle);
-            
-            var titleStyle = new GUIStyle(EditorStyles.boldLabel)
-            {
-                fontSize = 14,
-                normal = { textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.2f, 0.2f, 0.2f) }
-            };
             GUILayout.Label("AI助手", titleStyle);
             GUILayout.FlexibleSpace();
             
-            var clearButtonStyle = new GUIStyle(EditorStyles.miniButton)
-            {
-                normal = { textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.7f, 0.7f, 0.7f) : new Color(0.4f, 0.4f, 0.4f) }
-            };
             if (GUILayout.Button("清空", clearButtonStyle, GUILayout.Width(50)))
             {
                 messages.Clear();
@@ -380,12 +430,15 @@ namespace UnityAIAgent.Editor
                 
                 if (GUILayout.Button("停止", stopButtonStyle, GUILayout.Width(90)))
                 {
-                    streamingHandler.StopStreaming();
+                    if (streamingHandler != null)
+                    {
+                        streamingHandler.StopStreaming();
+                    }
                 }
             }
             else
             {
-                GUI.enabled = !isProcessing && !string.IsNullOrWhiteSpace(userInput);
+                GUI.enabled = !isProcessing && IsValidString(userInput) && streamingHandler != null;
                 if (GUILayout.Button("发送", buttonStyle, GUILayout.Width(90)) || 
                     (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return && Event.current.control))
                 {
@@ -519,7 +572,7 @@ namespace UnityAIAgent.Editor
                 if (i % 2 == 0)
                 {
                     // 正常文本 - 进行进一步Markdown解析
-                    if (!string.IsNullOrWhiteSpace(parts[i]))
+                    if (IsValidString(parts[i]))
                     {
                         RenderTextWithMarkdown(parts[i].Trim());
                     }
@@ -1825,6 +1878,17 @@ namespace UnityAIAgent.Editor
 
             try
             {
+                // 确保 streamingHandler 已初始化
+                if (streamingHandler == null)
+                {
+                    InitializeStreamingHandler();
+                }
+                
+                if (streamingHandler == null)
+                {
+                    throw new InvalidOperationException("StreamingHandler 初始化失败");
+                }
+                
                 // 开始流式响应
                 await streamingHandler.StartStreaming(currentInput);
             }
@@ -1901,11 +1965,22 @@ namespace UnityAIAgent.Editor
 
         private Texture2D MakeColorTexture(Color color)
         {
+            if (textureCache.TryGetValue(color, out Texture2D cachedTexture))
+            {
+                return cachedTexture;
+            }
+            
             var texture = new Texture2D(1, 1);
             texture.SetPixel(0, 0, color);
             texture.Apply();
+            textureCache[color] = texture;
             return texture;
         }
+        
+        // Helper methods for performance optimization
+        private static bool IsValidString(string str) => !string.IsNullOrWhiteSpace(str);
+        
+        private Color GetThemeColor(Color proColor, Color lightColor) => IsProSkin ? proColor : lightColor;
         
 
         [Serializable]
