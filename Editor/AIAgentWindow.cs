@@ -10,6 +10,38 @@ namespace UnityAIAgent.Editor
 {
     public class AIAgentWindow : EditorWindow
     {
+        static AIAgentWindow()
+        {
+            // 监听程序域重载事件，清理静态缓存
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            System.AppDomain.CurrentDomain.DomainUnload += OnDomainUnload;
+        }
+        
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode || state == PlayModeStateChange.ExitingPlayMode)
+            {
+                // 清理纹理缓存
+                foreach (var texture in textureCache.Values)
+                {
+                    if (texture != null)
+                        DestroyImmediate(texture);
+                }
+                textureCache.Clear();
+            }
+        }
+        
+        private static void OnDomainUnload(object sender, EventArgs e)
+        {
+            // 程序域卸载时清理资源
+            foreach (var texture in textureCache.Values)
+            {
+                if (texture != null)
+                    DestroyImmediate(texture);
+            }
+            textureCache.Clear();
+        }
+        
         private string userInput = "";
         private List<ChatMessage> messages = new List<ChatMessage>();
         private Vector2 scrollPosition;
@@ -95,6 +127,10 @@ namespace UnityAIAgent.Editor
 
         private void OnEnable()
         {
+            // 重置状态
+            isProcessing = false;
+            hasActiveStream = false;
+            
             LoadChatHistory();
             InitializeStyles();
             InitializeStreamingHandler();
@@ -140,16 +176,19 @@ namespace UnityAIAgent.Editor
                 streamingHandler.OnStreamError -= OnStreamError;
             }
             
-            // Clean up texture cache periodically to prevent memory leaks
-            if (textureCache.Count > 20) // Keep cache size reasonable
-            {
-                textureCache.Clear();
-            }
+            // Clean up texture cache and handle domain reload
+            CleanupTextureCache();
         }
 
         private void InitializeStyles()
         {
-            if (userMessageStyle != null) return;
+            // 检查样式是否需要重新初始化（处理域重载情况）
+            bool needsReinit = userMessageStyle == null || 
+                              userMessageStyle.normal.background == null ||
+                              aiMessageStyle == null ||
+                              aiMessageStyle.normal.background == null;
+            
+            if (!needsReinit) return;
             
             // User message - simple clean border
             userMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
@@ -239,6 +278,12 @@ namespace UnityAIAgent.Editor
         private void OnGUI()
         {
             InitializeStyles();
+            
+            // 确保 StreamingHandler 在每次 GUI 渲染时都已初始化
+            if (streamingHandler == null)
+            {
+                InitializeStreamingHandler();
+            }
             
             // Tab selector
             DrawTabSelector();
@@ -438,7 +483,9 @@ namespace UnityAIAgent.Editor
             }
             else
             {
-                GUI.enabled = !isProcessing && IsValidString(userInput) && streamingHandler != null;
+                bool canSend = !isProcessing && IsValidString(userInput) && streamingHandler != null;
+                GUI.enabled = canSend;
+                
                 if (GUILayout.Button("发送", buttonStyle, GUILayout.Width(90)) || 
                     (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return && Event.current.control))
                 {
@@ -448,6 +495,19 @@ namespace UnityAIAgent.Editor
             
             GUI.enabled = true;
             EditorGUILayout.EndHorizontal();
+            
+            // Status info
+            if (!isProcessing && !string.IsNullOrWhiteSpace(userInput) && streamingHandler == null)
+            {
+                EditorGUILayout.HelpBox("StreamingHandler 未初始化，请稍等...", MessageType.Warning);
+            }
+            else if (string.IsNullOrWhiteSpace(userInput))
+            {
+                var hintStyle = new GUIStyle(EditorStyles.miniLabel);
+                hintStyle.normal.textColor = GetThemeColor(
+                    new Color(0.6f, 0.6f, 0.6f), new Color(0.5f, 0.5f, 0.5f));
+                EditorGUILayout.LabelField("输入您的问题，然后点击发送或按 Ctrl+Enter", hintStyle);
+            }
             
             GUILayout.Space(8);
             
@@ -1965,7 +2025,7 @@ namespace UnityAIAgent.Editor
 
         private Texture2D MakeColorTexture(Color color)
         {
-            if (textureCache.TryGetValue(color, out Texture2D cachedTexture))
+            if (textureCache.TryGetValue(color, out Texture2D cachedTexture) && cachedTexture != null)
             {
                 return cachedTexture;
             }
@@ -1973,6 +2033,7 @@ namespace UnityAIAgent.Editor
             var texture = new Texture2D(1, 1);
             texture.SetPixel(0, 0, color);
             texture.Apply();
+            texture.hideFlags = HideFlags.HideAndDontSave; // 防止被意外销毁
             textureCache[color] = texture;
             return texture;
         }
@@ -1981,6 +2042,22 @@ namespace UnityAIAgent.Editor
         private static bool IsValidString(string str) => !string.IsNullOrWhiteSpace(str);
         
         private Color GetThemeColor(Color proColor, Color lightColor) => IsProSkin ? proColor : lightColor;
+        
+        private void CleanupTextureCache()
+        {
+            if (textureCache.Count > 20) // Keep cache size reasonable
+            {
+                // 销毁所有缓存的纹理
+                foreach (var texture in textureCache.Values)
+                {
+                    if (texture != null)
+                    {
+                        DestroyImmediate(texture);
+                    }
+                }
+                textureCache.Clear();
+            }
+        }
         
 
         [Serializable]
