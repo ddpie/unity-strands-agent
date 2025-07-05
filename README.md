@@ -178,7 +178,7 @@ UnityAIAgent/
    Unity菜单 → Window → AI助手 → 聊天
    ```
 
-2. **编程集成**（如需要）
+2. **编程集成**
    ```csharp
    // 发送消息给AI
    string response = PythonBridge.ProcessMessage("你好，AI！");

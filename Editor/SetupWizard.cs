@@ -41,7 +41,7 @@ namespace UnityAIAgent.Editor
         private readonly string[] setupSteps = {
             "检测Python环境",
             "检测Node.js环境",
-            "安装Node.js和npm(如需要)",
+            "安装Node.js和npm",
             "创建虚拟环境", 
             "安装Strands Agent SDK",
             "安装MCP支持包(可选)",
@@ -620,7 +620,7 @@ namespace UnityAIAgent.Editor
                 UpdateProgress("检测Node.js环境...", 0.12f);
                 bool nodeInstalled = await CheckNodeJsInstalled();
                 
-                // 步骤3: 安装Node.js和npm(如需要)
+                // 步骤3: 安装Node.js和npm
                 if (!nodeInstalled)
                 {
                     UpdateProgress("安装Node.js和npm...", 0.16f);

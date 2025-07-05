@@ -54,10 +54,10 @@ namespace UnityAIAgent.Editor
         private readonly string[] setupSteps = {
             "检测Python环境",
             "检测Node.js环境",
-            "安装Node.js和npm(如需要)",
+            "安装Node.js和npm",
             "创建虚拟环境", 
             "安装Strands Agent SDK",
-            "安装MCP支持包(可选)",
+            "安装MCP支持包",
             "安装SSL证书支持",
             "安装其他依赖包",
             "配置环境变量",
@@ -70,7 +70,8 @@ namespace UnityAIAgent.Editor
         [MenuItem("Window/AI助手/AI助手")]
         public static void ShowWindow()
         {
-            var window = GetWindow<AIAgentWindow>("AI助手");
+            var window = GetWindow<AIAgentWindow>(typeof(SceneView));
+            window.titleContent = new GUIContent("AI助手");
             window.minSize = new Vector2(500, 700);
         }
 
