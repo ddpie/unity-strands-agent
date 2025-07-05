@@ -1094,6 +1094,19 @@ namespace UnityAIAgent.Editor
         
         private void RenderToolProgress(string line)
         {
+            // 检查是否包含JSON数据
+            if (IsJsonContent(line))
+            {
+                RenderJsonToolProgress(line);
+            }
+            else
+            {
+                RenderRegularToolProgress(line);
+            }
+        }
+        
+        private void RenderRegularToolProgress(string line)
+        {
             // 创建缩进的工具进度样式
             var progressStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
             {
@@ -1121,6 +1134,189 @@ namespace UnityAIAgent.Editor
             GUILayout.Label(line.TrimStart(), progressStyle);
             EditorGUILayout.EndHorizontal();
             GUILayout.Space(1);
+        }
+        
+        private void RenderJsonToolProgress(string line)
+        {
+            string trimmedLine = line.TrimStart();
+            
+            // 提取JSON部分和前缀
+            string prefix = "";
+            string jsonContent = "";
+            
+            if (trimmedLine.Contains("原始数据:"))
+            {
+                var parts = trimmedLine.Split(new[] { "原始数据:" }, 2, StringSplitOptions.None);
+                if (parts.Length == 2)
+                {
+                    prefix = parts[0] + "原始数据:";
+                    jsonContent = parts[1].Trim();
+                }
+            }
+            else if (trimmedLine.Contains(":") && (trimmedLine.Contains("{") || trimmedLine.Contains("[")))
+            {
+                var colonIndex = trimmedLine.IndexOf(':');
+                prefix = trimmedLine.Substring(0, colonIndex + 1);
+                jsonContent = trimmedLine.Substring(colonIndex + 1).Trim();
+            }
+            else
+            {
+                RenderRegularToolProgress(line);
+                return;
+            }
+            
+            // 创建展开/收缩的唯一ID
+            string collapseId = $"json_{prefix.GetHashCode()}_{jsonContent.GetHashCode()}";
+            if (!collapsedStates.ContainsKey(collapseId))
+            {
+                collapsedStates[collapseId] = true; // 默认收缩显示
+            }
+            
+            bool isCollapsed = collapsedStates[collapseId];
+            
+            // 渲染前缀和展开/收缩按钮
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(30); // 缩进
+            
+            var prefixStyle = new GUIStyle(EditorStyles.label)
+            {
+                normal = { textColor = new Color(0.6f, 0.8f, 1f) },
+                fontSize = 11
+            };
+            
+            // 展开/收缩图标
+            string icon = isCollapsed ? "▶" : "▼";
+            var iconStyle = new GUIStyle(EditorStyles.label)
+            {
+                normal = { textColor = new Color(0.8f, 0.8f, 0.8f) },
+                fontSize = 10
+            };
+            
+            if (GUILayout.Button($"{icon} {prefix}", iconStyle, GUILayout.ExpandWidth(false)))
+            {
+                collapsedStates[collapseId] = !isCollapsed;
+            }
+            
+            if (isCollapsed)
+            {
+                // 收缩状态：显示简化的JSON预览
+                var previewStyle = new GUIStyle(EditorStyles.label)
+                {
+                    normal = { textColor = new Color(0.6f, 0.6f, 0.6f) },
+                    fontSize = 10,
+                    fontStyle = FontStyle.Italic
+                };
+                GUILayout.Label(GetJsonPreview(jsonContent), previewStyle);
+            }
+            
+            EditorGUILayout.EndHorizontal();
+            
+            // 展开状态：显示格式化的JSON
+            if (!isCollapsed)
+            {
+                EditorGUILayout.BeginVertical();
+                GUILayout.Space(30 + 10); // 额外缩进
+                
+                string formattedJson = FormatJsonString(jsonContent);
+                
+                var jsonStyle = new GUIStyle(EditorStyles.textArea)
+                {
+                    font = Font.CreateDynamicFontFromOSFont("Courier New", 10),
+                    normal = { 
+                        background = MakeColorTexture(new Color(0.1f, 0.1f, 0.1f, 0.8f)),
+                        textColor = new Color(0.9f, 0.9f, 0.9f)
+                    },
+                    padding = new RectOffset(10, 10, 8, 8),
+                    wordWrap = true
+                };
+                
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(40);
+                
+                var rect = EditorGUILayout.GetControlRect(false, jsonStyle.CalcHeight(new GUIContent(formattedJson), Screen.width - 80));
+                GUI.Box(rect, "", jsonStyle);
+                GUI.Label(rect, formattedJson, jsonStyle);
+                
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+            }
+            
+            GUILayout.Space(2);
+        }
+        
+        private bool IsJsonContent(string line)
+        {
+            string trimmed = line.TrimStart();
+            return (trimmed.Contains("原始数据:") && (trimmed.Contains("{") || trimmed.Contains("["))) ||
+                   (trimmed.Contains(":") && (trimmed.Contains("{'") || trimmed.Contains("{\"") || 
+                    trimmed.Contains("[{") || trimmed.Contains("['") || trimmed.Contains("[\"") ||
+                    trimmed.Contains("'message':") || trimmed.Contains("\"message\":")));
+        }
+        
+        private string GetJsonPreview(string jsonContent)
+        {
+            if (string.IsNullOrEmpty(jsonContent)) return "";
+            
+            // 简化的JSON预览
+            if (jsonContent.Length > 50)
+            {
+                return jsonContent.Substring(0, 47) + "...";
+            }
+            return jsonContent;
+        }
+        
+        private string FormatJsonString(string jsonContent)
+        {
+            if (string.IsNullOrEmpty(jsonContent)) return "";
+            
+            try
+            {
+                // 简单的JSON格式化
+                string formatted = jsonContent;
+                
+                // 基本的格式化处理
+                formatted = formatted.Replace("{'", "{\n  '")
+                                   .Replace("\":", "\": ")
+                                   .Replace("',", "',\n  ")
+                                   .Replace("\",", "\",\n  ")
+                                   .Replace("}", "\n}")
+                                   .Replace("[{", "[\n  {")
+                                   .Replace("}]", "}\n]")
+                                   .Replace("}, {", "},\n  {");
+                
+                // 修复缩进
+                var lines = formatted.Split('\n');
+                var result = new System.Text.StringBuilder();
+                int indentLevel = 0;
+                
+                foreach (var line in lines)
+                {
+                    string trimmedLine = line.Trim();
+                    if (string.IsNullOrEmpty(trimmedLine)) continue;
+                    
+                    // 减少缩进
+                    if (trimmedLine.StartsWith("}") || trimmedLine.StartsWith("]"))
+                    {
+                        indentLevel = Math.Max(0, indentLevel - 1);
+                    }
+                    
+                    // 添加缩进
+                    result.AppendLine(new string(' ', indentLevel * 2) + trimmedLine);
+                    
+                    // 增加缩进
+                    if (trimmedLine.EndsWith("{") || trimmedLine.EndsWith("["))
+                    {
+                        indentLevel++;
+                    }
+                }
+                
+                return result.ToString().TrimEnd();
+            }
+            catch
+            {
+                // 如果格式化失败，返回原始内容
+                return jsonContent;
+            }
         }
 
         private async void SendMessage()
