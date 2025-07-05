@@ -12,7 +12,6 @@ namespace UnityAIAgent.Editor
     public static class PythonBridge
     {
         private static dynamic agentCore;
-        private static dynamic streamingAgent;
         private static bool isInitialized = false;
 
         /// <summary>
@@ -54,7 +53,7 @@ namespace UnityAIAgent.Editor
                     
                     // 导入Python模块
                     agentCore = Py.Import("agent_core");
-                    streamingAgent = Py.Import("streaming_agent");
+                    // streaming_agent functionality is now integrated into agent_core
                     
                     // 配置Python日志输出到Unity Console
                     ConfigurePythonLogging();
@@ -146,7 +145,9 @@ namespace UnityAIAgent.Editor
                         {
                             // 获取流式生成器
                             Debug.Log("[Unity] 创建流式生成器");
-                            dynamic streamGen = streamingAgent.process_message_stream(message);
+                            // 使用agent_core的流式处理功能
+                            dynamic unityAgent = agentCore.get_agent();
+                            dynamic streamGen = unityAgent.process_message_stream(message);
                             Debug.Log("[Unity] 流式生成器创建成功，开始处理流...");
                             
                             // 处理流式数据
@@ -360,7 +361,7 @@ class UnityLogHandler(logging.Handler):
         sys.stdout.flush()
 
 # 获取根logger和相关logger
-loggers = ['agent_core', 'streaming_agent', 'strands']
+loggers = ['agent_core', 'strands']
 unity_handler = UnityLogHandler()
 unity_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
