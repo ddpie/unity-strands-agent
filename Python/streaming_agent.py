@@ -75,27 +75,10 @@ async def process_message_stream(message: str) -> AsyncGenerator[str, None]:
         logger.info(f"开始使用Unity代理处理消息: {message[:50]}...")
         logger.info(f"可用工具: {unity_agent.get_available_tools()}")
         
-        # 添加超时保护
-        last_chunk_time = asyncio.get_event_loop().time()
-        timeout_seconds = 60  # 60秒无响应超时
-        
         # 使用异步流式API - 使用Unity代理的流式方法
         response_text = ""
         seen_chunks = set()  # 用于去重chunk内容
         async for chunk in unity_agent.process_message_stream(message):
-            # 检查超时
-            current_time = asyncio.get_event_loop().time()
-            if current_time - last_chunk_time > timeout_seconds:
-                logger.error(f"流式响应超时，超过{timeout_seconds}秒无响应")
-                yield json.dumps({
-                    "type": "error",
-                    "error": f"响应超时：超过{timeout_seconds}秒无新数据",
-                    "done": True
-                }, ensure_ascii=False, separators=(',', ':'))
-                break
-            
-            # 更新最后接收时间
-            last_chunk_time = current_time
             logger.debug(f"收到chunk: {chunk}")
             
             # 处理Unity代理返回的JSON格式块
