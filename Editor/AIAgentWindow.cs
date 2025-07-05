@@ -121,23 +121,25 @@ namespace UnityAIAgent.Editor
             // Initialize clean modern styles
             if (userMessageStyle == null)
             {
-                // User message - clean card style
+                // User message - simple clean border
                 userMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
                 userMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.25f, 0.25f, 0.3f, 0.4f) : new Color(0.9f, 0.9f, 0.95f, 0.8f));
+                    new Color(0.22f, 0.24f, 0.28f, 0.8f) : new Color(0.95f, 0.96f, 0.98f, 1f));
+                userMessageStyle.border = new RectOffset(1, 1, 1, 1);
                 userMessageStyle.padding = new RectOffset(16, 16, 12, 12);
                 userMessageStyle.margin = new RectOffset(40, 8, 4, 4);
                 userMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.1f, 0.1f, 0.1f);
+                    new Color(0.95f, 0.95f, 0.95f) : new Color(0.1f, 0.1f, 0.15f);
 
-                // AI message - clean card style
+                // AI message - simple clean border
                 aiMessageStyle = new GUIStyle(EditorStyles.wordWrappedLabel);
                 aiMessageStyle.normal.background = MakeColorTexture(EditorGUIUtility.isProSkin ? 
-                    new Color(0.18f, 0.18f, 0.18f, 0.6f) : new Color(0.98f, 0.98f, 0.98f, 0.9f));
+                    new Color(0.18f, 0.18f, 0.18f, 0.9f) : new Color(0.98f, 0.98f, 0.98f, 1f));
+                aiMessageStyle.border = new RectOffset(1, 1, 1, 1);
                 aiMessageStyle.padding = new RectOffset(16, 16, 12, 12);
                 aiMessageStyle.margin = new RectOffset(8, 40, 4, 4);
                 aiMessageStyle.normal.textColor = EditorGUIUtility.isProSkin ? 
-                    new Color(0.9f, 0.9f, 0.9f) : new Color(0.1f, 0.1f, 0.1f);
+                    new Color(0.95f, 0.95f, 0.95f) : new Color(0.1f, 0.1f, 0.15f);
 
                 // Code blocks - clean monospace
                 codeStyle = new GUIStyle(EditorStyles.textArea);
@@ -366,7 +368,16 @@ namespace UnityAIAgent.Editor
             
             if (streamingHandler != null && streamingHandler.IsStreaming)
             {
-                if (GUILayout.Button("停止", buttonStyle, GUILayout.Width(90)))
+                GUI.enabled = true; // 确保停止按钮可以点击
+                
+                // 停止按钮使用稍微不同的样式来突出显示
+                var stopButtonStyle = new GUIStyle(buttonStyle)
+                {
+                    normal = { textColor = EditorGUIUtility.isProSkin ? 
+                        new Color(1f, 0.8f, 0.8f) : new Color(0.8f, 0.2f, 0.2f) }
+                };
+                
+                if (GUILayout.Button("停止", stopButtonStyle, GUILayout.Width(90)))
                 {
                     streamingHandler.StopStreaming();
                 }
@@ -1019,7 +1030,10 @@ namespace UnityAIAgent.Editor
                 }
                 
                 // 工具调用处理 - 美化显示
-                if ((line.Contains("🔧") && line.Contains("**工具")) || line.StartsWith("Tool #"))
+                if ((line.Contains("🔧") && line.Contains("**工具")) || 
+                    line.StartsWith("Tool #") || 
+                    line.Contains("工具调用") ||
+                    System.Text.RegularExpressions.Regex.IsMatch(line, @"[▶▼►◆♦]\s*工具调用"))
                 {
                     // 渲染工具标题
                     RenderToolHeader(line);
@@ -1204,7 +1218,24 @@ namespace UnityAIAgent.Editor
             
             // Clean expand/collapse icon
             var icon = isCollapsed ? "▶" : "▼";
-            if (GUILayout.Button($"{icon} {summary}", buttonStyle, GUILayout.ExpandWidth(true)))
+            
+            // 增强工具调用的显示
+            string displaySummary = summary;
+            if (summary == "工具调用" || summary.Contains("工具调用"))
+            {
+                // 尝试从content中提取工具信息
+                string toolInfo = ExtractToolInfoFromContent(content);
+                if (!string.IsNullOrEmpty(toolInfo))
+                {
+                    displaySummary = $"工具调用 - {toolInfo}";
+                }
+                else
+                {
+                    displaySummary = "工具调用 - 执行操作";
+                }
+            }
+            
+            if (GUILayout.Button($"{icon} {displaySummary}", buttonStyle, GUILayout.ExpandWidth(true)))
             {
                 collapsedStates[collapseId] = !isCollapsed;
             }
@@ -1291,11 +1322,47 @@ namespace UnityAIAgent.Editor
                 // 格式2: "Tool #1: file_read"
                 match = System.Text.RegularExpressions.Regex.Match(line, @"Tool #(\d+): (.+)");
             }
+            if (!match.Success)
+            {
+                // 格式3: "▶ 工具调用" 或带其他前缀的工具调用
+                match = System.Text.RegularExpressions.Regex.Match(line, @"[▶▼►◆♦]?\s*工具调用");
+            }
+            if (!match.Success)
+            {
+                // 格式4: 纯"工具调用"文本
+                match = System.Text.RegularExpressions.Regex.Match(line, @"工具调用");
+            }
             
             if (match.Success)
             {
-                var toolNumber = match.Groups[1].Value;
-                var toolName = match.Groups[2].Value;
+                var toolNumber = "?";
+                var toolName = "unknown";
+                var toolDescription = "";
+                
+                // 检查是否有捕获组
+                if (match.Groups.Count > 2)
+                {
+                    toolNumber = match.Groups[1].Value;
+                    toolName = match.Groups[2].Value;
+                    toolDescription = GetToolDescription(toolName);
+                }
+                else
+                {
+                    // 只是简单的"工具调用"匹配，尝试从整行中提取更多信息
+                    toolDescription = "执行操作";
+                    if (line.Contains("文件"))
+                    {
+                        toolDescription = "文件操作";
+                    }
+                    else if (line.Contains("代码"))
+                    {
+                        toolDescription = "代码分析";
+                    }
+                    else if (line.Contains("搜索"))
+                    {
+                        toolDescription = "内容搜索";
+                    }
+                }
                 
                 // 创建突出的工具调用样式
                 var toolBoxStyle = new GUIStyle(EditorStyles.helpBox)
@@ -1321,7 +1388,17 @@ namespace UnityAIAgent.Editor
                     fontSize = 13,
                     normal = { textColor = new Color(0.8f, 1f, 0.8f) }
                 };
-                GUILayout.Label($"工具调用 #{toolNumber}: {toolName}", toolStyle);
+                // 根据信息完整性显示不同的文本
+                string displayText;
+                if (toolNumber != "?" && toolName != "unknown")
+                {
+                    displayText = $"工具调用 #{toolNumber}: {toolName} - {toolDescription}";
+                }
+                else
+                {
+                    displayText = $"工具调用 - {toolDescription}";
+                }
+                GUILayout.Label(displayText, toolStyle);
                 
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.EndVertical();
@@ -1332,6 +1409,167 @@ namespace UnityAIAgent.Editor
                 // 回退到普通文本显示
                 GUILayout.Label(line, EditorStyles.wordWrappedLabel);
             }
+        }
+        
+        private string ExtractToolInfoFromContent(string content)
+        {
+            // 从content中提取工具信息
+            if (string.IsNullOrEmpty(content)) return "";
+            
+            // 首先尝试提取具体的文件名或路径
+            string fileName = ExtractFileNameFromContent(content);
+            
+            // 根据内容判断具体操作类型
+            if (content.Contains("toolResult") && content.Contains("text") && content.Contains("Content of"))
+            {
+                // 读取文件操作
+                if (!string.IsNullOrEmpty(fileName))
+                    return $"读取 {fileName}";
+                return "读取文件";
+            }
+            
+            if (content.Contains("原始数据") && content.Contains("message"))
+            {
+                // 原始数据操作，尝试从中提取更多信息
+                if (content.Contains(".cs"))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(content, @"(\w+\.cs)");
+                    if (match.Success)
+                        return $"处理 {match.Groups[1].Value}";
+                }
+                return "原始数据";
+            }
+            
+            // 检查是否是创建文件操作
+            if (content.Contains("using UnityEngine") || content.Contains("public class"))
+            {
+                if (!string.IsNullOrEmpty(fileName))
+                    return $"创建 {fileName}";
+                return "创建文件";
+            }
+            
+            // 检查Shell命令
+            if (content.Contains("shell") || content.Contains("bash"))
+            {
+                var cmdMatch = System.Text.RegularExpressions.Regex.Match(content, @"['""](.+?)['""]");
+                if (cmdMatch.Success)
+                {
+                    var cmd = cmdMatch.Groups[1].Value;
+                    if (cmd.Length > 30)
+                        cmd = cmd.Substring(0, 30) + "...";
+                    return $"执行: {cmd}";
+                }
+                return "执行命令";
+            }
+            
+            // 搜索操作
+            if (content.Contains("search") || content.Contains("grep") || content.Contains("find"))
+                return "搜索内容";
+            
+            // Git操作
+            if (content.Contains("git "))
+                return "Git操作";
+            
+            // 通用文件操作
+            if (content.Contains("file_read"))
+                return !string.IsNullOrEmpty(fileName) ? $"读取 {fileName}" : "读取文件";
+            if (content.Contains("file_write"))
+                return !string.IsNullOrEmpty(fileName) ? $"写入 {fileName}" : "写入文件";
+            if (content.Contains("edit"))
+                return !string.IsNullOrEmpty(fileName) ? $"编辑 {fileName}" : "编辑文件";
+            
+            // 如果没有匹配到特定操作，返回简短描述
+            var firstLine = content.Split('\n')[0].Trim();
+            if (firstLine.Length > 25)
+                firstLine = firstLine.Substring(0, 25) + "...";
+            
+            return firstLine;
+        }
+        
+        private string ExtractFileNameFromContent(string content)
+        {
+            // 尝试从内容中提取文件名
+            
+            // 匹配 .cs 文件
+            var csMatch = System.Text.RegularExpressions.Regex.Match(content, @"(\w+\.cs)");
+            if (csMatch.Success)
+                return csMatch.Groups[1].Value;
+            
+            // 匹配完整路径中的文件名
+            var pathMatch = System.Text.RegularExpressions.Regex.Match(content, @"[/\\]([^/\\]+\.[a-zA-Z]+)");
+            if (pathMatch.Success)
+                return pathMatch.Groups[1].Value;
+            
+            // 匹配 Assets 路径
+            var assetsMatch = System.Text.RegularExpressions.Regex.Match(content, @"Assets[/\\].+?[/\\]([^/\\]+)");
+            if (assetsMatch.Success)
+                return assetsMatch.Groups[1].Value;
+            
+            return "";
+        }
+        
+        private string GetToolDescription(string toolName)
+        {
+            // 根据工具名称返回有意义的描述
+            return toolName.ToLower() switch
+            {
+                "file_read" or "read" => "读取文件内容",
+                "file_write" or "write" => "写入文件内容", 
+                "shell" or "bash" => "执行命令行指令",
+                "search" or "grep" => "搜索文件内容",
+                "ls" or "list" => "列出目录文件",
+                "edit" => "编辑文件内容",
+                "create" => "创建新文件",
+                "delete" => "删除文件",
+                "move" => "移动文件",
+                "copy" => "复制文件",
+                "find" => "查找文件",
+                "git" => "Git版本控制",
+                "npm" => "Node包管理",
+                "python" => "执行Python脚本",
+                "unity" => "Unity操作",
+                "build" => "构建项目",
+                "test" => "运行测试",
+                "deploy" => "部署应用",
+                "debug" => "调试代码",
+                "compile" => "编译代码",
+                "format" => "格式化代码",
+                "lint" => "代码检查",
+                "install" => "安装依赖",
+                "update" => "更新包",
+                "config" => "配置设置",
+                "backup" => "备份数据",
+                "restore" => "恢复数据",
+                "compress" => "压缩文件",
+                "extract" => "解压文件",
+                "network" => "网络请求",
+                "database" => "数据库操作",
+                "api" => "API调用",
+                "json" => "JSON处理",
+                "xml" => "XML处理",
+                "csv" => "CSV处理",
+                "log" => "日志查看",
+                "monitor" => "系统监控",
+                "performance" => "性能分析",
+                _ => GetGenericToolDescription(toolName)
+            };
+        }
+        
+        private string GetGenericToolDescription(string toolName)
+        {
+            // 为未知工具提供通用描述
+            if (toolName.Contains("_"))
+            {
+                var parts = toolName.Split('_');
+                return parts.Length > 1 ? $"{parts[0]} {parts[1]}操作" : "执行工具操作";
+            }
+            
+            if (toolName.Length > 8)
+            {
+                return "执行专用工具";
+            }
+            
+            return "工具执行";
         }
         
         private void RenderToolProgress(string line)
@@ -1667,6 +1905,7 @@ namespace UnityAIAgent.Editor
             texture.Apply();
             return texture;
         }
+        
 
         [Serializable]
         private class ChatMessage
