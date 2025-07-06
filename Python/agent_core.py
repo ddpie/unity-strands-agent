@@ -7,113 +7,27 @@ import sys
 import os
 import ssl
 from unity_system_prompt import UNITY_SYSTEM_PROMPT
+from ssl_config import configure_ssl_for_unity, get_ssl_config
 # 确保使用UTF-8编码
 if sys.version_info >= (3, 7):
     if hasattr(sys, 'set_int_max_str_digits'):
         sys.set_int_max_str_digits(0)
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-# 配置SSL证书路径 - Unity环境特殊处理
-def configure_ssl_for_unity():
-    """为Unity环境配置SSL证书"""
-    try:
-        import certifi
-        # 使用certifi提供的证书束
-        cert_path = certifi.where()
-        
-        # 验证证书文件存在
-        if os.path.exists(cert_path):
-            os.environ['SSL_CERT_FILE'] = cert_path
-            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
-            os.environ['CURL_CA_BUNDLE'] = cert_path
-            print(f"[Python] ✓ 使用certifi证书路径: {cert_path}")
-            return True
-        else:
-            print(f"[Python] ⚠️ certifi证书文件不存在: {cert_path}")
-            
-    except ImportError as e:
-        print(f"[Python] ⚠️ certifi不可用: {e}")
-    
-    # 尝试系统Python的certifi路径
-    system_certifi_paths = [
-        # 最新版本优先
-        '/usr/local/lib/python3.13/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.12/site-packages/certifi/cacert.pem', 
-        '/usr/local/lib/python3.11/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.10/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.9/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.8/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.7/site-packages/certifi/cacert.pem',
-        '/usr/local/lib/python3.6/site-packages/certifi/cacert.pem',
-        # macOS Framework路径
-        '/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.8/lib/python3.8/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages/certifi/cacert.pem',
-        '/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/certifi/cacert.pem',   
-    ]
-    for cert_path in system_certifi_paths:
-        if os.path.exists(cert_path):
-            os.environ['SSL_CERT_FILE'] = cert_path
-            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
-            os.environ['CURL_CA_BUNDLE'] = cert_path
-            print(f"[Python] ✓ 使用系统Python证书路径: {cert_path}")
-            return True
-    
-    # 尝试macOS系统证书路径
-    macos_cert_paths = [
-        '/etc/ssl/cert.pem',  # 标准位置
-        '/usr/local/etc/openssl/cert.pem',  # Homebrew OpenSSL
-        '/opt/homebrew/etc/openssl/cert.pem',  # Apple Silicon Homebrew
-        '/System/Library/OpenSSL/certs/cert.pem',  # 系统OpenSSL
-    ]
-    
-    for cert_path in macos_cert_paths:
-        if os.path.exists(cert_path):
-            os.environ['SSL_CERT_FILE'] = cert_path
-            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
-            os.environ['CURL_CA_BUNDLE'] = cert_path
-            print(f"[Python] ✓ 使用系统证书路径: {cert_path}")
-            return True
-    
-    print("[Python] ⚠️ 未找到有效的SSL证书，将禁用SSL验证")
-    return False
+# SSL配置已移至独立模块ssl_config.py
 
 # 执行SSL配置
 ssl_configured = configure_ssl_for_unity()
 
-# 配置SSL上下文
-try:
-    import ssl
-    if ssl_configured:
-        print("[Python] ✓ SSL验证已启用，使用配置的证书")
-    else:
-        # 如果找不到证书，临时禁用SSL验证以确保连接
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        
-        # 设置环境变量禁用SSL验证
-        os.environ['PYTHONHTTPSVERIFY'] = '0'
-        os.environ['CURL_CA_BUNDLE'] = ''
-        os.environ['REQUESTS_CA_BUNDLE'] = ''
-        
-        print("[Python] ⚠️ SSL验证已禁用 - 仅用于开发环境")
-except Exception as e:
-    print(f"[Python] SSL配置警告: {e}")
-    pass
+# 获取SSL配置实例并配置AWS SSL
+ssl_config_instance = get_ssl_config()
+ssl_config_instance.configure_aws_ssl()
 
-# 额外的SSL配置用于AWS请求
-try:
-    import boto3
-    import botocore.config
-    # 为boto3配置SSL设置
-    if not ssl_configured:
-        print("[Python] 为AWS Bedrock配置SSL设置")
-except ImportError:
-    pass
+# 输出SSL配置状态
+if ssl_configured:
+    print("[Python] ✓ SSL验证已启用，使用配置的证书")
+else:
+    print("[Python] ⚠️ SSL验证已禁用 - 仅用于开发环境")
 
 from strands import Agent
 import json
