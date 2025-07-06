@@ -26,7 +26,7 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### 企业级功能
 
-- **多模型支持**: 兼容 Amazon Bedrock、Anthropic、OpenAI、Meta Llama 等主流 AI 服务
+- **AI 模型集成**: 当前支持 Amazon Bedrock，其他主流 AI 服务（Anthropic、OpenAI、Meta Llama 等）支持开发中
 - **上下文记忆**: 智能记住项目偏好和代码风格，提供个性化开发建议
 - **团队协作**: 学习团队编码规范，自动调整代码以符合团队标准
 
@@ -38,7 +38,7 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 - **操作系统**: macOS 10.15+ / Windows 10+ / Ubuntu 18.04+
 - **Python**: 3.10 或更高版本（支持自动检测和配置）
 - **Node.js**: 16.0 或更高版本（用于 MCP 工具支持）
-- **AI 模型访问**: 支持 AWS Bedrock、Anthropic、OpenAI、Meta Llama 等服务提供商
+- **AI 模型访问**: 需要配置 AWS CLI 凭证以使用 Amazon Bedrock 服务
 
 ### 安装方法
 
@@ -80,7 +80,7 @@ cd unity-strands-agent
    ![MCP配置](Assets/Resources/settings_3.png)
 
 4. **模型配置**
-   - 根据需要配置 AI 模型提供商（AWS Bedrock、Anthropic、OpenAI 等）
+   - 配置 AWS CLI 凭证以使用 Amazon Bedrock 服务
    - 详细配置说明请参考 [Strands Agent SDK 官方文档](https://strandsagents.com/latest/)
 
 5. **开始使用**
@@ -157,7 +157,7 @@ flowchart TD
 
 **AI模型 & 外部服务层**
 
-- **AI模型**: 集成 Amazon Bedrock、Anthropic、OpenAI、Meta Llama 等主流 AI 服务
+- **AI模型**: 当前支持通过 AWS CLI 本地凭证调用 Amazon Bedrock 服务，基于 Strands Agent SDK 的灵活架构，可轻松扩展支持其他模型提供商（详见 [Strands 官方文档](https://strandsagents.com/latest/)）
 - **MCP服务器**: Unity 专属和通用的工具服务器，提供编辑器操作、文档查询、文件管理等功能
 
 ### 工具生态系统
@@ -225,9 +225,9 @@ Strands Agent SDK 是 AWS 推出的开源 AI 代理框架，采用模型驱动�
 
 #### 模型兼容性
 
-- **多模型支持**: 兼容 Amazon Bedrock、Anthropic、OpenAI、Meta Llama、Ollama 等
+- **模型支持**: 当前支持 Amazon Bedrock，基于 Strands Agent SDK 架构可轻松扩展支持 Anthropic、OpenAI、Meta Llama、Ollama 等模型
 - **跨平台部署**: 可在云端、混合环境或本地运行
-- **灵活集成**: 通过 LiteLLM 支持更多模型提供商
+- **灵活集成**: Strands Agent SDK 提供简单的模型接入机制，详见 [官方文档](https://strandsagents.com/latest/)
 
 #### 多智能体协作
 
