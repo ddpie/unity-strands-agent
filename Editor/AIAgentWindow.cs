@@ -126,7 +126,7 @@ namespace UnityAIAgent.Editor
             };
         }
 
-        [MenuItem("Window/AI Assistant/AI Assistant")]
+        [MenuItem("Window/Unity Strands Agent")]
         public static void ShowWindow()
         {
             // 使用反射获取InspectorWindow类型，以便将AI助手停靠在右侧
@@ -150,11 +150,11 @@ namespace UnityAIAgent.Editor
             else
             {
                 // 降级方案：创建独立窗口并放置在右侧
-                window = GetWindow<AIAgentWindow>(LanguageManager.GetText("AI助手", "AI Assistant"), true);
+                window = GetWindow<AIAgentWindow>("Unity Strands Agent", true);
                 window.position = new Rect(Screen.width - 600, 100, 550, 800);
             }
             
-            window.titleContent = new GUIContent(LanguageManager.GetText("AI助手", "AI Assistant"));
+            window.titleContent = new GUIContent("Unity Strands Agent");
             window.minSize = new Vector2(500, 700);
             
             // 确保窗口组件正确初始化
@@ -1420,17 +1420,17 @@ namespace UnityAIAgent.Editor
             
             // 增强工具调用的显示
             string displaySummary = summary;
-            if (summary == "工具调用" || summary.Contains("工具调用"))
+            if (summary == "工具调用" || summary.Contains("工具调用") || summary == "Tool Call" || summary.Contains("Tool Call"))
             {
                 // 尝试从content中提取工具信息
                 string toolInfo = ExtractToolInfoFromContent(content);
                 if (!string.IsNullOrEmpty(toolInfo))
                 {
-                    displaySummary = $"工具调用 - {toolInfo}";
+                    displaySummary = $"{LanguageManager.GetText("工具调用", "Tool Call")} - {toolInfo}";
                 }
                 else
                 {
-                    displaySummary = "工具调用 - 执行操作";
+                    displaySummary = $"{LanguageManager.GetText("工具调用", "Tool Call")} - {LanguageManager.GetText("执行操作", "Executing")}";
                 }
             }
             
@@ -1591,11 +1591,11 @@ namespace UnityAIAgent.Editor
                 string displayText;
                 if (toolNumber != "?" && toolName != "unknown")
                 {
-                    displayText = $"工具调用 #{toolNumber}: {toolName} - {toolDescription}";
+                    displayText = $"{LanguageManager.GetText("工具调用", "Tool Call")} #{toolNumber}: {toolName} - {toolDescription}";
                 }
                 else
                 {
-                    displayText = $"工具调用 - {toolDescription}";
+                    displayText = $"{LanguageManager.GetText("工具调用", "Tool Call")} - {toolDescription}";
                 }
                 GUILayout.Label(displayText, toolStyle);
                 
@@ -1623,28 +1623,28 @@ namespace UnityAIAgent.Editor
             {
                 // 读取文件操作
                 if (!string.IsNullOrEmpty(fileName))
-                    return $"读取 {fileName}";
-                return "读取文件";
+                    return $"{LanguageManager.GetText("读取", "Read")} {fileName}";
+                return LanguageManager.GetText("读取文件", "Read File");
             }
             
-            if (content.Contains("原始数据") && content.Contains("message"))
+            if ((content.Contains("原始数据") || content.Contains("raw data")) && content.Contains("message"))
             {
                 // 原始数据操作，尝试从中提取更多信息
                 if (content.Contains(".cs"))
                 {
                     var match = System.Text.RegularExpressions.Regex.Match(content, @"(\w+\.cs)");
                     if (match.Success)
-                        return $"处理 {match.Groups[1].Value}";
+                        return $"{LanguageManager.GetText("处理", "Processing")} {match.Groups[1].Value}";
                 }
-                return "原始数据";
+                return LanguageManager.GetText("原始数据", "Raw Data");
             }
             
             // 检查是否是创建文件操作
             if (content.Contains("using UnityEngine") || content.Contains("public class"))
             {
                 if (!string.IsNullOrEmpty(fileName))
-                    return $"创建 {fileName}";
-                return "创建文件";
+                    return $"{LanguageManager.GetText("创建", "Create")} {fileName}";
+                return LanguageManager.GetText("创建文件", "Create File");
             }
             
             // 检查Shell命令
@@ -1656,26 +1656,26 @@ namespace UnityAIAgent.Editor
                     var cmd = cmdMatch.Groups[1].Value;
                     if (cmd.Length > 30)
                         cmd = cmd.Substring(0, 30) + "...";
-                    return $"执行: {cmd}";
+                    return $"{LanguageManager.GetText("执行", "Execute")}: {cmd}";
                 }
-                return "执行命令";
+                return LanguageManager.GetText("执行命令", "Execute Command");
             }
             
             // 搜索操作
             if (content.Contains("search") || content.Contains("grep") || content.Contains("find"))
-                return "搜索内容";
+                return LanguageManager.GetText("搜索内容", "Search Content");
             
             // Git操作
             if (content.Contains("git "))
-                return "Git操作";
+                return LanguageManager.GetText("Git操作", "Git Operation");
             
             // 通用文件操作
             if (content.Contains("file_read"))
-                return !string.IsNullOrEmpty(fileName) ? $"读取 {fileName}" : "读取文件";
+                return !string.IsNullOrEmpty(fileName) ? $"{LanguageManager.GetText("读取", "Read")} {fileName}" : LanguageManager.GetText("读取文件", "Read File");
             if (content.Contains("file_write"))
-                return !string.IsNullOrEmpty(fileName) ? $"写入 {fileName}" : "写入文件";
+                return !string.IsNullOrEmpty(fileName) ? $"{LanguageManager.GetText("写入", "Write")} {fileName}" : LanguageManager.GetText("写入文件", "Write File");
             if (content.Contains("edit"))
-                return !string.IsNullOrEmpty(fileName) ? $"编辑 {fileName}" : "编辑文件";
+                return !string.IsNullOrEmpty(fileName) ? $"{LanguageManager.GetText("编辑", "Edit")} {fileName}" : LanguageManager.GetText("编辑文件", "Edit File");
             
             // 如果没有匹配到特定操作，返回简短描述
             var firstLine = content.Split('\n')[0].Trim();
@@ -1712,44 +1712,44 @@ namespace UnityAIAgent.Editor
             // 根据工具名称返回有意义的描述
             return toolName.ToLower() switch
             {
-                "file_read" or "read" => "读取文件内容",
-                "file_write" or "write" => "写入文件内容", 
-                "shell" or "bash" => "执行命令行指令",
-                "search" or "grep" => "搜索文件内容",
-                "ls" or "list" => "列出目录文件",
-                "edit" => "编辑文件内容",
-                "create" => "创建新文件",
-                "delete" => "删除文件",
-                "move" => "移动文件",
-                "copy" => "复制文件",
-                "find" => "查找文件",
-                "git" => "Git版本控制",
-                "npm" => "Node包管理",
-                "python" => "执行Python脚本",
-                "unity" => "Unity操作",
-                "build" => "构建项目",
-                "test" => "运行测试",
-                "deploy" => "部署应用",
-                "debug" => "调试代码",
-                "compile" => "编译代码",
-                "format" => "格式化代码",
-                "lint" => "代码检查",
-                "install" => "安装依赖",
-                "update" => "更新包",
-                "config" => "配置设置",
-                "backup" => "备份数据",
-                "restore" => "恢复数据",
-                "compress" => "压缩文件",
-                "extract" => "解压文件",
-                "network" => "网络请求",
-                "database" => "数据库操作",
-                "api" => "API调用",
-                "json" => "JSON处理",
-                "xml" => "XML处理",
-                "csv" => "CSV处理",
-                "log" => "日志查看",
-                "monitor" => "系统监控",
-                "performance" => "性能分析",
+                "file_read" or "read" => LanguageManager.GetText("读取文件内容", "Read file content"),
+                "file_write" or "write" => LanguageManager.GetText("写入文件内容", "Write file content"), 
+                "shell" or "bash" => LanguageManager.GetText("执行命令行指令", "Execute shell command"),
+                "search" or "grep" => LanguageManager.GetText("搜索文件内容", "Search file content"),
+                "ls" or "list" => LanguageManager.GetText("列出目录文件", "List directory files"),
+                "edit" => LanguageManager.GetText("编辑文件内容", "Edit file content"),
+                "create" => LanguageManager.GetText("创建新文件", "Create new file"),
+                "delete" => LanguageManager.GetText("删除文件", "Delete file"),
+                "move" => LanguageManager.GetText("移动文件", "Move file"),
+                "copy" => LanguageManager.GetText("复制文件", "Copy file"),
+                "find" => LanguageManager.GetText("查找文件", "Find file"),
+                "git" => LanguageManager.GetText("Git版本控制", "Git version control"),
+                "npm" => LanguageManager.GetText("Node包管理", "Node package management"),
+                "python" => LanguageManager.GetText("执行Python脚本", "Execute Python script"),
+                "unity" => LanguageManager.GetText("Unity操作", "Unity operation"),
+                "build" => LanguageManager.GetText("构建项目", "Build project"),
+                "test" => LanguageManager.GetText("运行测试", "Run tests"),
+                "deploy" => LanguageManager.GetText("部署应用", "Deploy application"),
+                "debug" => LanguageManager.GetText("调试代码", "Debug code"),
+                "compile" => LanguageManager.GetText("编译代码", "Compile code"),
+                "format" => LanguageManager.GetText("格式化代码", "Format code"),
+                "lint" => LanguageManager.GetText("代码检查", "Lint code"),
+                "install" => LanguageManager.GetText("安装依赖", "Install dependencies"),
+                "update" => LanguageManager.GetText("更新包", "Update packages"),
+                "config" => LanguageManager.GetText("配置设置", "Configure settings"),
+                "backup" => LanguageManager.GetText("备份数据", "Backup data"),
+                "restore" => LanguageManager.GetText("恢复数据", "Restore data"),
+                "compress" => LanguageManager.GetText("压缩文件", "Compress files"),
+                "extract" => LanguageManager.GetText("解压文件", "Extract files"),
+                "network" => LanguageManager.GetText("网络请求", "Network request"),
+                "database" => LanguageManager.GetText("数据库操作", "Database operation"),
+                "api" => LanguageManager.GetText("API调用", "API call"),
+                "json" => LanguageManager.GetText("JSON处理", "JSON processing"),
+                "xml" => LanguageManager.GetText("XML处理", "XML processing"),
+                "csv" => LanguageManager.GetText("CSV处理", "CSV processing"),
+                "log" => LanguageManager.GetText("日志查看", "View logs"),
+                "monitor" => LanguageManager.GetText("系统监控", "System monitoring"),
+                "performance" => LanguageManager.GetText("性能分析", "Performance analysis"),
                 _ => GetGenericToolDescription(toolName)
             };
         }
@@ -1760,15 +1760,15 @@ namespace UnityAIAgent.Editor
             if (toolName.Contains("_"))
             {
                 var parts = toolName.Split('_');
-                return parts.Length > 1 ? $"{parts[0]} {parts[1]}操作" : "执行工具操作";
+                return parts.Length > 1 ? $"{parts[0]} {parts[1]}{LanguageManager.GetText("操作", "operation")}" : LanguageManager.GetText("执行工具操作", "Execute tool operation");
             }
             
             if (toolName.Length > 8)
             {
-                return "执行专用工具";
+                return LanguageManager.GetText("执行专用工具", "Execute specialized tool");
             }
             
-            return "工具执行";
+            return LanguageManager.GetText("工具执行", "Tool execution");
         }
         
         private void RenderToolProgress(string line)
@@ -3403,8 +3403,8 @@ namespace UnityAIAgent.Editor
             // 主界面标签
             tabNames = new string[]
             {
-                LanguageManager.GetText("AI智能助手", "AI Assistant"),
-                LanguageManager.GetText("AI助手设置", "AI Assistant Settings")
+                "Unity Strands Agent",
+                LanguageManager.GetText("设置", "Settings")
             };
             
             // 设置界面标签

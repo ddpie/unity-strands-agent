@@ -1,4 +1,4 @@
-# Unity Strands Agent 智能助手插件 | Unity Strands Agent AI Assistant Plugin
+# Unity Strands Agent
 
 **Language / 语言**: [中文](#中文版本) | [English](#english-version)
 
@@ -18,19 +18,19 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### Unity 集成优势
 
-**深度工作流整合**
+##### 深度工作流整合
 
 - **项目结构理解**: 智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
 - **组件管理**: 自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
 - **性能优化**: 基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
 
-**工具生态系统**
+##### 工具生态系统
 
 - **预构建工具**: 提供 21 个内置工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
 - **MCP 协议支持**: 通过 Model Context Protocol 扩展第三方工具和服务集成能力
 - **可选扩展**: 支持浏览器自动化、高级内存管理等可选功能模块
 
-**企业级功能**
+##### 企业级功能
 
 - **AI 模型集成**: 当前支持 Amazon Bedrock，Strands Agent SDK 支持其他主流 AI 服务（Anthropic、OpenAI、Meta Llama 等）
 - **上下文记忆**: 智能记住项目偏好和代码风格，提供个性化开发建议
@@ -48,14 +48,14 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### 安装方法
 
-**方法一：Unity Package Manager（推荐）**
+##### 方法一：Unity Package Manager（推荐）
 
 1. 在 Unity 中打开 Package Manager
 2. 点击 "Add package from git URL"
 3. 输入：`https://github.com/ddpie/unity-strands-agent.git`
 4. 等待 Unity 自动下载和导入
 
-**方法二：本地安装**
+##### 方法二：本地安装
 
 1. 下载项目源码到本地
 2. 在 Unity Package Manager 中选择 "Add package from disk"
@@ -64,8 +64,8 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 #### 配置步骤
 
 1. **路径配置**
-   - 打开 Unity 菜单 → Window → AI助手 → 设置向导
-   - 切换到"路径配置"标签页，配置系统依赖路径
+   - 打开 Unity 菜单 → Window → Unity Strands Agent
+   - 切换到"设置"标签页，然后选择"路径配置"
    - 使用"自动检测"功能快速配置常见路径
    - 展开"查看/编辑环境变量"查看和管理所有环境变量
 
@@ -91,13 +91,13 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### 基本功能
 
-1. **打开 AI 助手**: 在 Unity 中选择菜单 Window → AI助手 → AI助手
+1. **打开 Unity Strands Agent**: 在 Unity 中选择菜单 Window → Unity Strands Agent
 2. **开始对话**: 在聊天界面输入问题或需求
-3. **查看建议**: AI 助手将提供代码生成、优化建议和问题解决方案
+3. **查看建议**: Unity Strands Agent 将提供代码生成、优化建议和问题解决方案
 
 #### 高级功能
 
-- **项目分析**: AI 助手能够分析整个项目结构，理解组件关系
+- **项目分析**: Unity Strands Agent 能够分析整个项目结构，理解组件关系
 - **代码生成**: 根据需求生成符合项目风格的 C# 脚本
 - **性能优化**: 提供针对性的性能优化建议
 - **问题诊断**: 帮助诊断和解决常见的 Unity 开发问题
@@ -106,11 +106,11 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### 概述
 
-路径配置系统提供统一的路径管理，将系统依赖路径提取到可配置界面中，方便用户根据不同环境进行调整。该功能已集成到 AI 助手的设置界面中。
+路径配置系统提供统一的路径管理，将系统依赖路径提取到可配置界面中，方便用户根据不同环境进行调整。该功能已集成到 Unity Strands Agent 的设置界面中。
 
 #### 主要功能
 
-- **集成配置界面**: 路径配置集成在 AI 助手设置界面中
+- **集成配置界面**: 路径配置集成在 Unity Strands Agent 设置界面中
 - **相对路径支持**: 优先使用相对路径，便于项目迁移
 - **自动检测**: 自动检测常见的路径位置
 - **配置验证**: 实时验证配置的有效性
@@ -120,7 +120,7 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 #### 使用方法
 
 1. **打开配置界面**
-   在 Unity Editor 中选择菜单：`Window > AI助手 > 设置向导`，切换到"路径配置"标签页
+   在 Unity Editor 中选择菜单：`Window > Unity Strands Agent`，切换到"设置"标签页，然后选择"路径配置"
 
 2. **基本路径配置**
    - **项目根目录**: Unity 项目的根目录，其他相对路径基于此目录
@@ -213,10 +213,10 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 
 #### 项目结构
 
-```
+```text
 unity-strands-agent/
 ├── Editor/                     # Unity Editor扩展
-│   ├── AIAgentWindow.cs        # AI助手主界面
+│   ├── AIAgentWindow.cs        # Unity Strands Agent主界面
 │   ├── SetupWizard.cs         # 设置向导
 │   ├── PythonManager.cs       # Python环境管理
 │   ├── PathManager.cs         # 路径管理系统
@@ -252,35 +252,36 @@ unity-strands-agent/
 
 ## English Version
 
-Unity Strands Agent is an intelligent assistant plugin for Unity development based on the open-source AWS Strands Agent SDK, providing Unity developers with intelligent code generation, project optimization suggestions, and real-time Q&A support.
+Unity Strands Agent is a powerful AI-powered development assistant that brings the capabilities of AWS's open-source Strands Agent SDK directly into the Unity Editor. This plugin transforms your Unity development workflow by providing intelligent code generation, automated problem-solving, and context-aware development suggestions.
 
-![Unity Strands Agent Demo](Assets/Resources/unity-strands-agent-demo.png)
+![Unity Strands Agent Demo](Assets/Resources/unity_strands_agent_demo_en.png)
 
 ### Project Overview
 
-Unity Strands Agent integrates advanced AI capabilities directly into the Unity Editor, providing intelligent development assistance through deep understanding of Unity development workflows. The plugin is designed with a modular architecture, supports multiple AI models, and provides a rich ecosystem of tools.
+Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your Unity development environment. Built on the robust Strands Agent SDK framework, this plugin understands Unity's unique development patterns, component systems, and best practices to deliver contextually relevant assistance. With support for 21+ built-in tools and extensible MCP (Model Context Protocol) integration, it adapts to your project's specific needs and coding standards.
 
 ### Key Features
 
-#### Unity Integration Advantages
+#### Unity-Native Integration
 
-**Deep Workflow Integration**
+##### Deep Unity Engine Understanding
 
-- **Project Structure Understanding**: Intelligently identifies Unity project structure and provides targeted code generation and problem-solving solutions
-- **Component Management**: Automatically handles GameObject and component dependencies, ensuring code follows Unity best practices
-- **Performance Optimization**: Provides targeted optimization suggestions based on Unity-specific performance bottleneck analysis
+- **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
+- **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
+- **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
 
-**Tool Ecosystem**
+#### Comprehensive Tool Ecosystem
 
-- **Pre-built Tools**: Provides 21 built-in tools covering file operations, API calls, mathematical calculations, AI services, workflow management, etc.
-- **MCP Protocol Support**: Extends third-party tool and service integration capabilities through Model Context Protocol
-- **Optional Extensions**: Supports optional functional modules such as browser automation and advanced memory management
+- **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
+- **MCP Protocol Support**: Seamlessly integrate external tools and services through the Model Context Protocol for unlimited extensibility
+- **Smart Tool Selection**: AI automatically selects the right tools for your task, from simple file edits to complex multi-step operations
 
-**Enterprise-level Features**
+#### Enterprise-Ready Features
 
-- **AI Model Integration**: Currently supports Amazon Bedrock, Strands Agent SDK supports other mainstream AI services (Anthropic, OpenAI, Meta Llama, etc.)
-- **Context Memory**: Intelligently remembers project preferences and coding styles, providing personalized development suggestions
-- **Team Collaboration**: Learns team coding standards and automatically adjusts code to meet team standards
+- **Multiple AI Model Support**: Powered by Amazon Bedrock with support for Claude, GPT, Llama, and other leading AI models
+- **Persistent Context Memory**: Remembers your project patterns, coding style, and preferences across sessions
+- **Team Standardization**: Learns and enforces your team's coding conventions, naming patterns, and architectural decisions
+- **Language Adaptation**: Automatically responds in your preferred language (English/Chinese) based on input
 
 ### Quick Start
 
@@ -294,14 +295,14 @@ Unity Strands Agent integrates advanced AI capabilities directly into the Unity 
 
 #### Installation Methods
 
-**Method 1: Unity Package Manager (Recommended)**
+##### Method 1: Unity Package Manager (Recommended)
 
 1. Open Package Manager in Unity
 2. Click "Add package from git URL"
 3. Enter: `https://github.com/ddpie/unity-strands-agent.git`
 4. Wait for Unity to automatically download and import
 
-**Method 2: Local Installation**
+##### Method 2: Local Installation
 
 1. Download the project source code locally
 2. Select "Add package from disk" in Unity Package Manager
@@ -310,53 +311,67 @@ Unity Strands Agent integrates advanced AI capabilities directly into the Unity 
 #### Configuration Steps
 
 1. **Path Configuration**
-   - Open Unity Menu → Window → AI Assistant → Setup Wizard
-   - Switch to "Path Configuration" tab to configure system dependency paths
+   - Open Unity Menu → Window → Unity Strands Agent
+   - Switch to "Settings" tab, then select "Path Configuration"
    - Use "Auto Detect" function to quickly configure common paths
    - Expand "View/Edit Environment Variables" to view and manage all environment variables
 
-   ![Path Configuration](Assets/Resources/settings_1.png)
+   ![Path Configuration](Assets/Resources/settings_1_en.png)
 
 2. **Environment Installation**
    - Click "Start Auto Setup" in the "Environment Installation" tab
    - The system will automatically complete the installation of Python environment, Strands Agent SDK, and dependency packages
 
-   ![Environment Installation](Assets/Resources/settings_2.png)
+   ![Environment Setup](Assets/Resources/settings_2_en.png)
 
 3. **MCP Configuration**
    - Configure external tools and services in the "MCP Configuration" tab
    - Add and configure MCP servers as needed
 
-   ![MCP Configuration](Assets/Resources/settings_3.png)
+   ![MCP Configuration](Assets/Resources/settings_3_en.png)
 
 4. **Model Configuration**
    - Configure AWS CLI credentials to use Amazon Bedrock services
    - For detailed configuration instructions, please refer to [Strands Agent SDK Official Documentation](https://strandsagents.com/latest/)
 
-### User Guide
+### Getting Started
 
-#### Basic Functions
+#### Basic Usage
 
-1. **Open AI Assistant**: Select menu Window → AI Assistant → AI Assistant in Unity
-2. **Start Conversation**: Enter questions or requirements in the chat interface
-3. **View Suggestions**: The AI assistant will provide code generation, optimization suggestions, and problem-solving solutions
+1. **Launch the Assistant**: Navigate to `Window → Unity Strands Agent` in Unity Editor
+2. **Ask Questions**: Type your development questions or describe what you want to build
+3. **Get Intelligent Responses**: Receive contextual code suggestions, explanations, and step-by-step solutions
 
-#### Advanced Functions
+#### Core Capabilities
 
-- **Project Analysis**: The AI assistant can analyze the entire project structure and understand component relationships
-- **Code Generation**: Generate C# scripts that conform to project style based on requirements
-- **Performance Optimization**: Provide targeted performance optimization suggestions
-- **Problem Diagnosis**: Help diagnose and solve common Unity development problems
+- **Smart Code Analysis**: Understands your existing codebase and suggests improvements that match your project's style
+- **Instant Code Generation**: Creates production-ready C# scripts with proper Unity patterns and optimizations
+- **Intelligent Debugging**: Diagnoses issues in your Unity project and provides targeted solutions
+- **Performance Insights**: Identifies performance bottlenecks specific to Unity and suggests optimization strategies
+- **Automated Refactoring**: Helps modernize legacy code while maintaining Unity compatibility
+
+#### Example Interactions
+
+```text
+You: "Create a player controller with double jump"
+Agent: [Generates complete PlayerController.cs with proper Unity input handling, physics, and state management]
+
+You: "Why is my game lagging on mobile?"
+Agent: [Analyzes your project, identifies draw call issues, suggests batching strategies and LOD implementation]
+
+You: "Refactor this singleton to use ScriptableObject"
+Agent: [Converts your singleton pattern to Unity's ScriptableObject architecture with migration guide]
+```
 
 ### Path Configuration System
 
 #### Overview
 
-The path configuration system provides unified path management, extracting system dependency paths into a configurable interface for easy adjustment by users according to different environments. This feature has been integrated into the AI assistant's settings interface.
+The path configuration system provides unified path management, extracting system dependency paths into a configurable interface for easy adjustment by users according to different environments. This feature has been integrated into the Unity Strands Agent's settings interface.
 
 #### Main Functions
 
-- **Integrated Configuration Interface**: Path configuration is integrated into the AI assistant settings interface
+- **Integrated Configuration Interface**: Path configuration is integrated into the Unity Strands Agent settings interface
 - **Relative Path Support**: Prioritizes relative paths for easy project migration
 - **Auto Detection**: Automatically detects common path locations
 - **Configuration Validation**: Real-time validation of configuration validity
@@ -366,7 +381,7 @@ The path configuration system provides unified path management, extracting syste
 #### Usage
 
 1. **Open Configuration Interface**
-   Select menu in Unity Editor: `Window > AI Assistant > Setup Wizard`, switch to "Path Configuration" tab
+   Select menu in Unity Editor: `Window > Unity Strands Agent`, switch to "Settings" tab, then select "Path Configuration"
 
 2. **Basic Path Configuration**
    - **Project Root Directory**: Unity project root directory, other relative paths are based on this directory
@@ -398,7 +413,8 @@ Configuration is saved in the `Assets/UnityAIAgent/PathConfiguration.asset` file
 
 The system automatically sets the following environment variables for Python scripts, while supporting real-time viewing and editing in the path configuration interface:
 
-**Project Path Variables**
+##### Project Path Variables
+
 - `PROJECT_ROOT_PATH`: Project root directory path
 - `STRANDS_TOOLS_PATH`: Strands tools path
 - `NODE_EXECUTABLE_PATH`: Node.js executable file path
@@ -406,13 +422,15 @@ The system automatically sets the following environment variables for Python scr
 - `MCP_UNITY_SERVER_PATH`: MCP Unity server path
 - `SHELL_EXECUTABLE_PATH`: Shell executable file path
 
-**Python Environment Variables**
+##### Python Environment Variables
+
 - `PYTHONHOME`: Python home directory
 - `PYTHONPATH`: Python module search path
 - `PYTHONIOENCODING`: Python IO encoding settings
 - `PYTHONHTTPSVERIFY`: Python HTTPS verification settings
 
-**SSL Certificate Variables**
+##### SSL Certificate Variables
+
 - `SSL_CERT_FILE_PATH`: SSL certificate file path
 - `SSL_CERT_DIR_PATH`: SSL certificate directory path
 - `SSL_CERT_DIR`: SSL certificate directory (runtime)
@@ -420,12 +438,14 @@ The system automatically sets the following environment variables for Python scr
 - `REQUESTS_CA_BUNDLE`: Requests library CA certificate bundle
 - `CURL_CA_BUNDLE`: Curl library CA certificate bundle
 
-**System Environment Variables**
+##### System Environment Variables
+
 - `LC_ALL`: System locale settings
 - `LANG`: System language settings
 - `DYLD_LIBRARY_PATH`: Dynamic library path (macOS specific)
 
-**Environment Variable Management Features**
+##### Environment Variable Management Features
+
 - **Real-time Viewing**: View current values of all environment variables in the path configuration interface
 - **Safe Editing**: Supports temporary editing, requires manual application of changes
 - **Path Selection**: Path-type variables provide file/folder selection functionality
@@ -459,10 +479,10 @@ The system prioritizes relative paths, relative to the project root directory:
 
 #### Project Structure
 
-```
+```text
 unity-strands-agent/
 ├── Editor/                     # Unity Editor Extensions
-│   ├── AIAgentWindow.cs        # AI Assistant Main Interface
+│   ├── AIAgentWindow.cs        # Unity Strands Agent Main Interface
 │   ├── SetupWizard.cs         # Setup Wizard
 │   ├── PythonManager.cs       # Python Environment Management
 │   ├── PathManager.cs         # Path Management System

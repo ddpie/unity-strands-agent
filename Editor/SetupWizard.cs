@@ -55,11 +55,11 @@ namespace UnityAIAgent.Editor
             "完成设置"
         };
         
-        [MenuItem("Window/AI Assistant/Setup Wizard")]
+        [MenuItem("Window/Unity Strands Agent Setup")]
         public static void ShowWindow()
         {
             // Redirect to the merged AI Assistant window
-            var window = GetWindow<AIAgentWindow>("AI助手");
+            var window = GetWindow<AIAgentWindow>("Unity Strands Agent");
             window.minSize = new Vector2(450, 600);
             // Set to settings tab
             var windowType = typeof(AIAgentWindow);
