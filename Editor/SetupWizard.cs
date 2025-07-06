@@ -55,7 +55,7 @@ namespace UnityAIAgent.Editor
             "完成设置"
         };
         
-        [MenuItem("Window/AI助手/设置向导")]
+        [MenuItem("Window/AI Assistant/Setup Wizard")]
         public static void ShowWindow()
         {
             // Redirect to the merged AI Assistant window

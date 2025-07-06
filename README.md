@@ -247,7 +247,6 @@ unity-strands-agent/
 
 - **文档**: [Strands Agent SDK 官方文档](https://strandsagents.com/latest/)
 - **问题反馈**: [GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
-- **功能请求**: [GitHub Discussions](https://github.com/ddpie/unity-strands-agent/discussions)
 
 ---
 
@@ -494,4 +493,3 @@ This project is developed based on the open-source community and follows relevan
 
 - **Documentation**: [Strands Agent SDK Official Documentation](https://strandsagents.com/latest/)
 - **Issue Reporting**: [GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
-- **Feature Requests**: [GitHub Discussions](https://github.com/ddpie/unity-strands-agent/discussions)

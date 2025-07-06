@@ -77,7 +77,7 @@ namespace UnityAIAgent.Editor
         
         // Tab system
         private int selectedTab = 0;
-        private readonly string[] tabNames = { "AI智能助手", "AI助手设置" };
+        private string[] tabNames;
         
         // Settings variables from SetupWizard
         private int currentStep = 0;
@@ -90,7 +90,7 @@ namespace UnityAIAgent.Editor
         
         // MCP configuration
         private int settingsTab = 0;
-        private readonly string[] settingsTabNames = { "路径配置", "环境安装", "MCP配置" };
+        private string[] settingsTabNames;
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
@@ -105,23 +105,28 @@ namespace UnityAIAgent.Editor
         private bool envVarExpanded = false;
         private Dictionary<string, string> tempEnvVars = new Dictionary<string, string>();
         
-        private readonly string[] setupSteps = {
-            "检测Python环境",
-            "检测Node.js环境",
-            "安装Node.js和npm",
-            "创建虚拟环境", 
-            "安装Strands Agent SDK",
-            "安装MCP支持包",
-            "安装SSL证书支持",
-            "安装其他依赖包",
-            "配置环境变量",
-            "配置MCP服务器",
-            "初始化Python桥接",
-            "验证AWS连接",
-            "完成设置"
-        };
+        private string[] setupSteps;
+        
+        private void InitializeSetupSteps()
+        {
+            setupSteps = new string[] {
+                LanguageManager.GetText("检测Python环境", "Detecting Python Environment"),
+                LanguageManager.GetText("检测Node.js环境", "Detecting Node.js Environment"),
+                LanguageManager.GetText("安装Node.js和npm", "Installing Node.js and npm"),
+                LanguageManager.GetText("创建虚拟环境", "Creating Virtual Environment"),
+                LanguageManager.GetText("安装Strands Agent SDK", "Installing Strands Agent SDK"),
+                LanguageManager.GetText("安装MCP支持包", "Installing MCP Support Packages"),
+                LanguageManager.GetText("安装SSL证书支持", "Installing SSL Certificate Support"),
+                LanguageManager.GetText("安装其他依赖包", "Installing Other Dependencies"),
+                LanguageManager.GetText("配置环境变量", "Configuring Environment Variables"),
+                LanguageManager.GetText("配置MCP服务器", "Configuring MCP Server"),
+                LanguageManager.GetText("初始化Python桥接", "Initializing Python Bridge"),
+                LanguageManager.GetText("验证AWS连接", "Verifying AWS Connection"),
+                LanguageManager.GetText("完成设置", "Setup Complete")
+            };
+        }
 
-        [MenuItem("Window/AI助手/AI助手")]
+        [MenuItem("Window/AI Assistant/AI Assistant")]
         public static void ShowWindow()
         {
             // 使用反射获取InspectorWindow类型，以便将AI助手停靠在右侧
@@ -145,11 +150,11 @@ namespace UnityAIAgent.Editor
             else
             {
                 // 降级方案：创建独立窗口并放置在右侧
-                window = GetWindow<AIAgentWindow>("AI助手", true);
+                window = GetWindow<AIAgentWindow>(LanguageManager.GetText("AI助手", "AI Assistant"), true);
                 window.position = new Rect(Screen.width - 600, 100, 550, 800);
             }
             
-            window.titleContent = new GUIContent("AI助手");
+            window.titleContent = new GUIContent(LanguageManager.GetText("AI助手", "AI Assistant"));
             window.minSize = new Vector2(500, 700);
             
             // 确保窗口组件正确初始化
@@ -161,6 +166,9 @@ namespace UnityAIAgent.Editor
 
         private void OnEnable()
         {
+            // 初始化本地化文本
+            InitializeLocalizedText();
+            
             // 重置状态
             isProcessing = false;
             hasActiveStream = false;
@@ -173,7 +181,7 @@ namespace UnityAIAgent.Editor
             catch (System.NullReferenceException)
             {
                 // EditorStyles 还未准备好，跳过样式初始化
-                Debug.Log("EditorStyles未准备好，将在OnGUI中重试");
+                Debug.Log("EditorStyles not ready, will retry in OnGUI");
             }
             InitializeStreamingHandler();
             
@@ -205,7 +213,7 @@ namespace UnityAIAgent.Editor
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"StreamingHandler 初始化失败: {e.Message}");
+                    Debug.LogError($"StreamingHandler initialization failed: {e.Message}");
                     streamingHandler = null;
                 }
             }
@@ -423,10 +431,10 @@ namespace UnityAIAgent.Editor
         {
             EditorGUILayout.BeginHorizontal(chatHeaderStyle);
             
-            GUILayout.Label("AI助手", titleStyle);
+            GUILayout.Label(LanguageManager.GetText("AI助手", "AI Assistant"), titleStyle);
             GUILayout.FlexibleSpace();
             
-            if (GUILayout.Button("清空", clearButtonStyle, GUILayout.Width(50)))
+            if (GUILayout.Button(LanguageManager.GetText("清空", "Clear"), clearButtonStyle, GUILayout.Width(50)))
             {
                 messages.Clear();
                 SaveChatHistory();
@@ -550,7 +558,7 @@ namespace UnityAIAgent.Editor
                         new Color(1f, 0.8f, 0.8f) : new Color(0.8f, 0.2f, 0.2f) }
                 };
                 
-                if (GUILayout.Button("停止", stopButtonStyle, GUILayout.Width(90)))
+                if (GUILayout.Button(LanguageManager.GetText("停止", "Stop"), stopButtonStyle, GUILayout.Width(90)))
                 {
                     if (streamingHandler != null)
                     {
@@ -563,7 +571,7 @@ namespace UnityAIAgent.Editor
                 bool canSend = !isProcessing && IsValidString(userInput) && streamingHandler != null;
                 GUI.enabled = canSend;
                 
-                if (GUILayout.Button("发送", buttonStyle, GUILayout.Width(90)) || 
+                if (GUILayout.Button(LanguageManager.GetText("发送", "Send"), buttonStyle, GUILayout.Width(90)) || 
                     (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return && Event.current.control))
                 {
                     SendMessage();
@@ -576,14 +584,14 @@ namespace UnityAIAgent.Editor
             // Status info
             if (!isProcessing && !string.IsNullOrWhiteSpace(userInput) && streamingHandler == null)
             {
-                EditorGUILayout.HelpBox("StreamingHandler 未初始化，请稍等...", MessageType.Warning);
+                EditorGUILayout.HelpBox(LanguageManager.GetText("StreamingHandler 未初始化，请稍等...", "StreamingHandler not initialized, please wait..."), MessageType.Warning);
             }
             else if (string.IsNullOrWhiteSpace(userInput))
             {
                 var hintStyle = new GUIStyle(EditorStyles.miniLabel);
                 hintStyle.normal.textColor = GetThemeColor(
                     new Color(0.6f, 0.6f, 0.6f), new Color(0.5f, 0.5f, 0.5f));
-                EditorGUILayout.LabelField("输入您的问题，然后点击发送或按 Ctrl+Enter", hintStyle);
+                EditorGUILayout.LabelField(LanguageManager.GetText("输入您的问题，然后点击发送或按 Ctrl+Enter", "Enter your question, then click Send or press Ctrl+Enter"), hintStyle);
             }
             
             GUILayout.Space(8);
@@ -600,10 +608,10 @@ namespace UnityAIAgent.Editor
                     padding = new RectOffset(12, 12, 8, 8)
                 };
                 
-                string statusText = "AI正在思考...";
+                string statusText = LanguageManager.GetText("AI正在思考...", "AI is thinking...");
                 if (streamingHandler != null && streamingHandler.IsStreaming)
                 {
-                    statusText = "正在接收响应...";
+                    statusText = LanguageManager.GetText("正在接收响应...", "Receiving response...");
                 }
                 
                 EditorGUILayout.BeginHorizontal(statusStyle);
@@ -623,7 +631,7 @@ namespace UnityAIAgent.Editor
                         new Color(0.4f, 0.3f, 0.2f, 0.3f) : new Color(1f, 0.95f, 0.9f, 0.8f)) }
                 };
                 EditorGUILayout.BeginHorizontal(warningStyle);
-                GUILayout.Label("请先完成设置", EditorStyles.label);
+                GUILayout.Label(LanguageManager.GetText("请先完成设置", "Please complete setup first"), EditorStyles.label);
                 EditorGUILayout.EndHorizontal();
             }
             
@@ -659,7 +667,7 @@ namespace UnityAIAgent.Editor
                     new Color(0.7f, 0.7f, 0.7f) : new Color(0.5f, 0.5f, 0.5f) }
             };
             
-            string userLabel = message.isUser ? "您" : "助手";
+            string userLabel = message.isUser ? LanguageManager.GetText("您", "You") : LanguageManager.GetText("助手", "Assistant");
             GUILayout.Label(userLabel, labelStyle);
             GUILayout.FlexibleSpace();
             
@@ -690,7 +698,7 @@ namespace UnityAIAgent.Editor
                     new Color(0.6f, 0.6f, 0.6f) : new Color(0.5f, 0.5f, 0.5f) }
             };
             
-            if (GUILayout.Button("复制", copyButtonStyle, GUILayout.Width(50)))
+            if (GUILayout.Button(LanguageManager.GetText("复制", "Copy"), copyButtonStyle, GUILayout.Width(50)))
             {
                 EditorGUIUtility.systemCopyBuffer = message.content;
             }
@@ -2037,7 +2045,7 @@ namespace UnityAIAgent.Editor
                     isUser = false,
                     timestamp = DateTime.Now
                 });
-                Debug.LogError($"AI助手错误: {e}");
+                Debug.LogError($"AI Assistant error: {e}");
                 isProcessing = false;
             }
             finally
@@ -2154,12 +2162,12 @@ namespace UnityAIAgent.Editor
         // 流式响应回调方法
         private void OnStreamChunkReceived(string chunk)
         {
-            Debug.Log($"[AIAgentWindow] 接收到流式数据块: {chunk}，当前活跃流: {hasActiveStream}");
+            Debug.Log($"[AIAgentWindow] Received streaming chunk: {chunk}, active stream: {hasActiveStream}");
             
             // 严格检查：只有在有活跃流的情况下才处理chunk
             if (!hasActiveStream)
             {
-                Debug.Log($"[AIAgentWindow] 无活跃流，忽略chunk: {chunk}");
+                Debug.Log($"[AIAgentWindow] No active stream, ignoring chunk: {chunk}");
                 return;
             }
             
@@ -2173,7 +2181,7 @@ namespace UnityAIAgent.Editor
                     timestamp = DateTime.Now
                 });
                 currentStreamingMessageIndex = messages.Count - 1;
-                Debug.Log($"[AIAgentWindow] 创建唯一流式消息，索引: {currentStreamingMessageIndex}");
+                Debug.Log($"[AIAgentWindow] Created unique streaming message, index: {currentStreamingMessageIndex}");
             }
             
             // 更新消息内容
@@ -2181,7 +2189,7 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText + "▌";
-                Debug.Log($"[AIAgentWindow] 更新消息，当前长度: {currentStreamText.Length}");
+                Debug.Log($"[AIAgentWindow] Updated message, current length: {currentStreamText.Length}");
             }
             
             // UI更新
@@ -2196,7 +2204,7 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamComplete()
         {
-            Debug.Log($"[AIAgentWindow] 流式响应完成，立即关闭活跃流");
+            Debug.Log($"[AIAgentWindow] Streaming response completed, closing active stream immediately");
             
             // 立即关闭活跃流，阻止任何后续chunk
             hasActiveStream = false;
@@ -2205,7 +2213,7 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText;
-                Debug.Log($"[AIAgentWindow] 完成消息，最终长度: {currentStreamText.Length}");
+                Debug.Log($"[AIAgentWindow] Completed message, final length: {currentStreamText.Length}");
             }
             
             // 重置所有状态
@@ -2225,7 +2233,7 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamError(string error)
         {
-            Debug.Log($"[AIAgentWindow] 流式响应错误: {error}");
+            Debug.Log($"[AIAgentWindow] Streaming response error: {error}");
             
             // 立即关闭活跃流
             hasActiveStream = false;
@@ -2235,11 +2243,11 @@ namespace UnityAIAgent.Editor
             string errorMessage = error;
             if (error.Contains("SSL") || error.Contains("certificate"))
             {
-                errorMessage = $"🔒 **SSL连接错误**\n\n{error}\n\n💡 **建议**：\n- 检查网络连接\n- 更新系统证书\n- 检查防火墙设置";
+                errorMessage = $"🔒 **{LanguageManager.GetText("SSL连接错误", "SSL Connection Error")}**\n\n{error}\n\n💡 **{LanguageManager.GetText("建议", "Suggestions")}**：\n- {LanguageManager.GetText("检查网络连接", "Check network connection")}\n- {LanguageManager.GetText("更新系统证书", "Update system certificates")}\n- {LanguageManager.GetText("检查防火墙设置", "Check firewall settings")}";
             }
             else
             {
-                errorMessage = $"❌ **处理错误**\n\n{error}";
+                errorMessage = $"❌ **{LanguageManager.GetText("处理错误", "Processing Error")}**\n\n{error}";
             }
             
             // 如果正在流式处理，更新当前消息为错误信息
@@ -2449,14 +2457,14 @@ namespace UnityAIAgent.Editor
             if (setupCompleted)
             {
                 // Buttons after setup completion
-                if (GUILayout.Button("打开AI助手", GUILayout.Width(120), GUILayout.Height(35)))
+                if (GUILayout.Button(LanguageManager.GetText("打开AI助手", "Open AI Assistant"), GUILayout.Width(120), GUILayout.Height(35)))
                 {
                     selectedTab = 0; // Switch to chat tab
                 }
                 
                 GUILayout.Space(10);
                 
-                if (GUILayout.Button("重新设置", GUILayout.Width(100), GUILayout.Height(35)))
+                if (GUILayout.Button(LanguageManager.GetText("重新设置", "Reset Setup"), GUILayout.Width(100), GUILayout.Height(35)))
                 {
                     ResetSetup();
                 }
@@ -2465,7 +2473,7 @@ namespace UnityAIAgent.Editor
             {
                 // Buttons during setup process
                 GUI.enabled = !isProcessing;
-                if (GUILayout.Button("开始设置", GUILayout.Width(120), GUILayout.Height(35)))
+                if (GUILayout.Button(LanguageManager.GetText("开始设置", "Start Setup"), GUILayout.Width(120), GUILayout.Height(35)))
                 {
                     StartSetup();
                 }
@@ -2474,7 +2482,7 @@ namespace UnityAIAgent.Editor
                 if (isProcessing)
                 {
                     GUILayout.Space(10);
-                    if (GUILayout.Button("取消", GUILayout.Width(80), GUILayout.Height(35)))
+                    if (GUILayout.Button(LanguageManager.GetText("取消", "Cancel"), GUILayout.Width(80), GUILayout.Height(35)))
                     {
                         CancelSetup();
                     }
@@ -2497,12 +2505,12 @@ namespace UnityAIAgent.Editor
             
             // MCP Configuration UI
             EditorGUILayout.BeginVertical("box");
-            GUILayout.Label("MCP 服务器配置", EditorStyles.boldLabel);
+            GUILayout.Label(LanguageManager.GetText("MCP 服务器配置", "MCP Server Configuration"), EditorStyles.boldLabel);
             
             if (mcpConfig == null)
             {
-                EditorGUILayout.HelpBox("MCP配置未初始化", MessageType.Warning);
-                if (GUILayout.Button("初始化MCP配置"))
+                EditorGUILayout.HelpBox(LanguageManager.GetText("MCP配置未初始化", "MCP configuration not initialized"), MessageType.Warning);
+                if (GUILayout.Button(LanguageManager.GetText("初始化MCP配置", "Initialize MCP Configuration")))
                 {
                     InitializeMCPConfig();
                 }
@@ -2512,13 +2520,13 @@ namespace UnityAIAgent.Editor
             
             // JSON configuration area with reload button
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("JSON配置", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(LanguageManager.GetText("JSON配置", "JSON Configuration"), EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("重新加载", EditorStyles.miniButton, GUILayout.Width(80)))
+            if (GUILayout.Button(LanguageManager.GetText("重新加载", "Reload"), EditorStyles.miniButton, GUILayout.Width(80)))
             {
                 mcpJsonConfig = null; // 清除缓存
                 LoadMCPConfiguration();
-                Debug.Log("MCP配置已重新加载");
+                Debug.Log(LanguageManager.GetText("MCP配置已重新加载", "MCP configuration reloaded"));
             }
             EditorGUILayout.EndHorizontal();
             
@@ -2527,11 +2535,11 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.EndScrollView();
             
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("保存配置"))
+            if (GUILayout.Button(LanguageManager.GetText("保存配置", "Save Configuration")))
             {
                 SaveMCPConfiguration();
             }
-            if (GUILayout.Button("重置为默认"))
+            if (GUILayout.Button(LanguageManager.GetText("重置为默认", "Reset to Default")))
             {
                 mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
             }
@@ -2542,7 +2550,7 @@ namespace UnityAIAgent.Editor
             // Server list
             EditorGUILayout.Space();
             EditorGUILayout.BeginVertical("box");
-            GUILayout.Label("服务器列表", EditorStyles.boldLabel);
+            GUILayout.Label(LanguageManager.GetText("服务器列表", "Server List"), EditorStyles.boldLabel);
             
             if (mcpConfig.servers != null && mcpConfig.servers.Count > 0)
             {
@@ -2551,13 +2559,13 @@ namespace UnityAIAgent.Editor
                     EditorGUILayout.BeginHorizontal("box");
                     GUILayout.Label(server.name, EditorStyles.boldLabel);
                     GUILayout.FlexibleSpace();
-                    GUILayout.Label($"类型: {server.transportType}", EditorStyles.miniLabel);
+                    GUILayout.Label($"{LanguageManager.GetText("类型:", "Type:")} {server.transportType}", EditorStyles.miniLabel);
                     EditorGUILayout.EndHorizontal();
                 }
             }
             else
             {
-                EditorGUILayout.HelpBox("没有配置的服务器", MessageType.Info);
+                EditorGUILayout.HelpBox(LanguageManager.GetText("没有配置的服务器", "No configured servers"), MessageType.Info);
             }
             
             EditorGUILayout.EndVertical();
@@ -2572,7 +2580,7 @@ namespace UnityAIAgent.Editor
             
             if (mcpConfig == null)
             {
-                Debug.Log("MCPConfig.asset不存在，将创建新的配置");
+                Debug.Log("MCPConfig.asset does not exist, will create new configuration");
                 // 创建新的MCPConfiguration
                 mcpConfig = ScriptableObject.CreateInstance<MCPConfiguration>();
                 
@@ -2587,11 +2595,11 @@ namespace UnityAIAgent.Editor
                 AssetDatabase.CreateAsset(mcpConfig, configPath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-                Debug.Log($"已创建新的MCP配置: {configPath}");
+                Debug.Log($"Created new MCP configuration: {configPath}");
             }
             else
             {
-                Debug.Log("MCP ScriptableObject配置已加载");
+                Debug.Log("MCP ScriptableObject configuration loaded");
             }
             
             // 然后加载JSON配置（用于编辑）
@@ -2601,11 +2609,11 @@ namespace UnityAIAgent.Editor
                 try
                 {
                     mcpJsonConfig = System.IO.File.ReadAllText(jsonConfigPath);
-                    Debug.Log($"MCP JSON配置已从文件加载: {jsonConfigPath}");
+                    Debug.Log($"MCP JSON configuration loaded from file: {jsonConfigPath}");
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"无法读取MCP JSON配置: {e.Message}");
+                    Debug.LogWarning($"Unable to read MCP JSON configuration: {e.Message}");
                     mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
                 }
             }
@@ -2613,14 +2621,14 @@ namespace UnityAIAgent.Editor
             {
                 // 如果JSON文件不存在，从ScriptableObject生成
                 mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
-                Debug.Log("MCP JSON配置从ScriptableObject生成");
+                Debug.Log("MCP JSON configuration generated from ScriptableObject");
             }
             
             // 确保JSON配置不为空
             if (string.IsNullOrEmpty(mcpJsonConfig))
             {
                 mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
-                Debug.Log("使用默认空MCP配置");
+                Debug.Log("Using default empty MCP configuration");
             }
         }
         
@@ -2642,14 +2650,14 @@ namespace UnityAIAgent.Editor
                 System.IO.File.WriteAllText(jsonConfigPath, mcpJsonConfig);
                 AssetDatabase.Refresh();
                 
-                Debug.Log($"MCP配置已保存到: {jsonConfigPath}");
+                Debug.Log($"MCP configuration saved to: {jsonConfigPath}");
                 
                 // 通知Python端重新加载MCP配置
                 ReloadMCPConfigInPython();
                 
-                EditorUtility.DisplayDialog("应用成功", "MCP JSON配置已成功保存！\\n\\nPython端已重新加载MCP配置。", "确定");
+                EditorUtility.DisplayDialog(LanguageManager.GetText("应用成功", "Apply Successful"), LanguageManager.GetText("MCP JSON配置已成功保存！\\n\\nPython端已重新加载MCP配置。", "MCP JSON configuration saved successfully!\\n\\nPython side has reloaded MCP configuration."), LanguageManager.GetText("确定", "OK"));
                 
-                statusMessage = "MCP配置已成功保存";
+                statusMessage = LanguageManager.GetText("MCP配置已成功保存", "MCP configuration saved successfully");
                 
                 // 可选：同时更新Unity ScriptableObject用于UI显示
                 if (mcpConfig != null)
@@ -2660,8 +2668,8 @@ namespace UnityAIAgent.Editor
             catch (Exception e)
             {
                 statusMessage = $"保存配置失败: {e.Message}";
-                EditorUtility.DisplayDialog("保存失败", $"保存JSON配置时出错：\\n{e.Message}", "确定");
-                Debug.LogError($"保存MCP配置失败: {e}");
+                EditorUtility.DisplayDialog(LanguageManager.GetText("保存失败", "Save Failed"), LanguageManager.GetText($"保存JSON配置时出错：\\n{e.Message}", $"Error saving JSON configuration:\\n{e.Message}"), LanguageManager.GetText("确定", "OK"));
+                Debug.LogError($"Failed to save MCP configuration: {e}");
             }
         }
         
@@ -2678,12 +2686,12 @@ namespace UnityAIAgent.Editor
                 {
                     EditorUtility.SetDirty(mcpConfig);
                     AssetDatabase.SaveAssets();
-                    Debug.Log($"Unity ScriptableObject已更新，服务器总数: {mcpConfig.servers.Count}");
+                    Debug.Log($"Unity ScriptableObject updated, total servers: {mcpConfig.servers.Count}");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"更新ScriptableObject失败，但JSON文件已保存: {e.Message}");
+                Debug.LogWarning($"Failed to update ScriptableObject, but JSON file saved: {e.Message}");
             }
         }
         
@@ -2718,7 +2726,7 @@ namespace UnityAIAgent.Editor
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"JSON解析失败: {e.Message}");
+                Debug.LogWarning($"JSON parsing failed: {e.Message}");
                 return false;
             }
         }
@@ -2920,7 +2928,7 @@ namespace UnityAIAgent.Editor
                 // 确保Python桥接已初始化
                 if (!PythonManager.IsInitialized)
                 {
-                    Debug.LogWarning("Python未初始化，无法重新加载MCP配置");
+                    Debug.LogWarning("Python not initialized, unable to reload MCP configuration");
                     return;
                 }
                 
@@ -2935,18 +2943,18 @@ namespace UnityAIAgent.Editor
                     
                     if (result.success)
                     {
-                        Debug.Log($"Python端MCP配置重新加载成功: {result.message}");
-                        Debug.Log($"MCP启用: {result.mcp_enabled}, 服务器数: {result.server_count}, 启用数: {result.enabled_server_count}");
+                        Debug.Log($"Python side MCP configuration reload successful: {result.message}");
+                        Debug.Log($"MCP enabled: {result.mcp_enabled}, server count: {result.server_count}, enabled count: {result.enabled_server_count}");
                     }
                     else
                     {
-                        Debug.LogError($"Python端MCP配置重新加载失败: {result.message}");
+                        Debug.LogError($"Python side MCP configuration reload failed: {result.message}");
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"调用Python reload_mcp_config失败: {e.Message}");
+                Debug.LogError($"Failed to call Python reload_mcp_config: {e.Message}");
             }
         }
         
@@ -2996,15 +3004,15 @@ namespace UnityAIAgent.Editor
                 setupCompleted = true;
                 statusMessage = "设置完成！AI助手已就绪。";
                 
-                EditorUtility.DisplayDialog("设置完成", "AI助手设置已成功完成！\n\n您现在可以开始使用AI助手了。", "确定");
+                EditorUtility.DisplayDialog(LanguageManager.GetText("设置完成", "Setup Complete"), LanguageManager.GetText("AI助手设置已成功完成！\n\n您现在可以开始使用AI助手了。", "AI Assistant setup completed successfully!\n\nYou can now start using the AI Assistant."), LanguageManager.GetText("确定", "OK"));
             }
             catch (Exception e)
             {
-                Debug.LogError($"设置过程中出现错误: {e.Message}");
+                Debug.LogError($"Error during setup process: {e.Message}");
                 statusMessage = $"设置失败: {e.Message}";
                 progress = -1; // 表示错误状态
                 
-                EditorUtility.DisplayDialog("设置失败", $"设置过程中出现错误:\n{e.Message}\n\n请检查日志获取更多信息。", "确定");
+                EditorUtility.DisplayDialog(LanguageManager.GetText("设置失败", "Setup Failed"), LanguageManager.GetText($"设置过程中出现错误:\n{e.Message}\n\n请检查日志获取更多信息。", $"An error occurred during setup:\n{e.Message}\n\nPlease check the logs for more information."), LanguageManager.GetText("确定", "OK"));
             }
             finally
             {
@@ -3018,7 +3026,7 @@ namespace UnityAIAgent.Editor
             for (int i = 0; i < setupSteps.Length; i++)
             {
                 currentStep = i;
-                statusMessage = $"正在执行: {setupSteps[i]}";
+                statusMessage = LanguageManager.GetText($"正在执行: {setupSteps[i]}", $"Executing: {setupSteps[i]}");
                 progress = (float)i / setupSteps.Length;
                 
                 EditorApplication.delayCall += () => Repaint();
@@ -3048,7 +3056,7 @@ namespace UnityAIAgent.Editor
         
         private void ResetSetup()
         {
-            if (EditorUtility.DisplayDialog("重新设置", "确定要重新开始设置过程吗？\n\n这将清除所有当前的设置进度。", "确定", "取消"))
+            if (EditorUtility.DisplayDialog(LanguageManager.GetText("重新设置", "Reset Setup"), LanguageManager.GetText("确定要重新开始设置过程吗？\n\n这将清除所有当前的设置进度。", "Are you sure you want to restart the setup process?\n\nThis will clear all current setup progress."), LanguageManager.GetText("确定", "OK"), LanguageManager.GetText("取消", "Cancel")))
             {
                 currentStep = 0;
                 setupCompleted = false;
@@ -3056,7 +3064,7 @@ namespace UnityAIAgent.Editor
                 statusMessage = "";
                 progress = 0f;
                 
-                Debug.Log("设置已重置");
+                Debug.Log("Setup has been reset");
                 Repaint();
             }
         }
@@ -3079,13 +3087,13 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.Space(10);
             
             // 主标题
-            EditorGUILayout.LabelField("路径配置", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(LanguageManager.GetText("路径配置", "Path Configuration"), EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
             
             if (pathConfig == null)
             {
-                EditorGUILayout.HelpBox("路径配置未找到。将创建新的配置文件。", MessageType.Info);
-                if (GUILayout.Button("创建配置文件"))
+                EditorGUILayout.HelpBox(LanguageManager.GetText("路径配置未找到。将创建新的配置文件。", "Path configuration not found. A new configuration file will be created."), MessageType.Info);
+                if (GUILayout.Button(LanguageManager.GetText("创建配置文件", "Create Configuration File")))
                 {
                     PathManager.CreatePathConfiguration();
                     pathConfig = PathManager.PathConfig;
@@ -3095,23 +3103,23 @@ namespace UnityAIAgent.Editor
             }
             
             // 基本路径配置
-            EditorGUILayout.LabelField("基本路径配置", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(LanguageManager.GetText("基本路径配置", "Basic Path Configuration"), EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
             
             // 项目根目录
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("项目根目录", GUILayout.Width(120));
+            EditorGUILayout.LabelField(LanguageManager.GetText("项目根目录", "Project Root Directory"), GUILayout.Width(120));
             pathConfig.projectRootPath = EditorGUILayout.TextField(pathConfig.projectRootPath);
-            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            if (GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
             {
-                string path = EditorUtility.OpenFolderPanel("选择项目根目录", pathConfig.projectRootPath, "");
+                string path = EditorUtility.OpenFolderPanel(LanguageManager.GetText("选择项目根目录", "Select Project Root Directory"), pathConfig.projectRootPath, "");
                 if (!string.IsNullOrEmpty(path))
                 {
                     pathConfig.projectRootPath = path;
                     EditorUtility.SetDirty(pathConfig);
                 }
             }
-            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            if (GUILayout.Button(LanguageManager.GetText("自动检测", "Auto Detect"), GUILayout.Width(80)))
             {
                 pathConfig.projectRootPath = PathManager.GetProjectRootPath();
                 EditorUtility.SetDirty(pathConfig);
@@ -3120,18 +3128,18 @@ namespace UnityAIAgent.Editor
             
             // Node.js 路径
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("Node.js 路径", GUILayout.Width(120));
+            EditorGUILayout.LabelField(LanguageManager.GetText("Node.js 路径", "Node.js Path"), GUILayout.Width(120));
             pathConfig.nodeExecutablePath = EditorGUILayout.TextField(pathConfig.nodeExecutablePath);
-            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            if (GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
             {
-                string path = EditorUtility.OpenFilePanel("选择Node.js可执行文件", pathConfig.nodeExecutablePath, "");
+                string path = EditorUtility.OpenFilePanel(LanguageManager.GetText("选择Node.js可执行文件", "Select Node.js Executable"), pathConfig.nodeExecutablePath, "");
                 if (!string.IsNullOrEmpty(path))
                 {
                     pathConfig.nodeExecutablePath = path;
                     EditorUtility.SetDirty(pathConfig);
                 }
             }
-            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            if (GUILayout.Button(LanguageManager.GetText("自动检测", "Auto Detect"), GUILayout.Width(80)))
             {
                 pathConfig.nodeExecutablePath = PathManager.GetValidNodePath();
                 EditorUtility.SetDirty(pathConfig);
@@ -3140,18 +3148,18 @@ namespace UnityAIAgent.Editor
             
             // AI代理Python路径
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("AI代理Python路径", GUILayout.Width(120));
+            EditorGUILayout.LabelField(LanguageManager.GetText("AI代理Python路径", "AI Agent Python Path"), GUILayout.Width(120));
             pathConfig.strandsToolsPath = EditorGUILayout.TextField(pathConfig.strandsToolsPath);
-            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            if (GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
             {
-                string path = EditorUtility.OpenFolderPanel("选择AI代理Python目录", pathConfig.strandsToolsPath, "");
+                string path = EditorUtility.OpenFolderPanel(LanguageManager.GetText("选择AI代理Python目录", "Select AI Agent Python Directory"), pathConfig.strandsToolsPath, "");
                 if (!string.IsNullOrEmpty(path))
                 {
                     pathConfig.strandsToolsPath = path;
                     EditorUtility.SetDirty(pathConfig);
                 }
             }
-            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            if (GUILayout.Button(LanguageManager.GetText("自动检测", "Auto Detect"), GUILayout.Width(80)))
             {
                 // AI代理Python路径自动检测，使用Unity Agent Python路径作为默认值
                 pathConfig.strandsToolsPath = PathManager.GetStrandsToolsPath();
@@ -3167,31 +3175,31 @@ namespace UnityAIAgent.Editor
             
             // 操作按钮
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("全部自动检测", GUILayout.Height(30)))
+            if (GUILayout.Button(LanguageManager.GetText("全部自动检测", "Auto Detect All"), GUILayout.Height(30)))
             {
                 pathConfig.AutoDetectAllPaths();
                 EditorUtility.SetDirty(pathConfig);
             }
-            if (GUILayout.Button("验证配置", GUILayout.Height(30)))
+            if (GUILayout.Button(LanguageManager.GetText("验证配置", "Validate Configuration"), GUILayout.Height(30)))
             {
                 pathConfig.ValidateAllPaths();
                 EditorUtility.SetDirty(pathConfig);
             }
-            if (GUILayout.Button("保存配置", GUILayout.Height(30)))
+            if (GUILayout.Button(LanguageManager.GetText("保存配置", "Save Configuration"), GUILayout.Height(30)))
             {
                 EditorUtility.SetDirty(pathConfig);
                 AssetDatabase.SaveAssets();
-                EditorUtility.DisplayDialog("保存成功", "路径配置已保存", "确定");
+                EditorUtility.DisplayDialog(LanguageManager.GetText("保存成功", "Save Successful"), LanguageManager.GetText("路径配置已保存", "Path configuration saved"), LanguageManager.GetText("确定", "OK"));
             }
             EditorGUILayout.EndHorizontal();
             
             EditorGUILayout.Space(10);
             
             // 环境变量配置
-            EditorGUILayout.LabelField("环境变量配置", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(LanguageManager.GetText("环境变量配置", "Environment Variable Configuration"), EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
             
-            EditorGUILayout.HelpBox("这些环境变量会在Python初始化时自动设置，您可以查看和调试当前值", MessageType.Info);
+            EditorGUILayout.HelpBox(LanguageManager.GetText("这些环境变量会在Python初始化时自动设置，您可以查看和调试当前值", "These environment variables will be automatically set when Python initializes. You can view and debug current values"), MessageType.Info);
             EditorGUILayout.Space(5);
             
             DrawEnvironmentVariables();
@@ -3199,16 +3207,16 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.Space(10);
             
             // 配置状态
-            EditorGUILayout.LabelField("配置状态", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(LanguageManager.GetText("配置状态", "Configuration Status"), EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
             
             if (pathConfig.IsValid())
             {
-                EditorGUILayout.HelpBox("✓ 所有路径配置有效", MessageType.Info);
+                EditorGUILayout.HelpBox(LanguageManager.GetText("✓ 所有路径配置有效", "✓ All path configurations are valid"), MessageType.Info);
             }
             else
             {
-                EditorGUILayout.HelpBox("⚠ 部分路径配置可能无效，请检查上述配置", MessageType.Warning);
+                EditorGUILayout.HelpBox(LanguageManager.GetText("⚠ 部分路径配置可能无效，请检查上述配置", "⚠ Some path configurations may be invalid, please check above configurations"), MessageType.Warning);
             }
             
             EditorGUILayout.EndScrollView();
@@ -3217,7 +3225,7 @@ namespace UnityAIAgent.Editor
         private void DrawEnvironmentVariables()
         {
             // 可折叠的环境变量部分
-            envVarExpanded = EditorGUILayout.Foldout(envVarExpanded, "查看/编辑环境变量", true);
+            envVarExpanded = EditorGUILayout.Foldout(envVarExpanded, LanguageManager.GetText("查看/编辑环境变量", "View/Edit Environment Variables"), true);
             
             if (envVarExpanded)
             {
@@ -3226,25 +3234,25 @@ namespace UnityAIAgent.Editor
                 // 定义所有项目相关的环境变量
                 var environmentVariables = new Dictionary<string, (string description, bool isPath)>
                 {
-                    {"PROJECT_ROOT_PATH", ("项目根目录路径", true)},
-                    {"STRANDS_TOOLS_PATH", ("Strands工具路径", true)},
-                    {"NODE_EXECUTABLE_PATH", ("Node.js可执行文件路径", true)},
-                    {"MCP_CONFIG_PATH", ("MCP配置文件路径", true)},
-                    {"MCP_UNITY_SERVER_PATH", ("MCP Unity服务器路径", true)},
-                    {"SSL_CERT_FILE_PATH", ("SSL证书文件路径", true)},
-                    {"SSL_CERT_DIR_PATH", ("SSL证书目录路径", true)},
-                    {"SHELL_EXECUTABLE_PATH", ("Shell可执行文件路径", true)},
-                    {"PYTHONHOME", ("Python主目录", true)},
-                    {"PYTHONPATH", ("Python模块搜索路径", true)},
-                    {"PYTHONIOENCODING", ("Python IO编码", false)},
-                    {"LC_ALL", ("系统语言环境", false)},
-                    {"LANG", ("系统语言", false)},
-                    {"PYTHONHTTPSVERIFY", ("Python HTTPS验证", false)},
-                    {"SSL_CERT_DIR", ("SSL证书目录", true)},
-                    {"SSL_CERT_FILE", ("SSL证书文件", true)},
-                    {"REQUESTS_CA_BUNDLE", ("Requests CA证书包", true)},
-                    {"CURL_CA_BUNDLE", ("Curl CA证书包", true)},
-                    {"DYLD_LIBRARY_PATH", ("动态库路径 (macOS)", true)}
+                    {"PROJECT_ROOT_PATH", (LanguageManager.GetText("项目根目录路径", "Project Root Path"), true)},
+                    {"STRANDS_TOOLS_PATH", (LanguageManager.GetText("Strands工具路径", "Strands Tools Path"), true)},
+                    {"NODE_EXECUTABLE_PATH", (LanguageManager.GetText("Node.js可执行文件路径", "Node.js Executable Path"), true)},
+                    {"MCP_CONFIG_PATH", (LanguageManager.GetText("MCP配置文件路径", "MCP Configuration File Path"), true)},
+                    {"MCP_UNITY_SERVER_PATH", (LanguageManager.GetText("MCP Unity服务器路径", "MCP Unity Server Path"), true)},
+                    {"SSL_CERT_FILE_PATH", (LanguageManager.GetText("SSL证书文件路径", "SSL Certificate File Path"), true)},
+                    {"SSL_CERT_DIR_PATH", (LanguageManager.GetText("SSL证书目录路径", "SSL Certificate Directory Path"), true)},
+                    {"SHELL_EXECUTABLE_PATH", (LanguageManager.GetText("Shell可执行文件路径", "Shell Executable Path"), true)},
+                    {"PYTHONHOME", (LanguageManager.GetText("Python主目录", "Python Home Directory"), true)},
+                    {"PYTHONPATH", (LanguageManager.GetText("Python模块搜索路径", "Python Module Search Path"), true)},
+                    {"PYTHONIOENCODING", (LanguageManager.GetText("Python IO编码", "Python IO Encoding"), false)},
+                    {"LC_ALL", (LanguageManager.GetText("系统语言环境", "System Locale"), false)},
+                    {"LANG", (LanguageManager.GetText("系统语言", "System Language"), false)},
+                    {"PYTHONHTTPSVERIFY", (LanguageManager.GetText("Python HTTPS验证", "Python HTTPS Verification"), false)},
+                    {"SSL_CERT_DIR", (LanguageManager.GetText("SSL证书目录", "SSL Certificate Directory"), true)},
+                    {"SSL_CERT_FILE", (LanguageManager.GetText("SSL证书文件", "SSL Certificate File"), true)},
+                    {"REQUESTS_CA_BUNDLE", (LanguageManager.GetText("Requests CA证书包", "Requests CA Bundle"), true)},
+                    {"CURL_CA_BUNDLE", (LanguageManager.GetText("Curl CA证书包", "Curl CA Bundle"), true)},
+                    {"DYLD_LIBRARY_PATH", (LanguageManager.GetText("动态库路径 (macOS)", "Dynamic Library Path (macOS)"), true)}
                 };
                 
                 envVarScrollPosition = EditorGUILayout.BeginScrollView(envVarScrollPosition, GUILayout.Height(300));
@@ -3272,7 +3280,7 @@ namespace UnityAIAgent.Editor
                         currentValue = tempEnvVars[varName];
                     }
                     
-                    EditorGUILayout.LabelField("值:", GUILayout.Width(25));
+                    EditorGUILayout.LabelField(LanguageManager.GetText("值:", "Value:"), GUILayout.Width(25));
                     
                     // 编辑字段
                     string newValue = EditorGUILayout.TextField(currentValue);
@@ -3283,16 +3291,16 @@ namespace UnityAIAgent.Editor
                     }
                     
                     // 浏览按钮（仅对路径类型变量显示）
-                    if (isPath && GUILayout.Button("浏览", GUILayout.Width(60)))
+                    if (isPath && GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
                     {
                         string selectedPath;
                         if (varName.Contains("FILE") || varName.Contains("EXECUTABLE"))
                         {
-                            selectedPath = EditorUtility.OpenFilePanel($"选择{description}", currentValue, "");
+                            selectedPath = EditorUtility.OpenFilePanel(LanguageManager.GetText($"选择{description}", $"Select {description}"), currentValue, "");
                         }
                         else
                         {
-                            selectedPath = EditorUtility.OpenFolderPanel($"选择{description}", currentValue, "");
+                            selectedPath = EditorUtility.OpenFolderPanel(LanguageManager.GetText($"选择{description}", $"Select {description}"), currentValue, "");
                         }
                         
                         if (!string.IsNullOrEmpty(selectedPath))
@@ -3302,15 +3310,15 @@ namespace UnityAIAgent.Editor
                     }
                     
                     // 应用按钮
-                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button("应用", GUILayout.Width(50)))
+                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button(LanguageManager.GetText("应用", "Apply"), GUILayout.Width(50)))
                     {
                         System.Environment.SetEnvironmentVariable(varName, tempEnvVars[varName]);
                         tempEnvVars.Remove(varName);
-                        Debug.Log($"环境变量已更新: {varName} = {System.Environment.GetEnvironmentVariable(varName)}");
+                        Debug.Log($"Environment variable updated: {varName} = {System.Environment.GetEnvironmentVariable(varName)}");
                     }
                     
                     // 重置按钮
-                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button("重置", GUILayout.Width(50)))
+                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button(LanguageManager.GetText("重置", "Reset"), GUILayout.Width(50)))
                     {
                         tempEnvVars.Remove(varName);
                     }
@@ -3327,7 +3335,7 @@ namespace UnityAIAgent.Editor
                 // 全局操作按钮
                 EditorGUILayout.BeginHorizontal();
                 
-                if (GUILayout.Button("重新应用所有环境变量"))
+                if (GUILayout.Button(LanguageManager.GetText("重新应用所有环境变量", "Reapply All Environment Variables")))
                 {
                     // 重新触发Python环境配置
                     try
@@ -3340,30 +3348,30 @@ namespace UnityAIAgent.Editor
                                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                             method?.Invoke(null, null);
                             
-                            Debug.Log("环境变量重新应用完成");
-                            EditorUtility.DisplayDialog("成功", "环境变量已重新应用", "确定");
+                            Debug.Log("Environment variables reapplied successfully");
+                            EditorUtility.DisplayDialog(LanguageManager.GetText("成功", "Success"), LanguageManager.GetText("环境变量已重新应用", "Environment variables have been reapplied"), LanguageManager.GetText("确定", "OK"));
                         }
                         else
                         {
-                            EditorUtility.DisplayDialog("提示", "Python未初始化，请先完成环境安装", "确定");
+                            EditorUtility.DisplayDialog(LanguageManager.GetText("提示", "Notice"), LanguageManager.GetText("Python未初始化，请先完成环境安装", "Python is not initialized, please complete environment setup first"), LanguageManager.GetText("确定", "OK"));
                         }
                     }
                     catch (System.Exception e)
                     {
-                        Debug.LogError($"重新应用环境变量失败: {e.Message}");
-                        EditorUtility.DisplayDialog("错误", $"重新应用环境变量失败: {e.Message}", "确定");
+                        Debug.LogError($"Failed to reapply environment variables: {e.Message}");
+                        EditorUtility.DisplayDialog(LanguageManager.GetText("错误", "Error"), LanguageManager.GetText($"重新应用环境变量失败: {e.Message}", $"Failed to reapply environment variables: {e.Message}"), LanguageManager.GetText("确定", "OK"));
                     }
                 }
                 
-                if (tempEnvVars.Count > 0 && GUILayout.Button($"应用所有待定更改 ({tempEnvVars.Count})"))
+                if (tempEnvVars.Count > 0 && GUILayout.Button(LanguageManager.GetText($"应用所有待定更改 ({tempEnvVars.Count})", $"Apply All Pending Changes ({tempEnvVars.Count})")))
                 {
                     foreach (var kvp in tempEnvVars)
                     {
                         System.Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
-                        Debug.Log($"环境变量已更新: {kvp.Key} = {kvp.Value}");
+                        Debug.Log($"Environment variable updated: {kvp.Key} = {kvp.Value}");
                     }
                     tempEnvVars.Clear();
-                    EditorUtility.DisplayDialog("成功", "所有环境变量更改已应用", "确定");
+                    EditorUtility.DisplayDialog(LanguageManager.GetText("成功", "Success"), LanguageManager.GetText("所有环境变量更改已应用", "All environment variable changes have been applied"), LanguageManager.GetText("确定", "OK"));
                 }
                 
                 if (tempEnvVars.Count > 0 && GUILayout.Button("取消所有待定更改"))
@@ -3384,6 +3392,31 @@ namespace UnityAIAgent.Editor
             public string content;
             public string error;
             public bool done;
+        }
+        
+        /// <summary>
+        /// 初始化本地化文本
+        /// Initialize localized text
+        /// </summary>
+        private void InitializeLocalizedText()
+        {
+            // 主界面标签
+            tabNames = new string[]
+            {
+                LanguageManager.GetText("AI智能助手", "AI Assistant"),
+                LanguageManager.GetText("AI助手设置", "AI Assistant Settings")
+            };
+            
+            // 设置界面标签
+            settingsTabNames = new string[]
+            {
+                LanguageManager.GetText("路径配置", "Path Configuration"),
+                LanguageManager.GetText("环境安装", "Environment Setup"),
+                LanguageManager.GetText("MCP配置", "MCP Configuration")
+            };
+            
+            // 初始化设置步骤
+            InitializeSetupSteps();
         }
 
     }
