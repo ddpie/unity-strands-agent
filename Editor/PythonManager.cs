@@ -525,15 +525,23 @@ namespace UnityAIAgent.Editor
         // Unity Editor事件处理
         private static void OnBeforeAssemblyReload()
         {
+            // 先停止所有流式处理
+            try
+            {
+                StreamingManager.StopAllStreaming();
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"停止流式处理时出错: {e.Message}");
+            }
+            
             // 清理C#引用，但不关闭Python引擎
             if (isPythonInitialized)
             {
                 try
                 {
-                    using (Py.GIL())
-                    {
-                        // 清理缓存的Python对象
-                    }
+                    // 清理Python桥接
+                    PythonBridge.Shutdown();
                 }
                 catch (Exception e)
                 {

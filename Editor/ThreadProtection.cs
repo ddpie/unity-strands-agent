@@ -42,6 +42,16 @@ namespace UnityAIAgent.Editor
         {
             isUnityChangingMode = true;
             Debug.Log("[ThreadProtection] Unity开始重新加载程序集");
+            
+            // 通知StreamingManager停止所有流式处理
+            try
+            {
+                StreamingManager.StopAllStreaming();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[ThreadProtection] 停止流式处理时出错: {e.Message}");
+            }
         }
         
         private static void OnAfterAssemblyReload()

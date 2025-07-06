@@ -135,6 +135,19 @@ namespace UnityAIAgent.Editor
                 {
                     try
                     {
+                        // 在线程开始时再次检查Unity状态和Python状态
+                        if (ThreadProtection.IsUnityChangingMode)
+                        {
+                            Debug.LogWarning("[Unity] 线程启动时Unity正在切换模式，取消处理");
+                            return;
+                        }
+                        
+                        if (!PythonEngine.IsInitialized)
+                        {
+                            Debug.LogWarning("[Unity] 线程启动时PythonEngine未初始化，取消处理");
+                            return;
+                        }
+
                         using (Py.GIL())
                         {
                         dynamic asyncio = Py.Import("asyncio");
@@ -156,6 +169,14 @@ namespace UnityAIAgent.Editor
                             {
                                 try
                                 {
+                                    // 在每个循环中检查Unity状态
+                                    if (ThreadProtection.IsUnityChangingMode || !PythonEngine.IsInitialized)
+                                    {
+                                        Debug.LogWarning("[Unity] 检测到Unity状态变化或Python引擎关闭，退出流处理");
+                                        EditorApplication.delayCall += () => onError?.Invoke("Unity状态变化，流处理被中断");
+                                        break;
+                                    }
+                                    
                                     chunkIndex++;
                                     Debug.Log($"[Unity] 等待第 {chunkIndex} 个chunk...");
                                     dynamic chunk = loop.run_until_complete(streamGen.__anext__());
@@ -225,6 +246,11 @@ namespace UnityAIAgent.Editor
                         Debug.LogWarning("[Unity] Python处理线程被中止");
                         processError = "处理被中断（Unity模式切换）";
                         System.Threading.Thread.ResetAbort(); // 重置中止状态
+                    }
+                    catch (System.InvalidOperationException ex) when (ex.Message.Contains("PythonEngine is not initialized"))
+                    {
+                        Debug.LogWarning("[Unity] PythonEngine已关闭，这通常发生在Unity模式切换时");
+                        processError = "Python引擎已关闭（Unity模式切换）";
                     }
                     catch (Exception ex)
                     {
