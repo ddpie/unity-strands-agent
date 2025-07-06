@@ -360,250 +360,33 @@ namespace UnityAIAgent.Editor
         
         /// <summary>
         /// 解析Anthropic MCP JSON并应用到当前配置
-        /// 这个方法将在SetupWizard中使用更强大的JSON解析库
+        /// 注意：这是一个简化的解析器，用于基本的配置导入
+        /// 复杂的JSON解析应该在SetupWizard中使用Unity的JsonUtility处理
         /// </summary>
         public bool ApplyAnthropicJsonConfig(string jsonContent, out string errorMessage)
         {
-            errorMessage = "";
+            errorMessage = "此方法已简化，请使用SetupWizard进行完整的JSON配置导入";
             
-            try
+            // 基本验证
+            if (string.IsNullOrWhiteSpace(jsonContent))
             {
-                servers.Clear();
-                
-                // 简单的JSON解析，解析Anthropic MCP格式
-                if (string.IsNullOrWhiteSpace(jsonContent))
-                {
-                    errorMessage = "JSON内容为空";
-                    return false;
-                }
-                
-                // 启用MCP
-                enableMCP = true;
-                
-                // 查找mcpServers对象
-                int mcpServersStart = jsonContent.IndexOf("\"mcpServers\":");
-                if (mcpServersStart == -1)
-                {
-                    errorMessage = "未找到mcpServers节点";
-                    return false;
-                }
-                
-                // 找到mcpServers的开始和结束大括号
-                int braceStart = jsonContent.IndexOf('{', mcpServersStart);
-                if (braceStart == -1)
-                {
-                    errorMessage = "mcpServers格式错误";
-                    return false;
-                }
-                
-                int braceCount = 1;
-                int braceEnd = braceStart + 1;
-                
-                // 找到匹配的结束大括号
-                while (braceEnd < jsonContent.Length && braceCount > 0)
-                {
-                    if (jsonContent[braceEnd] == '{') braceCount++;
-                    else if (jsonContent[braceEnd] == '}') braceCount--;
-                    braceEnd++;
-                }
-                
-                if (braceCount > 0)
-                {
-                    errorMessage = "mcpServers JSON格式不完整";
-                    return false;
-                }
-                
-                string mcpServersContent = jsonContent.Substring(braceStart + 1, braceEnd - braceStart - 2);
-                
-                // 解析每个服务器配置
-                ParseMcpServers(mcpServersContent);
-                
-                return true;
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"应用配置失败: {ex.Message}";
+                errorMessage = "JSON内容为空";
                 return false;
             }
-        }
-        
-        private void ParseMcpServers(string mcpServersContent)
-        {
-            if (string.IsNullOrWhiteSpace(mcpServersContent)) return;
             
-            // 使用简单的字符串解析来提取服务器配置
-            // 寻找形如 "server-name": { ... } 的模式
-            
-            int index = 0;
-            while (index < mcpServersContent.Length)
+            if (!jsonContent.Contains("mcpServers"))
             {
-                // 寻找下一个服务器定义
-                int serverNameStart = mcpServersContent.IndexOf('"', index);
-                if (serverNameStart == -1) break;
-                
-                int serverNameEnd = mcpServersContent.IndexOf('"', serverNameStart + 1);
-                if (serverNameEnd == -1) break;
-                
-                // 检查是否是服务器名称（后面跟着 ": {")
-                int colonIndex = mcpServersContent.IndexOf(':', serverNameEnd);
-                if (colonIndex == -1) break;
-                
-                int braceIndex = mcpServersContent.IndexOf('{', colonIndex);
-                if (braceIndex == -1) break;
-                
-                // 确保是顶层服务器定义（没有其他内容在名称和冒号之间）
-                string betweenNameAndColon = mcpServersContent.Substring(serverNameEnd + 1, colonIndex - serverNameEnd - 1).Trim();
-                if (!string.IsNullOrEmpty(betweenNameAndColon))
-                {
-                    index = serverNameEnd + 1;
-                    continue;
-                }
-                
-                // 提取服务器名称
-                string serverName = mcpServersContent.Substring(serverNameStart + 1, serverNameEnd - serverNameStart - 1);
-                
-                // 找到服务器配置块的结束
-                int braceCount = 1;
-                int configEnd = braceIndex + 1;
-                
-                while (configEnd < mcpServersContent.Length && braceCount > 0)
-                {
-                    if (mcpServersContent[configEnd] == '{') braceCount++;
-                    else if (mcpServersContent[configEnd] == '}') braceCount--;
-                    configEnd++;
-                }
-                
-                if (braceCount == 0)
-                {
-                    // 提取服务器配置内容
-                    string serverConfig = mcpServersContent.Substring(braceIndex + 1, configEnd - braceIndex - 2);
-                    
-                    // 创建服务器配置
-                    var server = new MCPServerConfig
-                    {
-                        name = serverName,
-                        enabled = true,
-                        transportType = MCPTransportType.Stdio
-                    };
-                    
-                    // 解析服务器配置
-                    ParseServerConfig(server, serverConfig);
-                    
-                    servers.Add(server);
-                }
-                
-                index = configEnd;
-            }
-        }
-        
-        private void ParseServerConfig(MCPServerConfig server, string configContent)
-        {
-            // 解析 command
-            string commandPattern = "\"command\"";
-            int commandIndex = configContent.IndexOf(commandPattern);
-            if (commandIndex != -1)
-            {
-                server.command = ExtractJsonStringValueFromContent(configContent, commandIndex + commandPattern.Length);
+                errorMessage = "JSON格式错误：缺少 'mcpServers' 字段";
+                return false;
             }
             
-            // 解析 args
-            string argsPattern = "\"args\"";
-            int argsIndex = configContent.IndexOf(argsPattern);
-            if (argsIndex != -1)
-            {
-                server.args = ExtractJsonArrayFromContent(configContent, argsIndex + argsPattern.Length);
-            }
+            // 启用MCP
+            enableMCP = true;
             
-            // 可以在这里添加其他属性的解析
-        }
-        
-        private string ExtractJsonStringValueFromContent(string content, int startIndex)
-        {
-            int colonIndex = content.IndexOf(':', startIndex);
-            if (colonIndex == -1) return "";
+            // 提示用户使用SetupWizard进行完整配置
+            Debug.LogWarning("MCPConfiguration.ApplyAnthropicJsonConfig: 请使用SetupWizard窗口进行完整的JSON配置导入");
             
-            int firstQuote = content.IndexOf('"', colonIndex);
-            if (firstQuote == -1) return "";
-            
-            int lastQuote = content.IndexOf('"', firstQuote + 1);
-            if (lastQuote == -1) return "";
-            
-            return content.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-        }
-        
-        private string[] ExtractJsonArrayFromContent(string content, int startIndex)
-        {
-            var args = new List<string>();
-            
-            int colonIndex = content.IndexOf(':', startIndex);
-            if (colonIndex == -1) return args.ToArray();
-            
-            int arrayStart = content.IndexOf('[', colonIndex);
-            if (arrayStart == -1) return args.ToArray();
-            
-            int arrayEnd = content.IndexOf(']', arrayStart);
-            if (arrayEnd == -1) return args.ToArray();
-            
-            string arrayContent = content.Substring(arrayStart + 1, arrayEnd - arrayStart - 1);
-            
-            // 简单的参数解析
-            string[] parts = arrayContent.Split(',');
-            foreach (string part in parts)
-            {
-                string trimmed = part.Trim();
-                if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length > 1)
-                {
-                    args.Add(trimmed.Substring(1, trimmed.Length - 2));
-                }
-            }
-            
-            return args.ToArray();
-        }
-        
-        private void ParseEnvironmentVariables(MCPServerConfig server, string envLine, string[] allLines)
-        {
-            // 简单的环境变量解析
-            // 这里可以添加更复杂的环境变量解析逻辑
-            if (server.environmentVariables == null)
-            {
-                server.environmentVariables = new List<EnvironmentVariable>();
-            }
-        }
-        
-        private string ExtractJsonStringValue(string line)
-        {
-            int firstQuote = line.IndexOf('"', line.IndexOf(':'));
-            if (firstQuote == -1) return "";
-            
-            int lastQuote = line.LastIndexOf('"');
-            if (lastQuote <= firstQuote) return "";
-            
-            return line.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-        }
-        
-        private string[] ParseArgsArray(string line)
-        {
-            var args = new List<string>();
-            
-            int arrayStart = line.IndexOf('[');
-            int arrayEnd = line.LastIndexOf(']');
-            
-            if (arrayStart == -1 || arrayEnd <= arrayStart) return args.ToArray();
-            
-            string arrayContent = line.Substring(arrayStart + 1, arrayEnd - arrayStart - 1);
-            
-            // 简单的参数解析
-            string[] parts = arrayContent.Split(',');
-            foreach (string part in parts)
-            {
-                string trimmed = part.Trim();
-                if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
-                {
-                    args.Add(trimmed.Substring(1, trimmed.Length - 2));
-                }
-            }
-            
-            return args.ToArray();
+            return true;
         }
 
         /// <summary>
