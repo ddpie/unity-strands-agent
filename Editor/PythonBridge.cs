@@ -44,8 +44,8 @@ namespace UnityAIAgent.Editor
                     Debug.Log($"Python sys.path: {string.Join(", ", paths)}");
                     
                     // 手动添加插件路径到sys.path（如果不存在）
-                    string pluginPath = "/Users/caobao/projects/unity/unity-strands-agent/Python";
-                    if (!paths.Contains(pluginPath))
+                    string pluginPath = PathManager.GetUnityAgentPythonPath();
+                    if (!string.IsNullOrEmpty(pluginPath) && !paths.Contains(pluginPath))
                     {
                         sys.path.insert(0, pluginPath);
                         Debug.Log($"手动添加插件路径到sys.path: {pluginPath}");
@@ -395,6 +395,38 @@ print('[Python] Unity日志处理器配置完成')
             public string content;
             public string error;
             public bool done;
+        }
+        
+        /// <summary>
+        /// 清理Python桥接资源
+        /// </summary>
+        public static void Shutdown()
+        {
+            if (isInitialized)
+            {
+                try
+                {
+                    using (Py.GIL())
+                    {
+                        // 清理 Python 对象
+                        agentCore = null;
+                        // 使用Python内置垃圾回收
+                        using (var gc = Py.Import("gc"))
+                        {
+                            gc.InvokeMethod("collect");
+                        }
+                    }
+                    Debug.Log("Python桥接已清理");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"清理 Python 对象时出错: {e.Message}");
+                }
+                finally
+                {
+                    isInitialized = false;
+                }
+            }
         }
     }
 

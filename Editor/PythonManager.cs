@@ -25,6 +25,9 @@ namespace UnityAIAgent.Editor
             // Unity Editor事件监听
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            
+            // 监听Unity退出事件
+            EditorApplication.quitting += OnUnityQuitting;
         }
         
         public static void EnsureInitialized()
@@ -90,8 +93,9 @@ namespace UnityAIAgent.Editor
         
         private static void DetectPython()
         {
-            // 优先使用Python 3.11（Python.NET兼容版本）
-            string[] pythonPaths = {
+            // 从路径配置中获取Python路径列表
+            var pathConfig = PathManager.PathConfig;
+            string[] pythonPaths = pathConfig?.pythonExecutablePaths?.ToArray() ?? new string[] {
                 "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",  // Apple Silicon Homebrew (刚安装的)
                 "/opt/homebrew/bin/python3.11",               // Apple Silicon Homebrew 符号链接
                 "/usr/local/opt/python@3.11/bin/python3.11",  // Intel Homebrew Python 3.11
@@ -273,6 +277,9 @@ namespace UnityAIAgent.Editor
             // 设置PYTHONHOME为主Python安装目录
             Environment.SetEnvironmentVariable("PYTHONHOME", pythonHome);
             
+            // 设置路径配置相关的环境变量
+            SetPathConfigurationEnvironmentVariables();
+            
             // 构建完整的PYTHONPATH，包含标准库和虚拟环境
             string venvLib = Path.Combine(venvPath, "lib", $"python{pythonVersion}");
             string venvSitePackages = Path.Combine(venvLib, "site-packages");
@@ -286,12 +293,12 @@ namespace UnityAIAgent.Editor
             string packagePath = Path.GetDirectoryName(Path.GetDirectoryName(assemblyLocation));
             string pluginPythonPath = Path.Combine(packagePath, "Python");
             
-            // 如果路径解析失败，使用固定路径作为后备
+            // 如果路径解析失败，使用路径配置中的路径作为后备
             if (!Directory.Exists(pluginPythonPath))
             {
-                pluginPythonPath = "/Users/caobao/projects/unity/unity-strands-agent/Python";
+                pluginPythonPath = PathManager.GetUnityAgentPythonPath();
                 EditorApplication.delayCall += () => {
-                    UnityEngine.Debug.Log($"使用后备Python模块路径: {pluginPythonPath}");
+                    UnityEngine.Debug.Log($"使用配置的Python模块路径: {pluginPythonPath}");
                 };
             }
             
@@ -312,8 +319,20 @@ namespace UnityAIAgent.Editor
             
             // 设置SSL证书环境变量（解决SSL验证问题）
             Environment.SetEnvironmentVariable("PYTHONHTTPSVERIFY", "1");
-            Environment.SetEnvironmentVariable("SSL_CERT_DIR", "/etc/ssl/certs");
-            Environment.SetEnvironmentVariable("SSL_CERT_FILE", "/etc/ssl/cert.pem");
+            
+            // 使用配置的SSL证书路径
+            string sslCertDir = PathManager.GetValidSSLCertDirectory();
+            string sslCertFile = PathManager.GetValidSSLCertPath();
+            
+            if (!string.IsNullOrEmpty(sslCertDir))
+            {
+                Environment.SetEnvironmentVariable("SSL_CERT_DIR", sslCertDir);
+            }
+            
+            if (!string.IsNullOrEmpty(sslCertFile))
+            {
+                Environment.SetEnvironmentVariable("SSL_CERT_FILE", sslCertFile);
+            }
             // 设置certifi证书路径
             string certifiPath = Path.Combine(venvSitePackages, "certifi", "cacert.pem");
             if (File.Exists(certifiPath))
@@ -445,7 +464,6 @@ namespace UnityAIAgent.Editor
             
             if (File.Exists(certifiPath))
             {
-                Environment.SetEnvironmentVariable("SSL_CERT_FILE", certifiPath);
                 Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", certifiPath);
                 Environment.SetEnvironmentVariable("CURL_CA_BUNDLE", certifiPath);
                 
@@ -458,8 +476,13 @@ namespace UnityAIAgent.Editor
                 EditorApplication.delayCall += () => {
                     UnityEngine.Debug.LogWarning("未找到certifi证书文件，使用系统默认证书");
                 };
-                Environment.SetEnvironmentVariable("SSL_CERT_FILE", "/etc/ssl/cert.pem");
-                Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", "/etc/ssl/cert.pem");
+                
+                // 使用配置的SSL证书文件作为后备
+                string fallbackCertFile = PathManager.GetValidSSLCertPath();
+                if (!string.IsNullOrEmpty(fallbackCertFile))
+                {
+                    Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", fallbackCertFile);
+                }
             }
         }
         
@@ -541,6 +564,123 @@ namespace UnityAIAgent.Editor
         public static string PythonExecutable => pythonExecutable;
         public static string PythonHome => pythonHome;
         public static string PythonVersion => pythonVersion;
+        
+        /// <summary>
+        /// 设置路径配置相关的环境变量
+        /// </summary>
+        private static void SetPathConfigurationEnvironmentVariables()
+        {
+            try
+            {
+                // 获取路径配置
+                var pathConfig = PathManager.PathConfig;
+                if (pathConfig == null) return;
+                
+                // 设置Strands工具路径
+                if (!string.IsNullOrEmpty(pathConfig.strandsToolsPath))
+                {
+                    Environment.SetEnvironmentVariable("STRANDS_TOOLS_PATH", pathConfig.strandsToolsPath);
+                }
+                
+                // 设置Node.js路径
+                string nodeExecutablePath = PathManager.GetValidNodePath();
+                if (!string.IsNullOrEmpty(nodeExecutablePath))
+                {
+                    Environment.SetEnvironmentVariable("NODE_EXECUTABLE_PATH", nodeExecutablePath);
+                }
+                
+                // 设置SSL证书路径
+                string sslCertFile = PathManager.GetValidSSLCertPath();
+                if (!string.IsNullOrEmpty(sslCertFile))
+                {
+                    Environment.SetEnvironmentVariable("SSL_CERT_FILE_PATH", sslCertFile);
+                }
+                
+                string sslCertDir = PathManager.GetValidSSLCertDirectory();
+                if (!string.IsNullOrEmpty(sslCertDir))
+                {
+                    Environment.SetEnvironmentVariable("SSL_CERT_DIR_PATH", sslCertDir);
+                }
+                
+                // 设置Shell路径
+                string shellPath = PathManager.GetShellExecutablePath();
+                if (!string.IsNullOrEmpty(shellPath))
+                {
+                    Environment.SetEnvironmentVariable("SHELL_EXECUTABLE_PATH", shellPath);
+                }
+                
+                // 设置MCP配置路径
+                string mcpConfigPath = PathManager.GetMCPConfigPath();
+                if (!string.IsNullOrEmpty(mcpConfigPath))
+                {
+                    Environment.SetEnvironmentVariable("MCP_CONFIG_PATH", mcpConfigPath);
+                }
+                
+                // 设置MCP Unity服务器路径
+                string mcpServerPath = PathManager.GetMCPUnityServerPath();
+                if (!string.IsNullOrEmpty(mcpServerPath))
+                {
+                    Environment.SetEnvironmentVariable("MCP_UNITY_SERVER_PATH", mcpServerPath);
+                }
+                
+                // 设置项目根目录
+                string projectRoot = PathManager.GetProjectRootPath();
+                if (!string.IsNullOrEmpty(projectRoot))
+                {
+                    Environment.SetEnvironmentVariable("PROJECT_ROOT_PATH", projectRoot);
+                }
+                
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log("路径配置环境变量已设置");
+                };
+            }
+            catch (Exception e)
+            {
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.LogWarning($"设置路径配置环境变量失败: {e.Message}");
+                };
+            }
+        }
+        
+        /// <summary>
+        /// Unity退出时调用
+        /// </summary>
+        private static void OnUnityQuitting()
+        {
+            UnityEngine.Debug.Log("Unity 正在退出，开始清理 Python 资源...");
+            Shutdown();
+        }
+        
+        /// <summary>
+        /// 关闭Python引擎和清理资源
+        /// </summary>
+        public static void Shutdown()
+        {
+            if (isPythonInitialized)
+            {
+                try
+                {
+                    // 先清理 Python 桥接
+                    PythonBridge.Shutdown();
+                    
+                    // 关闭 Python 引擎
+                    if (PythonEngine.IsInitialized)
+                    {
+                        UnityEngine.Debug.Log("正在关闭Python引擎...");
+                        PythonEngine.Shutdown();
+                        UnityEngine.Debug.Log("Python引擎已关闭");
+                    }
+                }
+                catch (Exception e)
+                {
+                    UnityEngine.Debug.LogWarning($"关闭 Python 引擎时出错: {e.Message}");
+                }
+                finally
+                {
+                    isPythonInitialized = false;
+                }
+            }
+        }
         
         [Serializable]
         private class PythonInfo

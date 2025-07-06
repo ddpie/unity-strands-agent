@@ -83,7 +83,7 @@ response = agent("How many times does 'e' appear in 'engineering'?")
 2. **概念介绍**
    - Agents：轻量级AI代理框架
    - Tools：扩展代理能力的机制
-   - Model Providers：支持的模型提供商
+   - Model Providers：支持不同的模型提供商
 
 3. **安全与安全性**
    - 负责任的AI开发

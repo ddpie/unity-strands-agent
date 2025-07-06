@@ -159,14 +159,19 @@ class MCPManager:
             logger.info(f"当前Python工作目录: {current_dir}")
             
             # Unity项目的MCP配置路径
-            config_paths = [
-                "Assets/UnityAIAgent/mcp_config.json",
-                "../Assets/UnityAIAgent/mcp_config.json",
-                "../../Assets/UnityAIAgent/mcp_config.json",
-                "../../../CubeVerse/Assets/UnityAIAgent/mcp_config.json",  # CubeVerse项目
-                "/Users/caobao/projects/unity/CubeVerse/Assets/UnityAIAgent/mcp_config.json",  # 绝对路径
-                "mcp_config.json"
-            ]
+            # 从环境变量或配置文件获取路径
+            mcp_config_path = os.environ.get('MCP_CONFIG_PATH')
+            
+            if mcp_config_path:
+                config_paths = [mcp_config_path]
+            else:
+                # 默认路径列表
+                config_paths = [
+                    "Assets/UnityAIAgent/mcp_config.json",
+                    "../Assets/UnityAIAgent/mcp_config.json",
+                    "../../Assets/UnityAIAgent/mcp_config.json",
+                    "mcp_config.json"
+                ]
             
             for config_path in config_paths:
                 abs_path = os.path.abspath(config_path)

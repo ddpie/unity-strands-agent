@@ -83,6 +83,14 @@ class UnitySSLConfig:
     
     def _try_system_certifi(self):
         """尝试系统Python的certifi路径"""
+        # 首先尝试从环境变量获取配置的路径
+        ssl_cert_file = os.environ.get('SSL_CERT_FILE_PATH')
+        if ssl_cert_file and os.path.exists(ssl_cert_file):
+            self._set_cert_path(ssl_cert_file)
+            print(f"[Python] ✓ 使用配置的SSL证书路径: {ssl_cert_file}")
+            return True
+        
+        # 然后尝试预定义的系统路径
         for cert_path in self.SYSTEM_CERTIFI_PATHS:
             if os.path.exists(cert_path):
                 self._set_cert_path(cert_path)
@@ -92,6 +100,18 @@ class UnitySSLConfig:
     
     def _try_macos_certs(self):
         """尝试macOS系统证书路径"""
+        # 首先尝试从环境变量获取配置的证书目录
+        ssl_cert_dir = os.environ.get('SSL_CERT_DIR_PATH')
+        if ssl_cert_dir and os.path.exists(ssl_cert_dir):
+            # 在配置的目录中查找证书文件
+            for cert_file in ['cert.pem', 'ca-certificates.crt', 'cacert.pem']:
+                cert_path = os.path.join(ssl_cert_dir, cert_file)
+                if os.path.exists(cert_path):
+                    self._set_cert_path(cert_path)
+                    print(f"[Python] ✓ 使用配置的证书目录中的证书: {cert_path}")
+                    return True
+        
+        # 然后尝试预定义的macOS路径
         for cert_path in self.MACOS_CERT_PATHS:
             if os.path.exists(cert_path):
                 self._set_cert_path(cert_path)

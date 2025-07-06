@@ -30,14 +30,18 @@ def test_unity_directory() -> str:
         }
         
         # 检查所有配置路径
-        config_paths = [
-            "Assets/UnityAIAgent/mcp_config.json",
-            "../Assets/UnityAIAgent/mcp_config.json",
-            "../../Assets/UnityAIAgent/mcp_config.json",
-            "../../../CubeVerse/Assets/UnityAIAgent/mcp_config.json",
-            "/Users/caobao/projects/unity/CubeVerse/Assets/UnityAIAgent/mcp_config.json",
-            "mcp_config.json"
-        ]
+        # 从环境变量获取配置路径
+        mcp_config_path = os.environ.get('MCP_CONFIG_PATH')
+        
+        if mcp_config_path:
+            config_paths = [mcp_config_path]
+        else:
+            config_paths = [
+                "Assets/UnityAIAgent/mcp_config.json",
+                "../Assets/UnityAIAgent/mcp_config.json",
+                "../../Assets/UnityAIAgent/mcp_config.json",
+                "mcp_config.json"
+            ]
         
         for path in config_paths:
             result["config_paths_exist"][path] = {
@@ -138,12 +142,18 @@ def diagnose_unity_mcp_issue() -> str:
             logger.error(f"❌ Node.js测试失败: {e}")
         
         # 测试2.5: 使用绝对路径的Node.js测试
-        node_paths = [
-            '/usr/local/bin/node',
-            '/opt/homebrew/bin/node',
-            '/usr/bin/node',
-            '/Users/caobao/.nvm/current/bin/node'
-        ]
+        # 从环境变量获取Node.js路径，如果没有则使用默认列表
+        node_path_env = os.environ.get('NODE_EXECUTABLE_PATH')
+        
+        if node_path_env:
+            node_paths = [node_path_env]
+        else:
+            node_paths = [
+                '/usr/local/bin/node',
+                '/opt/homebrew/bin/node',
+                '/usr/bin/node',
+                os.path.expanduser('~/.nvm/current/bin/node')
+            ]
         
         for node_path in node_paths:
             if os.path.exists(node_path):
@@ -171,8 +181,9 @@ def diagnose_unity_mcp_issue() -> str:
                 break  # 只测试第一个存在的路径
         
         # 测试3: MCP服务器文件存在性
-        mcp_server_path = "/Users/caobao/projects/unity/CubeVerse/Library/PackageCache/com.gamelovers.mcp-unity@fe27f2b491/Server/build/index.js"
-        mcp_server_exists = os.path.exists(mcp_server_path)
+        # 从环境变量获取MCP服务器路径
+        mcp_server_path = os.environ.get('MCP_UNITY_SERVER_PATH', '')
+        mcp_server_exists = os.path.exists(mcp_server_path) if mcp_server_path else False
         result["mcp_tests"].append({
             "name": "MCP服务器文件检查",
             "success": mcp_server_exists,

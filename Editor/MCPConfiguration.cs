@@ -88,60 +88,6 @@ namespace UnityAIAgent.Editor
             return enabledServers;
         }
 
-        /// <summary>
-        /// 添加预设的MCP服务器配置
-        /// </summary>
-        public void AddPresetConfigurations()
-        {
-            // AWS文档MCP服务器
-            var awsDocsServer = new MCPServerConfig
-            {
-                name = "AWS文档",
-                description = "AWS官方文档搜索和查询",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "awslabs.aws-documentation-mcp-server@latest" },
-                enabled = false
-            };
-
-            // GitHub MCP服务器
-            var githubServer = new MCPServerConfig
-            {
-                name = "GitHub",
-                description = "GitHub仓库管理和搜索",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "mcp-server-github" },
-                enabled = false,
-                environmentVariables = new List<EnvironmentVariable>
-                {
-                    new EnvironmentVariable { key = "GITHUB_TOKEN", value = "", isSecret = true }
-                }
-            };
-
-            // 文件系统MCP服务器
-            var filesystemServer = new MCPServerConfig
-            {
-                name = "文件系统",
-                description = "本地文件系统访问",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "mcp-server-filesystem", "--base-path", Application.dataPath },
-                enabled = false
-            };
-
-            // Web搜索MCP服务器
-            var webSearchServer = new MCPServerConfig
-            {
-                name = "Web搜索",
-                description = "网络搜索和信息检索",
-                transportType = MCPTransportType.StreamableHttp,
-                httpUrl = "http://localhost:8000/mcp",
-                enabled = false
-            };
-
-            servers.AddRange(new[] { awsDocsServer, githubServer, filesystemServer, webSearchServer });
-        }
 
         /// <summary>
         /// 验证配置是否有效

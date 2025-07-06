@@ -8,7 +8,7 @@
 
 - **嵌入式Python**：使用Python.NET直接在Unity进程中运行Python
 - **虚拟环境隔离**：创建独立虚拟环境管理Python依赖
-- **AWS认证**：使用本地AWS credentials，无需手动配置API密钥
+- **AWS认证**：暂时使用本地AWS credentials，无需手动配置API密钥
 - **macOS优先**：首先支持macOS平台
 - **流式响应**：提供实时的AI响应流式输出
 

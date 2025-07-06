@@ -49,9 +49,11 @@ class UnityToolsManager:
         global shell_module, http_request_module
         
         try:
-            # 添加strands tools路径到sys.path
-            strands_tools_path = "/Users/caobao/projects/strands/tools/src"
-            if strands_tools_path not in sys.path:
+            # 从Unity PathManager获取strands tools路径
+            # 注意：这里需要通过Unity C#接口获取路径配置
+            # 暂时使用环境变量或配置文件作为后备方案
+            strands_tools_path = os.environ.get('STRANDS_TOOLS_PATH', "/Users/caobao/projects/strands/tools/src")
+            if strands_tools_path and strands_tools_path not in sys.path:
                 sys.path.insert(0, strands_tools_path)
             
             # 导入预定义工具模块

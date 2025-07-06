@@ -60,6 +60,7 @@ namespace UnityAIAgent.Editor
         private GUIStyle titleStyle;
         private GUIStyle clearButtonStyle;
         private GUIStyle chatHeaderStyle;
+        private bool stylesInitialized = false;
         private StreamingHandler streamingHandler;
         private bool autoScroll = true;
         private bool userScrolledUp = false;
@@ -89,11 +90,15 @@ namespace UnityAIAgent.Editor
         
         // MCP configuration
         private int settingsTab = 0;
-        private readonly string[] settingsTabNames = { "设置进度", "MCP配置" };
+        private readonly string[] settingsTabNames = { "设置进度", "路径配置", "MCP配置" };
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
         private bool showMCPPresets = false;
+        
+        // Path configuration
+        private Vector2 pathConfigScrollPosition;
+        private PathConfiguration pathConfig;
         
         private readonly string[] setupSteps = {
             "检测Python环境",
@@ -156,12 +161,24 @@ namespace UnityAIAgent.Editor
             hasActiveStream = false;
             
             LoadChatHistory();
-            InitializeStyles();
+            try
+            {
+                InitializeStyles();
+            }
+            catch (System.NullReferenceException)
+            {
+                // EditorStyles 还未准备好，跳过样式初始化
+                Debug.Log("EditorStyles未准备好，将在OnGUI中重试");
+            }
             InitializeStreamingHandler();
             
             // Initialize MCP configuration - 强制重新加载
             mcpJsonConfig = null; // 清除缓存，强制重新加载
             LoadMCPConfiguration();
+            
+            // Initialize Path configuration
+            LoadPathConfiguration();
+            
             CheckSetupStatus();
             
             // Ensure Python is initialized
@@ -207,6 +224,27 @@ namespace UnityAIAgent.Editor
 
         private void InitializeStyles()
         {
+            // Check if styles are already initialized to avoid redundant work
+            if (stylesInitialized && userMessageStyle != null && aiMessageStyle != null) 
+                return;
+                
+            // Check if EditorStyles is ready
+            try
+            {
+                // Test if EditorStyles is available by trying to access it
+                var test = EditorStyles.wordWrappedLabel;
+                if (test == null)
+                {
+                    // EditorStyles not ready yet, skip initialization
+                    return;
+                }
+            }
+            catch (System.NullReferenceException)
+            {
+                // EditorStyles not ready yet, skip initialization
+                return;
+            }
+            
             // 检查样式是否需要重新初始化（处理域重载情况）
             bool needsReinit = userMessageStyle == null || 
                               userMessageStyle.normal.background == null ||
@@ -298,11 +336,20 @@ namespace UnityAIAgent.Editor
                     new Color(0.2f, 0.2f, 0.2f, 0.8f) : new Color(0.95f, 0.95f, 0.95f, 0.8f)) },
                 padding = new RectOffset(16, 16, 12, 12)
             };
+            
+            stylesInitialized = true;
         }
 
         private void OnGUI()
         {
-            InitializeStyles();
+            try
+            {
+                InitializeStyles();
+            }
+            catch (System.NullReferenceException)
+            {
+                // EditorStyles 还未准备好，跳过样式初始化
+            }
             
             // 确保 StreamingHandler 在每次 GUI 渲染时都已初始化
             if (streamingHandler == null)
@@ -2267,7 +2314,11 @@ namespace UnityAIAgent.Editor
             {
                 DrawSetupProgress();
             }
-            else
+            else if (settingsTab == 1)
+            {
+                DrawPathConfiguration();
+            }
+            else if (settingsTab == 2)
             {
                 DrawMCPConfiguration();
             }
@@ -2431,6 +2482,12 @@ namespace UnityAIAgent.Editor
         
         private void DrawMCPConfiguration()
         {
+            // 确保MCP配置已加载
+            if (mcpConfig == null || string.IsNullOrEmpty(mcpJsonConfig))
+            {
+                LoadMCPConfiguration();
+            }
+            
             EditorGUILayout.Space();
             
             // MCP Configuration UI
@@ -2504,36 +2561,61 @@ namespace UnityAIAgent.Editor
         // Settings helper methods
         private void LoadMCPConfiguration()
         {
-            // 优先从JSON文件加载（这是实际使用的配置）
+            // 首先加载ScriptableObject配置
+            string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
+            mcpConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MCPConfiguration>(configPath);
+            
+            if (mcpConfig == null)
+            {
+                Debug.Log("MCPConfig.asset不存在，将创建新的配置");
+                // 创建新的MCPConfiguration
+                mcpConfig = ScriptableObject.CreateInstance<MCPConfiguration>();
+                
+                // 确保目录存在
+                string directory = "Assets/UnityAIAgent";
+                if (!System.IO.Directory.Exists(directory))
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+                
+                // 创建并保存Asset
+                AssetDatabase.CreateAsset(mcpConfig, configPath);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log($"已创建新的MCP配置: {configPath}");
+            }
+            else
+            {
+                Debug.Log("MCP ScriptableObject配置已加载");
+            }
+            
+            // 然后加载JSON配置（用于编辑）
             string jsonConfigPath = "Assets/UnityAIAgent/mcp_config.json";
             if (System.IO.File.Exists(jsonConfigPath))
             {
                 try
                 {
                     mcpJsonConfig = System.IO.File.ReadAllText(jsonConfigPath);
-                    Debug.Log($"MCP配置已从JSON文件加载: {jsonConfigPath}");
+                    Debug.Log($"MCP JSON配置已从文件加载: {jsonConfigPath}");
                 }
                 catch (System.Exception e)
                 {
                     Debug.LogWarning($"无法读取MCP JSON配置: {e.Message}");
-                    mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+                    mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
                 }
             }
             else
             {
-                // 备用方案：从Unity Asset加载
-                string configPath = "Assets/UnityAIAgent/MCPConfig.asset";
-                mcpConfig = UnityEditor.AssetDatabase.LoadAssetAtPath<MCPConfiguration>(configPath);
-                if (mcpConfig != null)
-                {
-                    mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
-                    Debug.Log("MCP配置已从Unity Asset加载");
-                }
-                else
-                {
-                    mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
-                    Debug.Log("未找到MCP配置，使用默认空配置");
-                }
+                // 如果JSON文件不存在，从ScriptableObject生成
+                mcpJsonConfig = mcpConfig.GenerateAnthropicMCPJson();
+                Debug.Log("MCP JSON配置从ScriptableObject生成");
+            }
+            
+            // 确保JSON配置不为空
+            if (string.IsNullOrEmpty(mcpJsonConfig))
+            {
+                mcpJsonConfig = "{\n  \"mcpServers\": {}\n}";
+                Debug.Log("使用默认空MCP配置");
             }
         }
         
@@ -2876,7 +2958,6 @@ namespace UnityAIAgent.Editor
             
             // Create new configuration
             mcpConfig = ScriptableObject.CreateInstance<MCPConfiguration>();
-            mcpConfig.AddPresetConfigurations();
             
             // Save as asset
             UnityEditor.AssetDatabase.CreateAsset(mcpConfig, configPath);
@@ -2973,6 +3054,148 @@ namespace UnityAIAgent.Editor
                 Debug.Log("设置已重置");
                 Repaint();
             }
+        }
+
+        private void LoadPathConfiguration()
+        {
+            pathConfig = PathManager.PathConfig;
+        }
+
+        private void DrawPathConfiguration()
+        {
+            // 确保路径配置已加载
+            if (pathConfig == null)
+            {
+                LoadPathConfiguration();
+            }
+            
+            pathConfigScrollPosition = EditorGUILayout.BeginScrollView(pathConfigScrollPosition);
+            
+            EditorGUILayout.Space(10);
+            
+            // 主标题
+            EditorGUILayout.LabelField("路径配置", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+            
+            if (pathConfig == null)
+            {
+                EditorGUILayout.HelpBox("路径配置未找到。将创建新的配置文件。", MessageType.Info);
+                if (GUILayout.Button("创建配置文件"))
+                {
+                    PathManager.CreatePathConfiguration();
+                    pathConfig = PathManager.PathConfig;
+                }
+                EditorGUILayout.EndScrollView();
+                return;
+            }
+            
+            // 基本路径配置
+            EditorGUILayout.LabelField("基本路径配置", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+            
+            // 项目根目录
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("项目根目录", GUILayout.Width(120));
+            pathConfig.projectRootPath = EditorGUILayout.TextField(pathConfig.projectRootPath);
+            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            {
+                string path = EditorUtility.OpenFolderPanel("选择项目根目录", pathConfig.projectRootPath, "");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    pathConfig.projectRootPath = path;
+                    EditorUtility.SetDirty(pathConfig);
+                }
+            }
+            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            {
+                pathConfig.projectRootPath = PathManager.GetProjectRootPath();
+                EditorUtility.SetDirty(pathConfig);
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            // Node.js 路径
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Node.js 路径", GUILayout.Width(120));
+            pathConfig.nodeExecutablePath = EditorGUILayout.TextField(pathConfig.nodeExecutablePath);
+            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            {
+                string path = EditorUtility.OpenFilePanel("选择Node.js可执行文件", pathConfig.nodeExecutablePath, "");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    pathConfig.nodeExecutablePath = path;
+                    EditorUtility.SetDirty(pathConfig);
+                }
+            }
+            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            {
+                pathConfig.nodeExecutablePath = PathManager.GetValidNodePath();
+                EditorUtility.SetDirty(pathConfig);
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            // AI代理Python路径
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("AI代理Python路径", GUILayout.Width(120));
+            pathConfig.strandsToolsPath = EditorGUILayout.TextField(pathConfig.strandsToolsPath);
+            if (GUILayout.Button("浏览", GUILayout.Width(60)))
+            {
+                string path = EditorUtility.OpenFolderPanel("选择AI代理Python目录", pathConfig.strandsToolsPath, "");
+                if (!string.IsNullOrEmpty(path))
+                {
+                    pathConfig.strandsToolsPath = path;
+                    EditorUtility.SetDirty(pathConfig);
+                }
+            }
+            if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+            {
+                // AI代理Python路径自动检测，使用Unity Agent Python路径作为默认值
+                pathConfig.strandsToolsPath = PathManager.GetStrandsToolsPath();
+                if (string.IsNullOrEmpty(pathConfig.strandsToolsPath))
+                {
+                    pathConfig.strandsToolsPath = PathManager.GetUnityAgentPythonPath();
+                }
+                EditorUtility.SetDirty(pathConfig);
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(15);
+            
+            // 操作按钮
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("全部自动检测", GUILayout.Height(30)))
+            {
+                pathConfig.AutoDetectAllPaths();
+                EditorUtility.SetDirty(pathConfig);
+            }
+            if (GUILayout.Button("验证配置", GUILayout.Height(30)))
+            {
+                pathConfig.ValidateAllPaths();
+                EditorUtility.SetDirty(pathConfig);
+            }
+            if (GUILayout.Button("保存配置", GUILayout.Height(30)))
+            {
+                EditorUtility.SetDirty(pathConfig);
+                AssetDatabase.SaveAssets();
+                EditorUtility.DisplayDialog("保存成功", "路径配置已保存", "确定");
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            EditorGUILayout.Space(10);
+            
+            // 配置状态
+            EditorGUILayout.LabelField("配置状态", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+            
+            if (pathConfig.IsValid())
+            {
+                EditorGUILayout.HelpBox("✓ 所有路径配置有效", MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("⚠ 部分路径配置可能无效，请检查上述配置", MessageType.Warning);
+            }
+            
+            EditorGUILayout.EndScrollView();
         }
         
 

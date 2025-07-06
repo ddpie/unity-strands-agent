@@ -215,6 +215,127 @@ Unity编辑器深度集成工具，提供菜单执行、对象操作、包管理
 - **Apache 2.0许可** - 开源协议，支持商业使用和定制开发
 - **活跃社区** - 快速发展的开源社区，持续改进和扩展功能
 
+## 路径配置系统
+
+### 概述
+
+本系统提供了统一的路径配置管理，将之前硬编码的路径提取到可配置的界面中，方便不同用户根据自己的环境进行调整。路径配置功能已集成到AI助手的设置界面中。
+
+### 功能特性
+
+- **集成配置界面**：路径配置集成在AI助手设置界面中
+- **相对路径支持**：优先使用相对路径，便于项目迁移
+- **自动检测**：自动检测常见的路径位置
+- **浏览功能**：提供文件/文件夹浏览器
+- **配置验证**：实时验证配置的有效性
+- **智能路径选择**：按优先级自动选择有效路径
+
+### 使用方法
+
+#### 1. 打开配置界面
+
+在Unity Editor中，选择菜单：`Window > AI助手 > 设置向导`，然后切换到"路径配置"标签页
+
+#### 2. 环境设置标签页
+
+这是原有的自动安装和配置功能，包含Python环境、依赖包安装等步骤。
+
+#### 3. 路径配置标签页
+
+**基本路径配置：**
+- **项目根目录**：Unity项目的根目录，其他相对路径基于此目录
+- **Node.js配置**：主要和备用Node.js可执行文件路径
+- **Strands工具配置**：Strands工具源码路径
+- **系统Shell配置**：Shell可执行文件路径（默认为/bin/bash）
+
+**高级路径配置：**
+- **Python路径列表**：按优先级排序的Python可执行文件路径
+- **Node.js路径列表**：按优先级排序的Node.js可执行文件路径  
+- **SSL证书配置**：SSL证书文件和目录路径列表，支持自定义证书位置
+
+#### 4. MCP配置标签页
+
+这是原有的MCP服务器配置功能，用于配置外部工具和服务连接。
+
+#### 5. 自动检测功能
+
+- 点击各个"自动检测"按钮，系统会自动搜索和设置常见的路径位置
+- 点击"全部自动检测"按钮，一键检测并配置所有路径
+- 系统会按优先级搜索配置的路径，自动选择第一个有效的路径
+
+### 配置文件
+
+配置保存在 `Assets/UnityAIAgent/PathConfiguration.asset` 文件中，会自动加载。
+
+### 环境变量
+
+系统会自动设置以下环境变量供Python脚本使用：
+
+- `STRANDS_TOOLS_PATH`：Strands工具路径
+- `NODE_EXECUTABLE_PATH`：Node.js可执行文件路径
+- `MCP_CONFIG_PATH`：MCP配置文件路径
+- `MCP_UNITY_SERVER_PATH`：MCP Unity服务器路径
+- `PROJECT_ROOT_PATH`：项目根目录
+- `SSL_CERT_FILE_PATH`：SSL证书文件路径
+- `SSL_CERT_DIR_PATH`：SSL证书目录路径
+- `SHELL_EXECUTABLE_PATH`：Shell可执行文件路径
+
+### 相对路径说明
+
+系统优先使用相对路径，相对于项目根目录：
+
+- `Assets/UnityAIAgent/mcp_config.json` - MCP配置文件
+- `Library/PackageCache/com.gamelovers.mcp-unity@xxx/Server/build/index.js` - MCP服务器
+- `~/.nvm/current/bin/node` - Node.js（用户主目录相对路径）
+
+### 故障排除
+
+1. **路径不存在错误**：
+   - 使用"验证配置"功能检查所有路径
+   - 使用"自动检测"功能重新检测路径
+   - 手动使用"浏览"功能设置正确路径
+
+2. **Python模块找不到**：
+   - 检查Strands工具路径是否正确
+   - 确保STRANDS_TOOLS_PATH环境变量已设置
+
+3. **MCP连接失败**：
+   - 验证Node.js路径和MCP服务器路径
+   - 检查MCP配置文件是否存在
+
+### 开发说明
+
+#### 添加新的配置路径
+
+1. 在 `PathConfiguration.cs` 中添加新的字段
+2. 在 `SetupWizard.cs` 的路径配置界面中添加UI控件
+3. 在 `PathManager.cs` 中添加获取方法
+4. 在 `PythonManager.cs` 中设置相应的环境变量
+
+#### 使用配置的路径
+
+在代码中，使用 `PathManager` 来获取配置的路径：
+
+```csharp
+// 获取Node.js路径
+string nodePath = PathManager.GetNodeExecutablePath();
+
+// 获取MCP服务器路径
+string mcpServerPath = PathManager.GetMCPUnityServerPath();
+```
+
+在Python脚本中，使用环境变量：
+
+```python
+import os
+
+# 获取Strands工具路径
+strands_path = os.environ.get('STRANDS_TOOLS_PATH')
+
+# 获取MCP配置路径
+mcp_config_path = os.environ.get('MCP_CONFIG_PATH')
+```
+
 ## 开发者指南
 
 ### 项目结构概览
@@ -227,7 +348,9 @@ unity-strands-agent/
 │   ├── MCPConfiguration.cs    # MCP工具配置管理
 │   ├── PythonBridge.cs        # Python.NET桥接层
 │   ├── StreamingHandler.cs    # 实时流式响应处理
-│   └── ThreadProtection.cs    # 线程安全保护
+│   ├── ThreadProtection.cs    # 线程安全保护
+│   ├── PathConfiguration.cs   # 路径配置系统
+│   └── PathManager.cs         # 路径管理器
 ├── Python/                    # Python AI代理层
 │   ├── unity_agent.py         # Unity专用AI代理
 │   ├── unity_system_prompt.py # Unity专业提示词

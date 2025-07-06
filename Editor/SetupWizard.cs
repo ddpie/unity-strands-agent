@@ -30,13 +30,14 @@ namespace UnityAIAgent.Editor
         private GUIStyle stepStyle;
         private GUIStyle statusStyle;
         
-        // MCP配置相关变量
+        // 配置相关变量
         private int selectedTab = 0;
-        private string[] tabNames = { "设置进度", "MCP配置" };
+        private string[] tabNames = { "环境设置", "路径配置", "MCP配置" };
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
-        private bool showMCPPresets = false;
+        private Vector2 pathConfigScrollPosition;
+        private PathConfiguration pathConfig;
         
         private readonly string[] setupSteps = {
             "检测Python环境",
@@ -74,6 +75,7 @@ namespace UnityAIAgent.Editor
             PythonManager.OnInitProgress += OnProgressUpdate;
             CheckExistingSetup();
             LoadOrCreateMCPConfig();
+            LoadPathConfig();
         }
         
         private void OnDisable()
@@ -169,13 +171,17 @@ namespace UnityAIAgent.Editor
             GUILayout.Space(10);
             
             // 根据选中的标签页显示不同内容
-            if (selectedTab == 0)
+            switch (selectedTab)
             {
-                DrawSetupContent();
-            }
-            else
-            {
-                DrawMCPContent();
+                case 0:
+                    DrawSetupContent();
+                    break;
+                case 1:
+                    DrawPathConfigContent();
+                    break;
+                case 2:
+                    DrawMCPContent();
+                    break;
             }
         }
         
@@ -203,6 +209,45 @@ namespace UnityAIAgent.Editor
             
             // 快速安装选项
             DrawQuickInstallOptions();
+        }
+        
+        private void DrawPathConfigContent()
+        {
+            pathConfigScrollPosition = EditorGUILayout.BeginScrollView(pathConfigScrollPosition);
+            
+            EditorGUILayout.BeginVertical();
+            
+            // 路径配置说明
+            EditorGUILayout.HelpBox(
+                "配置项目中使用的各种路径。建议使用相对路径以便项目在不同机器间移植。\n" +
+                "系统会按优先级搜索配置的路径，找到第一个有效的路径后使用。",
+                MessageType.Info);
+            
+            GUILayout.Space(10);
+            
+            if (pathConfig == null)
+            {
+                EditorGUILayout.HelpBox("路径配置未加载，请重新打开窗口。", MessageType.Warning);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndScrollView();
+                return;
+            }
+            
+            // 基本路径配置
+            DrawBasicPathConfig();
+            
+            GUILayout.Space(10);
+            
+            // 高级路径配置
+            DrawAdvancedPathConfig();
+            
+            GUILayout.Space(10);
+            
+            // 路径配置操作按钮
+            DrawPathConfigButtons();
+            
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndScrollView();
         }
         
         private void DrawMCPContent()
@@ -779,8 +824,7 @@ namespace UnityAIAgent.Editor
                     mcpConfig.maxConcurrentConnections = 3;
                     mcpConfig.defaultTimeoutSeconds = 30;
                     
-                    // 添加一些基础的预设配置（但不启用）
-                    mcpConfig.AddPresetConfigurations();
+                    // 默认创建空的MCP配置
                     
                     // 保存配置文件
                     AssetDatabase.CreateAsset(mcpConfig, configPath);
@@ -932,56 +976,11 @@ namespace UnityAIAgent.Editor
             }
         }
         
-        private void DrawMCPPresets()
+        private void LoadPathConfig()
         {
-            showMCPPresets = EditorGUILayout.Foldout(showMCPPresets, "预设配置");
-            
-            if (showMCPPresets)
-            {
-                EditorGUI.indentLevel++;
-                
-                EditorGUILayout.HelpBox(
-                    "预设配置包含常用的MCP服务器设置，点击添加到配置中。",
-                    MessageType.Info);
-                
-                EditorGUILayout.BeginHorizontal();
-                
-                if (GUILayout.Button("AWS文档"))
-                {
-                    AddAWSDocsPreset();
-                }
-                
-                if (GUILayout.Button("GitHub"))
-                {
-                    AddGitHubPreset();
-                }
-                
-                EditorGUILayout.EndHorizontal();
-                
-                EditorGUILayout.BeginHorizontal();
-                
-                if (GUILayout.Button("文件系统"))
-                {
-                    AddFilesystemPreset();
-                }
-                
-                if (GUILayout.Button("Web搜索"))
-                {
-                    AddWebSearchPreset();
-                }
-                
-                EditorGUILayout.EndHorizontal();
-                
-                if (GUILayout.Button("添加所有预设配置"))
-                {
-                    mcpConfig.AddPresetConfigurations();
-                    UpdateMCPJsonConfig();
-                    EditorUtility.SetDirty(mcpConfig);
-                }
-                
-                EditorGUI.indentLevel--;
-            }
+            pathConfig = PathManager.PathConfig;
         }
+        
         
         private void DrawMCPJsonEditor()
         {
@@ -1428,15 +1427,38 @@ namespace UnityAIAgent.Editor
                         isSecret = false
                     });
                     
-                    // 提取 args 路径
-                    var startIndex = mcpJsonConfig.IndexOf("/Users/caobao/projects/unity/CubeVerse/Library/PackageCache/com.gamelovers.mcp-unity");
-                    if (startIndex > 0)
+                    // 提取 args 路径 - 查找包含 "PackageCache/com.gamelovers.mcp-unity" 的路径
+                    var packagePattern = "PackageCache/com.gamelovers.mcp-unity";
+                    var packageIndex = mcpJsonConfig.IndexOf(packagePattern);
+                    if (packageIndex > 0)
                     {
-                        var endIndex = mcpJsonConfig.IndexOf("\"", startIndex);
-                        if (endIndex > startIndex)
+                        // 向前查找路径的开始（通常是引号后的第一个字符）
+                        var pathStartIndex = packageIndex;
+                        while (pathStartIndex > 0 && mcpJsonConfig[pathStartIndex - 1] != '"' && mcpJsonConfig[pathStartIndex - 1] != '\'')
                         {
-                            var argPath = mcpJsonConfig.Substring(startIndex, endIndex - startIndex);
+                            pathStartIndex--;
+                        }
+                        
+                        // 向后查找路径的结束（引号）
+                        var pathEndIndex = mcpJsonConfig.IndexOf("\"", packageIndex);
+                        if (pathEndIndex == -1)
+                        {
+                            pathEndIndex = mcpJsonConfig.IndexOf("'", packageIndex);
+                        }
+                        
+                        if (pathEndIndex > pathStartIndex)
+                        {
+                            var argPath = mcpJsonConfig.Substring(pathStartIndex, pathEndIndex - pathStartIndex);
                             server.args = new string[] { argPath };
+                        }
+                    }
+                    else
+                    {
+                        // 如果找不到 PackageCache 路径，尝试使用 PathManager 获取
+                        var mcpServerPath = PathManager.GetMCPUnityServerPath();
+                        if (!string.IsNullOrEmpty(mcpServerPath))
+                        {
+                            server.args = new string[] { mcpServerPath };
                         }
                     }
                     
@@ -1551,22 +1573,6 @@ namespace UnityAIAgent.Editor
             }
         }
         
-        private void AddAWSDocsPreset()
-        {
-            var preset = new MCPServerConfig
-            {
-                name = "AWS文档",
-                description = "AWS官方文档搜索和查询",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "awslabs.aws-documentation-mcp-server@latest" },
-                enabled = false
-            };
-            mcpConfig.servers.Add(preset);
-            UpdateMCPJsonConfig();
-            EditorUtility.SetDirty(mcpConfig);
-            AssetDatabase.SaveAssets();
-        }
         
         private void ReloadMCPConfigInPython()
         {
@@ -1623,12 +1629,7 @@ namespace UnityAIAgent.Editor
                     UnityEngine.Debug.Log($"Unity调用Python时的工作目录: {currentDir}");
                     
                     // 检查配置文件是否存在
-                    string[] configPaths = {
-                        "Assets/UnityAIAgent/mcp_config.json",
-                        "../Assets/UnityAIAgent/mcp_config.json", 
-                        "../../Assets/UnityAIAgent/mcp_config.json",
-                        "/Users/caobao/projects/unity/CubeVerse/Assets/UnityAIAgent/mcp_config.json"
-                    };
+                    string[] configPaths = PathManager.GetDiagnosticConfigPaths();
                     
                     foreach (string path in configPaths)
                     {
@@ -1771,7 +1772,7 @@ namespace UnityAIAgent.Editor
                                     }
                                     
                                     // 测试MCP服务器文件
-                                    string mcpServerPath = "/Users/caobao/projects/unity/CubeVerse/Library/PackageCache/com.gamelovers.mcp-unity@fe27f2b491/Server/build/index.js";
+                                    string mcpServerPath = PathManager.GetMCPUnityServerPath();
                                     if (System.IO.File.Exists(mcpServerPath))
                                     {
                                         UnityEngine.Debug.Log("✓ MCP服务器文件存在");
@@ -1842,59 +1843,8 @@ namespace UnityAIAgent.Editor
             }
         }
         
-        private void AddGitHubPreset()
-        {
-            var preset = new MCPServerConfig
-            {
-                name = "GitHub",
-                description = "GitHub仓库管理和搜索",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "mcp-server-github" },
-                enabled = false,
-                environmentVariables = new System.Collections.Generic.List<EnvironmentVariable>
-                {
-                    new EnvironmentVariable { key = "GITHUB_TOKEN", value = "", isSecret = true }
-                }
-            };
-            mcpConfig.servers.Add(preset);
-            UpdateMCPJsonConfig();
-            EditorUtility.SetDirty(mcpConfig);
-            AssetDatabase.SaveAssets();
-        }
         
-        private void AddFilesystemPreset()
-        {
-            var preset = new MCPServerConfig
-            {
-                name = "文件系统",
-                description = "本地文件系统访问",
-                transportType = MCPTransportType.Stdio,
-                command = "uvx",
-                args = new string[] { "mcp-server-filesystem", "--base-path", Application.dataPath },
-                enabled = false
-            };
-            mcpConfig.servers.Add(preset);
-            UpdateMCPJsonConfig();
-            EditorUtility.SetDirty(mcpConfig);
-            AssetDatabase.SaveAssets();
-        }
         
-        private void AddWebSearchPreset()
-        {
-            var preset = new MCPServerConfig
-            {
-                name = "Web搜索",
-                description = "网络搜索和信息检索",
-                transportType = MCPTransportType.HTTP,
-                httpUrl = "http://localhost:8000/mcp",
-                enabled = false
-            };
-            mcpConfig.servers.Add(preset);
-            UpdateMCPJsonConfig();
-            EditorUtility.SetDirty(mcpConfig);
-            AssetDatabase.SaveAssets();
-        }
         
         private string GenerateJsonConfig()
         {
@@ -1959,15 +1909,23 @@ namespace UnityAIAgent.Editor
         {
             try
             {
-                // 构建Node.js安装路径列表
+                // 从配置中获取Node.js路径列表
+                var pathConfig = PathManager.PathConfig;
                 var nodePathsList = new List<string>();
                 
-                // 常见的固定路径
-                nodePathsList.AddRange(new string[] {
-                    "/usr/local/bin/node",                              // Homebrew Intel Mac
-                    "/opt/homebrew/bin/node",                           // Homebrew Apple Silicon
-                    "/usr/bin/node",                                    // System installation
-                });
+                if (pathConfig?.nodeExecutablePaths != null)
+                {
+                    nodePathsList.AddRange(pathConfig.nodeExecutablePaths);
+                }
+                else
+                {
+                    // 后备默认路径
+                    nodePathsList.AddRange(new string[] {
+                        "/usr/local/bin/node",                              // Homebrew Intel Mac
+                        "/opt/homebrew/bin/node",                           // Homebrew Apple Silicon
+                        "/usr/bin/node",                                    // System installation
+                    });
+                }
                 
                 // 动态检测NVM安装的Node.js版本
                 string nvmPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), ".nvm/versions/node");
@@ -2079,7 +2037,7 @@ namespace UnityAIAgent.Editor
                     UnityEngine.Debug.Log("使用Homebrew安装Node.js LTS版本...");
                     var startInfo = new System.Diagnostics.ProcessStartInfo
                     {
-                        FileName = "/bin/bash",
+                        FileName = PathManager.GetShellExecutablePath(),
                         Arguments = "-c \"brew install node@20\"",  // 安装Node.js 20 LTS版本
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -2101,7 +2059,7 @@ namespace UnityAIAgent.Editor
                             UnityEngine.Debug.Log("链接Node.js到系统PATH...");
                             var linkStartInfo = new System.Diagnostics.ProcessStartInfo
                             {
-                                FileName = "/bin/bash",
+                                FileName = PathManager.GetShellExecutablePath(),
                                 Arguments = "-c \"brew link --overwrite node@20\"",
                                 UseShellExecute = false,
                                 RedirectStandardOutput = true,
@@ -2174,7 +2132,7 @@ namespace UnityAIAgent.Editor
             {
                 var startInfo = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "/bin/bash",
+                    FileName = PathManager.GetShellExecutablePath(),
                     Arguments = "-c \"which brew\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -2205,12 +2163,12 @@ namespace UnityAIAgent.Editor
                 if (EditorUtility.DisplayDialog("需要安装Homebrew", 
                     "Node.js安装需要Homebrew包管理器。\n\n" +
                     "请在终端中运行以下命令安装Homebrew：\n\n" +
-                    "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n\n" +
+                    $"{PathManager.GetShellExecutablePath()} -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"\n\n" +
                     "安装完成后，请重新运行设置向导。", 
                     "复制命令", "取消"))
                 {
                     // 复制安装命令到剪贴板
-                    GUIUtility.systemCopyBuffer = "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"";
+                    GUIUtility.systemCopyBuffer = $"{PathManager.GetShellExecutablePath()} -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"";
                     UnityEngine.Debug.Log("✓ 已复制Homebrew安装命令到剪贴板");
                 }
                 
@@ -2220,6 +2178,344 @@ namespace UnityAIAgent.Editor
             {
                 UnityEngine.Debug.LogError($"Homebrew安装失败: {e.Message}");
                 throw;
+            }
+        }
+        
+        private void DrawBasicPathConfig()
+        {
+            EditorGUILayout.LabelField("基本路径配置", EditorStyles.boldLabel);
+            
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                // 项目根目录
+                EditorGUILayout.LabelField("项目根目录", EditorStyles.boldLabel);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    pathConfig.projectRootPath = EditorGUILayout.TextField("根目录路径", pathConfig.projectRootPath);
+                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath = EditorUtility.OpenFolderPanel("选择项目根目录", pathConfig.projectRootPath, "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            pathConfig.projectRootPath = selectedPath;
+                            EditorUtility.SetDirty(pathConfig);
+                        }
+                    }
+                    if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+                    {
+                        pathConfig.AutoDetectProjectRoot();
+                        EditorUtility.SetDirty(pathConfig);
+                    }
+                }
+                
+                GUILayout.Space(5);
+                
+                // Node.js配置
+                EditorGUILayout.LabelField("Node.js 配置", EditorStyles.boldLabel);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    pathConfig.nodeExecutablePath = EditorGUILayout.TextField("主要Node.js路径", pathConfig.nodeExecutablePath);
+                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath = EditorUtility.OpenFilePanel("选择Node.js可执行文件", 
+                            System.IO.Path.GetDirectoryName(pathConfig.GetAbsolutePath(pathConfig.nodeExecutablePath)), "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            pathConfig.nodeExecutablePath = selectedPath;
+                            EditorUtility.SetDirty(pathConfig);
+                        }
+                    }
+                    if (GUILayout.Button("自动检测", GUILayout.Width(80)))
+                    {
+                        pathConfig.AutoDetectNodePath();
+                        EditorUtility.SetDirty(pathConfig);
+                    }
+                }
+                
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    pathConfig.fallbackNodePath = EditorGUILayout.TextField("备用Node.js路径", pathConfig.fallbackNodePath);
+                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath = EditorUtility.OpenFilePanel("选择备用Node.js可执行文件", 
+                            System.IO.Path.GetDirectoryName(pathConfig.GetAbsolutePath(pathConfig.fallbackNodePath)), "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            pathConfig.fallbackNodePath = selectedPath;
+                            EditorUtility.SetDirty(pathConfig);
+                        }
+                    }
+                }
+                
+                GUILayout.Space(5);
+                
+                // Strands工具路径
+                EditorGUILayout.LabelField("Strands 工具配置", EditorStyles.boldLabel);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    pathConfig.strandsToolsPath = EditorGUILayout.TextField("Strands工具路径", pathConfig.strandsToolsPath);
+                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath = EditorUtility.OpenFolderPanel("选择Strands工具目录", pathConfig.strandsToolsPath, "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            pathConfig.strandsToolsPath = selectedPath;
+                            EditorUtility.SetDirty(pathConfig);
+                        }
+                    }
+                }
+                
+                GUILayout.Space(5);
+                
+                // Shell配置
+                EditorGUILayout.LabelField("系统 Shell 配置", EditorStyles.boldLabel);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    pathConfig.shellExecutablePath = EditorGUILayout.TextField("Shell路径", pathConfig.shellExecutablePath);
+                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath = EditorUtility.OpenFilePanel("选择Shell可执行文件", 
+                            System.IO.Path.GetDirectoryName(pathConfig.shellExecutablePath), "");
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            pathConfig.shellExecutablePath = selectedPath;
+                            EditorUtility.SetDirty(pathConfig);
+                        }
+                    }
+                }
+            }
+        }
+        
+        private void DrawAdvancedPathConfig()
+        {
+            EditorGUILayout.LabelField("高级路径配置", EditorStyles.boldLabel);
+            
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                // Python可执行文件路径列表
+                EditorGUILayout.LabelField("Python 可执行文件路径（按优先级排序）", EditorStyles.boldLabel);
+                
+                for (int i = 0; i < pathConfig.pythonExecutablePaths.Count; i++)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        pathConfig.pythonExecutablePaths[i] = EditorGUILayout.TextField($"Python {i + 1}", pathConfig.pythonExecutablePaths[i]);
+                        
+                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                        {
+                            string selectedPath = EditorUtility.OpenFilePanel("选择Python可执行文件", 
+                                System.IO.Path.GetDirectoryName(pathConfig.pythonExecutablePaths[i]), "");
+                            if (!string.IsNullOrEmpty(selectedPath))
+                            {
+                                pathConfig.pythonExecutablePaths[i] = selectedPath;
+                                EditorUtility.SetDirty(pathConfig);
+                            }
+                        }
+                        
+                        if (GUILayout.Button("-", GUILayout.Width(25)))
+                        {
+                            pathConfig.pythonExecutablePaths.RemoveAt(i);
+                            EditorUtility.SetDirty(pathConfig);
+                            break;
+                        }
+                    }
+                }
+                
+                if (GUILayout.Button("添加Python路径"))
+                {
+                    pathConfig.pythonExecutablePaths.Add("");
+                    EditorUtility.SetDirty(pathConfig);
+                }
+                
+                GUILayout.Space(10);
+                
+                // Node.js可执行文件路径列表
+                EditorGUILayout.LabelField("Node.js 可执行文件路径（按优先级排序）", EditorStyles.boldLabel);
+                
+                for (int i = 0; i < pathConfig.nodeExecutablePaths.Count; i++)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        pathConfig.nodeExecutablePaths[i] = EditorGUILayout.TextField($"Node.js {i + 1}", pathConfig.nodeExecutablePaths[i]);
+                        
+                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                        {
+                            string selectedPath = EditorUtility.OpenFilePanel("选择Node.js可执行文件", 
+                                System.IO.Path.GetDirectoryName(pathConfig.nodeExecutablePaths[i]), "");
+                            if (!string.IsNullOrEmpty(selectedPath))
+                            {
+                                pathConfig.nodeExecutablePaths[i] = selectedPath;
+                                EditorUtility.SetDirty(pathConfig);
+                            }
+                        }
+                        
+                        if (GUILayout.Button("-", GUILayout.Width(25)))
+                        {
+                            pathConfig.nodeExecutablePaths.RemoveAt(i);
+                            EditorUtility.SetDirty(pathConfig);
+                            break;
+                        }
+                    }
+                }
+                
+                if (GUILayout.Button("添加Node.js路径"))
+                {
+                    pathConfig.nodeExecutablePaths.Add("");
+                    EditorUtility.SetDirty(pathConfig);
+                }
+                
+                GUILayout.Space(10);
+                
+                // SSL证书配置
+                EditorGUILayout.LabelField("SSL 证书配置", EditorStyles.boldLabel);
+                
+                // SSL证书文件路径
+                EditorGUILayout.LabelField("SSL 证书文件路径", EditorStyles.miniLabel);
+                for (int i = 0; i < pathConfig.sslCertFiles.Count; i++)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        pathConfig.sslCertFiles[i] = EditorGUILayout.TextField($"证书文件 {i + 1}", pathConfig.sslCertFiles[i]);
+                        
+                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                        {
+                            string selectedPath = EditorUtility.OpenFilePanel("选择SSL证书文件", 
+                                System.IO.Path.GetDirectoryName(pathConfig.sslCertFiles[i]), "pem");
+                            if (!string.IsNullOrEmpty(selectedPath))
+                            {
+                                pathConfig.sslCertFiles[i] = selectedPath;
+                                EditorUtility.SetDirty(pathConfig);
+                            }
+                        }
+                        
+                        if (GUILayout.Button("-", GUILayout.Width(25)))
+                        {
+                            pathConfig.sslCertFiles.RemoveAt(i);
+                            EditorUtility.SetDirty(pathConfig);
+                            break;
+                        }
+                    }
+                }
+                
+                if (GUILayout.Button("添加SSL证书文件"))
+                {
+                    pathConfig.sslCertFiles.Add("");
+                    EditorUtility.SetDirty(pathConfig);
+                }
+                
+                GUILayout.Space(5);
+                
+                // SSL证书目录路径
+                EditorGUILayout.LabelField("SSL 证书目录路径", EditorStyles.miniLabel);
+                for (int i = 0; i < pathConfig.sslCertDirectories.Count; i++)
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        pathConfig.sslCertDirectories[i] = EditorGUILayout.TextField($"证书目录 {i + 1}", pathConfig.sslCertDirectories[i]);
+                        
+                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
+                        {
+                            string selectedPath = EditorUtility.OpenFolderPanel("选择SSL证书目录", 
+                                pathConfig.sslCertDirectories[i], "");
+                            if (!string.IsNullOrEmpty(selectedPath))
+                            {
+                                pathConfig.sslCertDirectories[i] = selectedPath;
+                                EditorUtility.SetDirty(pathConfig);
+                            }
+                        }
+                        
+                        if (GUILayout.Button("-", GUILayout.Width(25)))
+                        {
+                            pathConfig.sslCertDirectories.RemoveAt(i);
+                            EditorUtility.SetDirty(pathConfig);
+                            break;
+                        }
+                    }
+                }
+                
+                if (GUILayout.Button("添加SSL证书目录"))
+                {
+                    pathConfig.sslCertDirectories.Add("");
+                    EditorUtility.SetDirty(pathConfig);
+                }
+            }
+        }
+        
+        private void DrawPathConfigButtons()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("保存配置"))
+                {
+                    SavePathConfig();
+                }
+                
+                if (GUILayout.Button("验证配置"))
+                {
+                    ValidatePathConfiguration();
+                }
+                
+                if (GUILayout.Button("重置为默认"))
+                {
+                    if (EditorUtility.DisplayDialog("重置配置", "确定要重置为默认配置吗？这将丢失当前设置。", "确定", "取消"))
+                    {
+                        pathConfig.InitializeDefaults();
+                        EditorUtility.SetDirty(pathConfig);
+                    }
+                }
+            }
+            
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("全部自动检测"))
+                {
+                    pathConfig.AutoDetectAllPaths();
+                    EditorUtility.SetDirty(pathConfig);
+                    EditorUtility.DisplayDialog("自动检测完成", "已自动检测并配置所有路径。", "确定");
+                }
+                
+                if (GUILayout.Button("显示配置摘要"))
+                {
+                    string summary = pathConfig.GetConfigurationSummary();
+                    EditorUtility.DisplayDialog("路径配置摘要", summary, "确定");
+                }
+            }
+        }
+        
+        private void SavePathConfig()
+        {
+            if (pathConfig != null)
+            {
+                EditorUtility.SetDirty(pathConfig);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                
+                // 重新加载PathManager配置
+                PathManager.ReloadConfiguration();
+                
+                EditorUtility.DisplayDialog("保存成功", "路径配置已保存并应用。", "确定");
+            }
+        }
+        
+        private void ValidatePathConfiguration()
+        {
+            if (pathConfig == null) return;
+            
+            var (isValid, errors) = pathConfig.ValidateConfiguration();
+            
+            if (isValid)
+            {
+                EditorUtility.DisplayDialog("验证成功", 
+                    "✓ 路径配置验证通过！所有配置的路径都有效。", "确定");
+            }
+            else
+            {
+                string errorMessage = "✗ 路径配置验证失败：\n\n";
+                foreach (string error in errors)
+                {
+                    errorMessage += $"• {error}\n";
+                }
+                EditorUtility.DisplayDialog("验证失败", errorMessage, "确定");
             }
         }
     }
