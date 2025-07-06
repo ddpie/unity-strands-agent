@@ -114,7 +114,31 @@ namespace UnityAIAgent.Editor
         [MenuItem("Window/AI助手/AI助手")]
         public static void ShowWindow()
         {
-            var window = GetWindow<AIAgentWindow>(typeof(SceneView));
+            // 使用反射获取InspectorWindow类型，以便将AI助手停靠在右侧
+            System.Type inspectorType = null;
+            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType("UnityEditor.InspectorWindow");
+                if (type != null)
+                {
+                    inspectorType = type;
+                    break;
+                }
+            }
+            
+            // 如果找到InspectorWindow类型，则停靠在其旁边；否则创建独立窗口
+            AIAgentWindow window;
+            if (inspectorType != null)
+            {
+                window = GetWindow<AIAgentWindow>(inspectorType);
+            }
+            else
+            {
+                // 降级方案：创建独立窗口并放置在右侧
+                window = GetWindow<AIAgentWindow>("AI助手", true);
+                window.position = new Rect(Screen.width - 600, 100, 550, 800);
+            }
+            
             window.titleContent = new GUIContent("AI助手");
             window.minSize = new Vector2(500, 700);
             
