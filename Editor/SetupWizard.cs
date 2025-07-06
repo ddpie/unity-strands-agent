@@ -32,7 +32,7 @@ namespace UnityAIAgent.Editor
         
         // 配置相关变量
         private int selectedTab = 0;
-        private string[] tabNames = { "环境设置", "路径配置", "MCP配置" };
+        private string[] tabNames = { "路径配置", "环境设置", "MCP配置" };
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
@@ -174,10 +174,10 @@ namespace UnityAIAgent.Editor
             switch (selectedTab)
             {
                 case 0:
-                    DrawSetupContent();
+                    DrawPathConfigContent();
                     break;
                 case 1:
-                    DrawPathConfigContent();
+                    DrawSetupContent();
                     break;
                 case 2:
                     DrawMCPContent();

@@ -67,11 +67,11 @@ cd unity-strands-agent
 
    ![路径配置](Assets/Resources/settings_2.png)
 
-2. **环境配置**
-   - 在"环境设置"标签页中点击"开始自动设置"
+2. **环境安装**
+   - 在"环境安装"标签页中点击"开始自动设置"
    - 系统将自动完成 Python 环境、Strands Agent SDK 和依赖包的安装
 
-   ![环境设置](Assets/Resources/settings_1.png)
+   ![环境安装](Assets/Resources/settings_1.png)
 
 3. **MCP 配置**
    - 在"MCP配置"标签页中配置外部工具和服务

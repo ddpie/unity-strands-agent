@@ -90,7 +90,7 @@ namespace UnityAIAgent.Editor
         
         // MCP configuration
         private int settingsTab = 0;
-        private readonly string[] settingsTabNames = { "设置进度", "路径配置", "MCP配置" };
+        private readonly string[] settingsTabNames = { "路径配置", "环境安装", "MCP配置" };
         private string mcpJsonConfig = "";
         private bool mcpConfigExpanded = false;
         private Vector2 mcpScrollPosition;
@@ -2312,11 +2312,11 @@ namespace UnityAIAgent.Editor
             
             if (settingsTab == 0)
             {
-                DrawSetupProgress();
+                DrawPathConfiguration();
             }
             else if (settingsTab == 1)
             {
-                DrawPathConfiguration();
+                DrawSetupProgress();
             }
             else if (settingsTab == 2)
             {
