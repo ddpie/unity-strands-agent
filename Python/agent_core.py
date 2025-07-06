@@ -35,35 +35,18 @@ import logging
 import asyncio
 from typing import Dict, Any, Optional
 from tool_tracker import get_tool_tracker
+from unity_tools import (
+    get_unity_tools_manager,
+    get_unity_tools,
+    get_available_tool_names,
+    is_tools_available,
+    is_mcp_available,
+    TOOLS_AVAILABLE,
+    MCP_AVAILABLE
+)
 
-# 导入Strands预定义工具
-try:
-    # 添加strands tools路径到sys.path
-    import sys
-    strands_tools_path = "/Users/caobao/projects/strands/tools/src"
-    if strands_tools_path not in sys.path:
-        sys.path.insert(0, strands_tools_path)
-    
-    # 导入预定义工具模块
-    import strands_tools.file_read as file_read_module
-    import strands_tools.file_write as file_write_module  
-    import strands_tools.editor as editor_module
-    import strands_tools.python_repl as python_repl_module
-    import strands_tools.calculator as calculator_module
-    import strands_tools.memory as memory_module
-    import strands_tools.current_time as current_time_module
-    import strands_tools.shell as shell_module
-    import strands_tools.http_request as http_request_module
-    
-    print("[Python] Strands预定义工具导入成功")
-    TOOLS_AVAILABLE = True
-except ImportError as e:
-    print(f"[Python] Strands工具导入失败: {e}")
-    print("[Python] 将使用无工具模式")
-    TOOLS_AVAILABLE = False
-
-# 尝试导入MCP支持
-MCP_AVAILABLE = False
+# MCP支持已移至unity_tools模块
+# 但保留这里的MCP类定义以供兼容
 try:
     from mcp import StdioServerParameters, stdio_client
     from strands.tools.mcp import MCPClient as StrandsMCPClient
@@ -380,7 +363,7 @@ class UnityAgent:
             
             # 配置Unity开发相关的工具集
             logger.info("开始配置Unity工具集...")
-            unity_tools = self._get_unity_tools()
+            unity_tools = get_unity_tools(include_mcp=True, agent_instance=self)
             logger.info(f"工具集配置完成，数量: {len(unity_tools)}")
             
             # 如果SSL未正确配置，为Agent添加SSL配置
@@ -464,84 +447,7 @@ class UnityAgent:
         except Exception as e:
             logger.warning(f"清理MCP资源时出错: {e}")
     
-    def _get_unity_tools(self):
-        """获取适合Unity开发的工具集合"""
-        if not TOOLS_AVAILABLE:
-            logger.warning("Strands工具不可用，返回空工具列表")
-            return []
-        
-        unity_tools = []
-        
-        # 文件操作工具 - Unity项目文件管理
-        try:
-            unity_tools.extend([file_read_module, file_write_module, editor_module])
-            logger.info("✓ 添加文件操作工具: file_read, file_write, editor")
-        except (NameError, ImportError) as e:
-            logger.warning(f"文件操作工具不可用: {e}")
-
-        # shell工具
-        try:
-            unity_tools.append(shell_module)
-            logger.info("✓ 添加shell工具: shell")
-        except (NameError, ImportError) as e:
-            logger.warning(f"shell工具不可用: {e}")
-        
-        # Python执行工具 - 脚本测试和原型开发
-        try:
-            unity_tools.append(python_repl_module)
-            logger.info("✓ 添加Python执行工具: python_repl")
-        except (NameError, ImportError) as e:
-            logger.warning(f"Python执行工具不可用: {e}")
-        
-        # 计算工具 - 数学计算、向量运算等
-        try:
-            unity_tools.append(calculator_module)
-            logger.info("✓ 添加计算工具: calculator")
-        except (NameError, ImportError) as e:
-            logger.warning(f"计算工具不可用: {e}")
-        
-        # 记忆工具 - 记住项目上下文和用户偏好
-        try:
-            unity_tools.append(memory_module)
-            logger.info("✓ 添加记忆工具: memory")
-        except (NameError, ImportError) as e:
-            logger.warning(f"记忆工具不可用: {e}")
-        
-        # 时间工具 - 获取当前时间，用于日志和时间戳
-        try:
-            unity_tools.append(current_time_module)
-            logger.info("✓ 添加时间工具: current_time")
-        except (NameError, ImportError) as e:
-            logger.warning(f"时间工具不可用: {e}")
-        
-        # HTTP工具 - 访问Unity文档、API等
-        try:
-            unity_tools.append(http_request_module)
-            logger.info("✓ 添加HTTP工具: http_request")
-        except (NameError, ImportError) as e:
-            logger.warning(f"HTTP工具不可用: {e}")
-        
-        # MCP工具 - 外部工具和服务集成
-        if MCP_AVAILABLE:
-            try:
-                mcp_tools = self._load_mcp_tools()
-                if mcp_tools:
-                    unity_tools.extend(mcp_tools)
-                    logger.info(f"✓ 添加MCP工具: {len(mcp_tools)} 个工具")
-                    # 存储MCP工具引用
-                    self._mcp_tools = mcp_tools
-            except Exception as e:
-                logger.warning(f"MCP工具加载失败: {e}")
-        else:
-            logger.info("ℹ️ MCP支持不可用，跳过MCP工具加载")
-        
-        if unity_tools:
-            logger.info(f"🎉 成功配置 {len(unity_tools)} 个Unity开发工具")
-            logger.info(f"可用工具列表: {[tool.__name__ if hasattr(tool, '__name__') else str(tool) for tool in unity_tools]}")
-        else:
-            logger.warning("⚠️ 没有可用的Unity开发工具")
-        
-        return unity_tools
+    # _get_unity_tools方法已移至unity_tools模块
     
     def get_available_tools(self):
         """获取当前可用的工具列表"""
@@ -569,7 +475,7 @@ class UnityAgent:
                 return self.agent.tool_names
             else:
                 logger.info("代理没有配置工具或工具信息不可访问")
-                return ["file_read", "file_write", "editor", "shell", "python_repl", "calculator", "memory", "current_time", "http_request"] if TOOLS_AVAILABLE else []
+                return get_available_tool_names()
         except Exception as e:
             logger.error(f"获取工具列表时出错: {e}")
             return []
