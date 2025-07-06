@@ -219,30 +219,30 @@ unity-strands-agent/
 │   └── UnityAIAgent/          # 运行时配置
 │       ├── mcp_config.json    # MCP 协议配置
 │       └── PathConfiguration.asset # 路径配置对象
-├── Editor/                    # Unity Editor 扩展 (9,118 行 C#)
-│   ├── AIAgentWindow.cs       # 主界面和聊天功能 (3,422 行)
-│   ├── SetupWizard.cs         # 设置向导 (2,521 行)
-│   ├── PythonManager.cs       # Python 环境管理 (701 行)
-│   ├── PathConfiguration.cs   # 路径配置系统 (588 行)
-│   ├── PythonBridge.cs        # Unity-Python 桥接 (490 行)
-│   ├── StreamingHandler.cs    # 流式响应处理 (459 行)
-│   ├── MCPConfiguration.cs    # MCP 配置管理 (406 行)
-│   ├── PathManager.cs         # 路径管理核心 (302 行)
-│   ├── ThreadProtection.cs    # 线程安全工具 (147 行)
-│   ├── LanguageManager.cs     # 国际化支持 (82 行)
+├── Editor/                    # Unity Editor 扩展
+│   ├── AIAgentWindow.cs       # 主界面和聊天功能
+│   ├── SetupWizard.cs         # 设置向导
+│   ├── PythonManager.cs       # Python 环境管理
+│   ├── PathConfiguration.cs   # 路径配置系统
+│   ├── PythonBridge.cs        # Unity-Python 桥接
+│   ├── StreamingHandler.cs    # 流式响应处理
+│   ├── MCPConfiguration.cs    # MCP 配置管理
+│   ├── PathManager.cs         # 路径管理核心
+│   ├── ThreadProtection.cs    # 线程安全工具
+│   ├── LanguageManager.cs     # 国际化支持
 │   └── UnityAIAgent.asmdef    # Unity 程序集定义
-├── Python/                    # Python 后端 (3,175 行 Python)
-│   ├── streaming_processor.py # 实时 AI 响应处理 (629 行)
-│   ├── unity_tools.py         # Unity 开发工具集 (445 行)
-│   ├── mcp_manager.py         # MCP 服务器管理 (379 行)
-│   ├── diagnostic_utils.py    # 系统诊断工具 (349 行)
-│   ├── mcp_client.py          # MCP 客户端实现 (287 行)
-│   ├── unity_agent.py         # Unity 专用 AI 代理 (226 行)
-│   ├── unity_system_prompt.py # 系统提示词 (226 行)
-│   ├── tool_tracker.py        # 工具使用跟踪 (204 行)
-│   ├── ssl_config.py          # SSL 配置管理 (181 行)
-│   ├── agent_core.py          # 核心 AI 代理功能 (180 行)
-│   ├── unity_non_interactive_tools.py # 非交互工具 (69 行)
+├── Python/                    # Python 后端
+│   ├── streaming_processor.py # 实时 AI 响应处理
+│   ├── unity_tools.py         # Unity 开发工具集
+│   ├── mcp_manager.py         # MCP 服务器管理
+│   ├── diagnostic_utils.py    # 系统诊断工具
+│   ├── mcp_client.py          # MCP 客户端实现
+│   ├── unity_agent.py         # Unity 专用 AI 代理
+│   ├── unity_system_prompt.py # 系统提示词
+│   ├── tool_tracker.py        # 工具使用跟踪
+│   ├── ssl_config.py          # SSL 配置管理
+│   ├── agent_core.py          # 核心 AI 代理功能
+│   ├── unity_non_interactive_tools.py # 非交互工具
 │   ├── requirements.txt       # Python 依赖配置
 │   ├── repl_state/            # REPL 状态管理
 │   └── workflows/             # 工作流配置
@@ -507,30 +507,30 @@ unity-strands-agent/
 │   └── UnityAIAgent/          # Runtime configuration
 │       ├── mcp_config.json    # MCP protocol configuration
 │       └── PathConfiguration.asset # Path configuration object
-├── Editor/                    # Unity Editor extensions (9,118 lines of C#)
-│   ├── AIAgentWindow.cs       # Main interface and chat functionality (3,422 lines)
-│   ├── SetupWizard.cs         # Setup wizard (2,521 lines)
-│   ├── PythonManager.cs       # Python environment management (701 lines)
-│   ├── PathConfiguration.cs   # Path configuration system (588 lines)
-│   ├── PythonBridge.cs        # Unity-Python bridge (490 lines)
-│   ├── StreamingHandler.cs    # Real-time streaming response (459 lines)
-│   ├── MCPConfiguration.cs    # MCP configuration management (406 lines)
-│   ├── PathManager.cs         # Path management core (302 lines)
-│   ├── ThreadProtection.cs    # Thread safety utilities (147 lines)
-│   ├── LanguageManager.cs     # Internationalization support (82 lines)
+├── Editor/                    # Unity Editor extensions
+│   ├── AIAgentWindow.cs       # Main interface and chat functionality
+│   ├── SetupWizard.cs         # Setup wizard
+│   ├── PythonManager.cs       # Python environment management
+│   ├── PathConfiguration.cs   # Path configuration system
+│   ├── PythonBridge.cs        # Unity-Python bridge
+│   ├── StreamingHandler.cs    # Real-time streaming response
+│   ├── MCPConfiguration.cs    # MCP configuration management
+│   ├── PathManager.cs         # Path management core
+│   ├── ThreadProtection.cs    # Thread safety utilities
+│   ├── LanguageManager.cs     # Internationalization support
 │   └── UnityAIAgent.asmdef    # Unity assembly definition
-├── Python/                    # Python backend (3,175 lines of Python)
-│   ├── streaming_processor.py # Real-time AI response processing (629 lines)
-│   ├── unity_tools.py         # Unity development toolkit (445 lines)
-│   ├── mcp_manager.py         # MCP server management (379 lines)
-│   ├── diagnostic_utils.py    # System diagnostic tools (349 lines)
-│   ├── mcp_client.py          # MCP client implementation (287 lines)
-│   ├── unity_agent.py         # Unity-specific AI agent (226 lines)
-│   ├── unity_system_prompt.py # System prompts (226 lines)
-│   ├── tool_tracker.py        # Tool usage tracking (204 lines)
-│   ├── ssl_config.py          # SSL configuration management (181 lines)
-│   ├── agent_core.py          # Core AI agent functionality (180 lines)
-│   ├── unity_non_interactive_tools.py # Non-interactive tools (69 lines)
+├── Python/                    # Python backend
+│   ├── streaming_processor.py # Real-time AI response processing
+│   ├── unity_tools.py         # Unity development toolkit
+│   ├── mcp_manager.py         # MCP server management
+│   ├── diagnostic_utils.py    # System diagnostic tools
+│   ├── mcp_client.py          # MCP client implementation
+│   ├── unity_agent.py         # Unity-specific AI agent
+│   ├── unity_system_prompt.py # System prompts
+│   ├── tool_tracker.py        # Tool usage tracking
+│   ├── ssl_config.py          # SSL configuration management
+│   ├── agent_core.py          # Core AI agent functionality
+│   ├── unity_non_interactive_tools.py # Non-interactive tools
 │   ├── requirements.txt       # Python dependencies
 │   ├── repl_state/            # REPL state management
 │   └── workflows/             # Workflow configurations
