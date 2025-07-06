@@ -44,7 +44,7 @@ namespace UnityAIAgent.Editor
             "安装Node.js和npm",
             "创建虚拟环境", 
             "安装Strands Agent SDK",
-            "安装MCP支持包(可选)",
+            "安装MCP支持包",
             "安装SSL证书支持",
             "安装其他依赖包",
             "配置环境变量",
