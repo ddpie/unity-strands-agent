@@ -60,15 +60,30 @@ cd unity-strands-agent
 
 ### 配置步骤
 
-1. **环境配置**
+1. **路径配置**
    - 打开 Unity 菜单 → Window → AI助手 → 设置向导
-   - 点击"开始自动设置"，系统将自动完成 Python 环境、Strands Agent SDK 和依赖包的安装
+   - 切换到"路径配置"标签页，配置系统依赖路径
+   - 使用"自动检测"功能快速配置常见路径
 
-2. **模型配置**
+   ![路径配置](Assets/Resources/settings_2.png)
+
+2. **环境配置**
+   - 在"环境设置"标签页中点击"开始自动设置"
+   - 系统将自动完成 Python 环境、Strands Agent SDK 和依赖包的安装
+
+   ![环境设置](Assets/Resources/settings_1.png)
+
+3. **MCP 配置**
+   - 在"MCP配置"标签页中配置外部工具和服务
+   - 根据需要添加和配置 MCP 服务器
+
+   ![MCP配置](Assets/Resources/settings_3.png)
+
+4. **模型配置**
    - 根据需要配置 AI 模型提供商（AWS Bedrock、Anthropic、OpenAI 等）
    - 详细配置说明请参考 [Strands Agent SDK 官方文档](https://strandsagents.com/latest/)
 
-3. **开始使用**
+5. **开始使用**
    - 打开 Unity 菜单 → Window → AI助手 → 聊天
    - 输入问题或需求，例如："帮我创建一个角色控制器脚本"
 
