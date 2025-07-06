@@ -100,6 +100,11 @@ namespace UnityAIAgent.Editor
         private Vector2 pathConfigScrollPosition;
         private PathConfiguration pathConfig;
         
+        // Environment variables
+        private Vector2 envVarScrollPosition;
+        private bool envVarExpanded = false;
+        private Dictionary<string, string> tempEnvVars = new Dictionary<string, string>();
+        
         private readonly string[] setupSteps = {
             "检测Python环境",
             "检测Node.js环境",
@@ -3182,6 +3187,17 @@ namespace UnityAIAgent.Editor
             
             EditorGUILayout.Space(10);
             
+            // 环境变量配置
+            EditorGUILayout.LabelField("环境变量配置", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+            
+            EditorGUILayout.HelpBox("这些环境变量会在Python初始化时自动设置，您可以查看和调试当前值", MessageType.Info);
+            EditorGUILayout.Space(5);
+            
+            DrawEnvironmentVariables();
+            
+            EditorGUILayout.Space(10);
+            
             // 配置状态
             EditorGUILayout.LabelField("配置状态", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
@@ -3198,6 +3214,168 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.EndScrollView();
         }
         
+        private void DrawEnvironmentVariables()
+        {
+            // 可折叠的环境变量部分
+            envVarExpanded = EditorGUILayout.Foldout(envVarExpanded, "查看/编辑环境变量", true);
+            
+            if (envVarExpanded)
+            {
+                EditorGUILayout.BeginVertical("box");
+                
+                // 定义所有项目相关的环境变量
+                var environmentVariables = new Dictionary<string, (string description, bool isPath)>
+                {
+                    {"PROJECT_ROOT_PATH", ("项目根目录路径", true)},
+                    {"STRANDS_TOOLS_PATH", ("Strands工具路径", true)},
+                    {"NODE_EXECUTABLE_PATH", ("Node.js可执行文件路径", true)},
+                    {"MCP_CONFIG_PATH", ("MCP配置文件路径", true)},
+                    {"MCP_UNITY_SERVER_PATH", ("MCP Unity服务器路径", true)},
+                    {"SSL_CERT_FILE_PATH", ("SSL证书文件路径", true)},
+                    {"SSL_CERT_DIR_PATH", ("SSL证书目录路径", true)},
+                    {"SHELL_EXECUTABLE_PATH", ("Shell可执行文件路径", true)},
+                    {"PYTHONHOME", ("Python主目录", true)},
+                    {"PYTHONPATH", ("Python模块搜索路径", true)},
+                    {"PYTHONIOENCODING", ("Python IO编码", false)},
+                    {"LC_ALL", ("系统语言环境", false)},
+                    {"LANG", ("系统语言", false)},
+                    {"PYTHONHTTPSVERIFY", ("Python HTTPS验证", false)},
+                    {"SSL_CERT_DIR", ("SSL证书目录", true)},
+                    {"SSL_CERT_FILE", ("SSL证书文件", true)},
+                    {"REQUESTS_CA_BUNDLE", ("Requests CA证书包", true)},
+                    {"CURL_CA_BUNDLE", ("Curl CA证书包", true)},
+                    {"DYLD_LIBRARY_PATH", ("动态库路径 (macOS)", true)}
+                };
+                
+                envVarScrollPosition = EditorGUILayout.BeginScrollView(envVarScrollPosition, GUILayout.Height(300));
+                
+                foreach (var kvp in environmentVariables)
+                {
+                    string varName = kvp.Key;
+                    string description = kvp.Value.description;
+                    bool isPath = kvp.Value.isPath;
+                    
+                    EditorGUILayout.BeginVertical("box");
+                    
+                    // 变量名称和描述
+                    EditorGUILayout.LabelField(varName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(description, EditorStyles.miniLabel);
+                    
+                    EditorGUILayout.BeginHorizontal();
+                    
+                    // 获取当前环境变量值
+                    string currentValue = System.Environment.GetEnvironmentVariable(varName) ?? "";
+                    
+                    // 如果是临时编辑状态，使用临时值
+                    if (tempEnvVars.ContainsKey(varName))
+                    {
+                        currentValue = tempEnvVars[varName];
+                    }
+                    
+                    EditorGUILayout.LabelField("值:", GUILayout.Width(25));
+                    
+                    // 编辑字段
+                    string newValue = EditorGUILayout.TextField(currentValue);
+                    
+                    if (newValue != currentValue)
+                    {
+                        tempEnvVars[varName] = newValue;
+                    }
+                    
+                    // 浏览按钮（仅对路径类型变量显示）
+                    if (isPath && GUILayout.Button("浏览", GUILayout.Width(60)))
+                    {
+                        string selectedPath;
+                        if (varName.Contains("FILE") || varName.Contains("EXECUTABLE"))
+                        {
+                            selectedPath = EditorUtility.OpenFilePanel($"选择{description}", currentValue, "");
+                        }
+                        else
+                        {
+                            selectedPath = EditorUtility.OpenFolderPanel($"选择{description}", currentValue, "");
+                        }
+                        
+                        if (!string.IsNullOrEmpty(selectedPath))
+                        {
+                            tempEnvVars[varName] = selectedPath;
+                        }
+                    }
+                    
+                    // 应用按钮
+                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button("应用", GUILayout.Width(50)))
+                    {
+                        System.Environment.SetEnvironmentVariable(varName, tempEnvVars[varName]);
+                        tempEnvVars.Remove(varName);
+                        Debug.Log($"环境变量已更新: {varName} = {System.Environment.GetEnvironmentVariable(varName)}");
+                    }
+                    
+                    // 重置按钮
+                    if (tempEnvVars.ContainsKey(varName) && GUILayout.Button("重置", GUILayout.Width(50)))
+                    {
+                        tempEnvVars.Remove(varName);
+                    }
+                    
+                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Space(3);
+                }
+                
+                EditorGUILayout.EndScrollView();
+                
+                EditorGUILayout.Space(5);
+                
+                // 全局操作按钮
+                EditorGUILayout.BeginHorizontal();
+                
+                if (GUILayout.Button("重新应用所有环境变量"))
+                {
+                    // 重新触发Python环境配置
+                    try
+                    {
+                        if (PythonManager.IsInitialized)
+                        {
+                            // 这会重新设置所有环境变量
+                            var pythonManagerType = typeof(PythonManager);
+                            var method = pythonManagerType.GetMethod("SetPathConfigurationEnvironmentVariables", 
+                                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                            method?.Invoke(null, null);
+                            
+                            Debug.Log("环境变量重新应用完成");
+                            EditorUtility.DisplayDialog("成功", "环境变量已重新应用", "确定");
+                        }
+                        else
+                        {
+                            EditorUtility.DisplayDialog("提示", "Python未初始化，请先完成环境安装", "确定");
+                        }
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogError($"重新应用环境变量失败: {e.Message}");
+                        EditorUtility.DisplayDialog("错误", $"重新应用环境变量失败: {e.Message}", "确定");
+                    }
+                }
+                
+                if (tempEnvVars.Count > 0 && GUILayout.Button($"应用所有待定更改 ({tempEnvVars.Count})"))
+                {
+                    foreach (var kvp in tempEnvVars)
+                    {
+                        System.Environment.SetEnvironmentVariable(kvp.Key, kvp.Value);
+                        Debug.Log($"环境变量已更新: {kvp.Key} = {kvp.Value}");
+                    }
+                    tempEnvVars.Clear();
+                    EditorUtility.DisplayDialog("成功", "所有环境变量更改已应用", "确定");
+                }
+                
+                if (tempEnvVars.Count > 0 && GUILayout.Button("取消所有待定更改"))
+                {
+                    tempEnvVars.Clear();
+                }
+                
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.EndVertical();
+            }
+        }
 
         [Serializable]
         private class StreamChunk

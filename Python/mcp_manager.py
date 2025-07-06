@@ -158,14 +158,16 @@ class MCPManager:
             current_dir = os.getcwd()
             logger.info(f"当前Python工作目录: {current_dir}")
             
-            # Unity项目的MCP配置路径
-            # 从环境变量或配置文件获取路径
-            mcp_config_path = os.environ.get('MCP_CONFIG_PATH')
-            
-            if mcp_config_path:
+            # 优先使用项目根目录环境变量构建MCP配置路径
+            project_root = os.environ.get('PROJECT_ROOT_PATH')
+            if project_root:
+                # 使用项目根目录 + 相对路径
+                mcp_config_path = os.path.join(project_root, "Assets/UnityAIAgent/mcp_config.json")
                 config_paths = [mcp_config_path]
+                logger.info(f"使用项目根目录构建MCP配置路径: {mcp_config_path}")
             else:
-                # 默认路径列表
+                # 回退到原有的相对路径搜索逻辑
+                logger.info("未找到PROJECT_ROOT_PATH环境变量，使用相对路径搜索")
                 config_paths = [
                     "Assets/UnityAIAgent/mcp_config.json",
                     "../Assets/UnityAIAgent/mcp_config.json",
