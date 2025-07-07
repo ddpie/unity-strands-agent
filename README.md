@@ -135,14 +135,16 @@ graph TB
    - 在Unity中选择菜单：Window → Unity Strands Agent
    - 点击顶部的"Settings"标签页
 
-2. **基础配置**
+2. **Python路径配置**
    - 点击"自动检测"按钮，系统会自动找到包中的Python代码路径
-   - 配置AWS凭证：
-     - AWS Access Key ID
-     - AWS Secret Access Key  
-     - AWS Region（默认为us-east-1）
+   - 或手动设置Strands工具路径
 
-3. **验证配置**
+3. **AWS凭证配置**
+   - AWS Access Key ID
+   - AWS Secret Access Key  
+   - AWS Region（默认为us-east-1）
+
+4. **验证配置**
    - 点击"验证配置"按钮确保所有设置正确
    - 如果显示绿色勾号，说明配置成功
 
@@ -184,38 +186,27 @@ Unity会自动下载新版本的包。
 #### 主要功能
 
 - **集成配置界面**: 路径配置集成在 Unity Strands Agent 设置界面中
-- **相对路径支持**: 优先使用相对路径，便于项目迁移
-- **自动检测**: 自动检测常见的路径位置
+- **简化配置**: 只需配置Python工具路径和AWS凭证
+- **自动检测**: 自动检测Python工具路径
 - **配置验证**: 实时验证配置的有效性
-- **智能路径选择**: 按优先级自动选择有效路径
-- **环境变量管理**: 实时查看和编辑所有项目相关的环境变量
 
 #### 使用方法
 
 1. **打开配置界面**
    在 Unity Editor 中选择菜单：`Window > Unity Strands Agent`，切换到"设置"标签页，然后选择"路径配置"
 
-2. **基本路径配置**
-   - **项目根目录**: Unity 项目的根目录，其他相对路径基于此目录
-   - **Node.js 配置**: 主要和备用 Node.js 可执行文件路径
-   - **Unity AI 代理 Python 模块路径**: Unity AI 代理 Python 模块路径
-   - **系统 Shell 配置**: Shell 可执行文件路径（默认为 /bin/bash）
+2. **Python路径配置**
+   - **项目根目录**: Unity 项目的根目录，自动检测
+   - **Strands工具路径**: Unity AI 代理 Python 模块路径
 
-3. **高级路径配置**
-   - **Python 路径列表**: 按优先级排序的 Python 可执行文件路径
-   - **Node.js 路径列表**: 按优先级排序的 Node.js 可执行文件路径
-   - **SSL 证书配置**: SSL 证书文件和目录路径列表
+3. **AWS凭证配置**
+   - **AWS Access Key ID**: AWS访问密钥ID
+   - **AWS Secret Access Key**: AWS访问密钥
+   - **AWS Region**: AWS区域（默认为us-east-1）
 
 4. **自动检测功能**
-   - 点击"自动检测"按钮，系统会自动搜索和设置常见路径位置
-   - 点击"全部自动检测"按钮，一键检测并配置所有路径
-   - 系统按优先级搜索配置的路径，自动选择第一个有效路径
-
-5. **环境变量管理**
-   - 展开"查看/编辑环境变量"部分，查看所有项目相关的环境变量
-   - 直接编辑环境变量值，或使用"浏览"按钮选择路径
-   - 支持临时编辑和批量应用更改，确保配置安全性
-   - 提供"重新应用所有环境变量"功能，一键重新配置所有环境设置
+   - 点击"自动检测"按钮，系统会自动搜索和设置Python工具路径
+   - 系统会自动在包目录中找到agent_core.py文件
 
 #### 配置文件
 
@@ -223,49 +214,21 @@ Unity会自动下载新版本的包。
 
 #### 环境变量
 
-系统会自动设置以下环境变量供Python脚本使用，同时支持在路径配置界面中实时查看和编辑：
+系统会自动设置以下环境变量供Python脚本使用：
 
-**项目路径变量**
+**基本配置变量**
 - `PROJECT_ROOT_PATH`：项目根目录路径
 - `STRANDS_TOOLS_PATH`：Strands工具路径
-- `NODE_EXECUTABLE_PATH`：Node.js可执行文件路径
-- `MCP_CONFIG_PATH`：MCP配置文件路径
-- `MCP_UNITY_SERVER_PATH`：MCP Unity服务器路径
-- `SHELL_EXECUTABLE_PATH`：Shell可执行文件路径
+- `AWS_ACCESS_KEY_ID`：AWS访问密钥ID
+- `AWS_SECRET_ACCESS_KEY`：AWS访问密钥
+- `AWS_DEFAULT_REGION`：AWS默认区域
 
-**Python 环境变量**
-- `PYTHONHOME`：Python主目录
-- `PYTHONPATH`：Python模块搜索路径
-- `PYTHONIOENCODING`：Python IO编码设置
-- `PYTHONHTTPSVERIFY`：Python HTTPS验证设置
+### 路径说明
 
-**SSL 证书变量**
-- `SSL_CERT_FILE_PATH`：SSL证书文件路径
-- `SSL_CERT_DIR_PATH`：SSL证书目录路径
-- `SSL_CERT_DIR`：SSL证书目录（运行时）
-- `SSL_CERT_FILE`：SSL证书文件（运行时）
-- `REQUESTS_CA_BUNDLE`：Requests库CA证书包
-- `CURL_CA_BUNDLE`：Curl库CA证书包
+系统会自动检测并使用以下路径：
 
-**系统环境变量**
-- `LC_ALL`：系统语言环境设置
-- `LANG`：系统语言设置
-- `DYLD_LIBRARY_PATH`：动态库路径（macOS专用）
-
-**环境变量管理功能**
-- **实时查看**：在路径配置界面中查看所有环境变量的当前值
-- **安全编辑**：支持临时编辑，需要手动应用更改
-- **路径选择**：路径类型变量提供文件/文件夹选择功能
-- **批量操作**：支持批量应用更改和重新应用所有环境变量
-- **调试支持**：所有环境变量操作都会在Unity Console中输出详细日志
-
-### 相对路径说明
-
-系统优先使用相对路径，相对于项目根目录：
-
-- `Assets/UnityAIAgent/mcp_config.json` - MCP配置文件
-- `Library/PackageCache/com.gamelovers.mcp-unity@xxx/Server/build/index.js` - MCP服务器
-- `~/.nvm/current/bin/node` - Node.js（用户主目录相对路径）
+- `Library/PackageCache/com.ddpie.unity-strands-agent@xxx/Python/` - Python工具目录
+- `Assets/UnityAIAgent/PathConfiguration.asset` - 配置文件
 
 ### 故障排除
 
@@ -291,7 +254,7 @@ Unity会自动下载新版本的包。
 如有问题，请：
 
 1. 检查Unity控制台的错误日志
-2. 在设置页面点击"配置摘要"查看当前配置状态
+2. 在设置页面点击"验证配置"查看当前配置状态
 3. 提交Issue到GitHub仓库并附上错误日志
 
 ### 开发和贡献
@@ -328,9 +291,7 @@ unity-strands-agent/
 │   ├── ssl_config.py          # SSL 配置管理
 │   ├── agent_core.py          # 核心 AI 代理功能
 │   ├── unity_non_interactive_tools.py # 非交互工具
-│   ├── requirements.txt       # Python 依赖配置
-│   ├── repl_state/            # REPL 状态管理
-│   └── workflows/             # 工作流配置
+│   └── requirements.txt       # Python 依赖配置
 ├── package.json               # Unity Package Manager 配置
 ├── README.md                  # 双语项目文档
 ├── LICENSE                    # MIT 开源许可证
@@ -439,7 +400,6 @@ graph TB
 - **Unity**: 2022.3 LTS or higher
 - **Operating System**: macOS 10.15+ / Windows 10+ / Ubuntu 18.04+
 - **Python**: 3.10 or higher (supports automatic detection and configuration)
-- **Node.js**: 16.0 or higher (for MCP tool support)
 - **AI Model Access**: Requires AWS CLI credentials configuration to use Amazon Bedrock services
 
 #### Installation Methods
@@ -489,14 +449,16 @@ In this mode, Python code will not be automatically deployed, but will directly 
    - In Unity, select menu: Window → Unity Strands Agent
    - Click the "Settings" tab at the top
 
-2. **Basic Configuration**
+2. **Python Path Configuration**
    - Click "Auto Detect" button, the system will automatically find the Python code path in the package
-   - Configure AWS credentials:
-     - AWS Access Key ID
-     - AWS Secret Access Key
-     - AWS Region (default is us-east-1)
+   - Or manually set the Strands Tools Path
 
-3. **Verify Configuration**
+3. **AWS Credentials Configuration**
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - AWS Region (default is us-east-1)
+
+4. **Verify Configuration**
    - Click "Validate Configuration" button to ensure all settings are correct
    - If you see a green checkmark, the configuration is successful
 
@@ -552,38 +514,27 @@ The path configuration system provides unified path management, extracting syste
 #### Main Functions
 
 - **Integrated Configuration Interface**: Path configuration is integrated into the Unity Strands Agent settings interface
-- **Relative Path Support**: Prioritizes relative paths for easy project migration
-- **Auto Detection**: Automatically detects common path locations
+- **Simplified Configuration**: Only requires Python tools path and AWS credentials configuration
+- **Auto Detection**: Automatically detects Python tools path
 - **Configuration Validation**: Real-time validation of configuration validity
-- **Intelligent Path Selection**: Automatically selects valid paths by priority
-- **Environment Variable Management**: Real-time viewing and editing of all project-related environment variables
 
 #### Usage
 
 1. **Open Configuration Interface**
    Select menu in Unity Editor: `Window > Unity Strands Agent`, switch to "Settings" tab, then select "Path Configuration"
 
-2. **Basic Path Configuration**
-   - **Project Root Directory**: Unity project root directory, other relative paths are based on this directory
-   - **Node.js Configuration**: Main and backup Node.js executable file paths
-   - **Unity AI Agent Python Module Path**: Unity AI agent Python module path
-   - **System Shell Configuration**: Shell executable file path (default is /bin/bash)
+2. **Python Path Configuration**
+   - **Project Root Directory**: Unity project root directory, automatically detected
+   - **Strands Tools Path**: Unity AI agent Python module path
 
-3. **Advanced Path Configuration**
-   - **Python Path List**: Priority-ordered Python executable file paths
-   - **Node.js Path List**: Priority-ordered Node.js executable file paths
-   - **SSL Certificate Configuration**: SSL certificate files and directory path lists
+3. **AWS Credentials Configuration**
+   - **AWS Access Key ID**: AWS access key ID
+   - **AWS Secret Access Key**: AWS secret access key
+   - **AWS Region**: AWS region (default is us-east-1)
 
 4. **Auto Detection Function**
-   - Click "Auto Detect" button, the system will automatically search and set common path locations
-   - Click "Auto Detect All" button for one-click detection and configuration of all paths
-   - The system searches configured paths by priority and automatically selects the first valid path
-
-5. **Environment Variable Management**
-   - Expand "View/Edit Environment Variables" section to view all project-related environment variables
-   - Directly edit environment variable values or use "Browse" button to select paths
-   - Supports temporary editing and batch application of changes to ensure configuration safety
-   - Provides "Reapply All Environment Variables" function for one-click reconfiguration of all environment settings
+   - Click "Auto Detect" button, the system will automatically search and set Python tools path
+   - The system will automatically find agent_core.py file in the package directory
 
 #### Configuration Files
 
@@ -591,54 +542,21 @@ Configuration is saved in the `Assets/UnityAIAgent/PathConfiguration.asset` file
 
 #### Environment Variables
 
-The system automatically sets the following environment variables for Python scripts, while supporting real-time viewing and editing in the path configuration interface:
+The system automatically sets the following environment variables for Python scripts:
 
-##### Project Path Variables
-
+**Basic Configuration Variables**
 - `PROJECT_ROOT_PATH`: Project root directory path
 - `STRANDS_TOOLS_PATH`: Strands tools path
-- `NODE_EXECUTABLE_PATH`: Node.js executable file path
-- `MCP_CONFIG_PATH`: MCP configuration file path
-- `MCP_UNITY_SERVER_PATH`: MCP Unity server path
-- `SHELL_EXECUTABLE_PATH`: Shell executable file path
+- `AWS_ACCESS_KEY_ID`: AWS access key ID
+- `AWS_SECRET_ACCESS_KEY`: AWS secret access key
+- `AWS_DEFAULT_REGION`: AWS default region
 
-##### Python Environment Variables
+### Path Description
 
-- `PYTHONHOME`: Python home directory
-- `PYTHONPATH`: Python module search path
-- `PYTHONIOENCODING`: Python IO encoding settings
-- `PYTHONHTTPSVERIFY`: Python HTTPS verification settings
+The system automatically detects and uses the following paths:
 
-##### SSL Certificate Variables
-
-- `SSL_CERT_FILE_PATH`: SSL certificate file path
-- `SSL_CERT_DIR_PATH`: SSL certificate directory path
-- `SSL_CERT_DIR`: SSL certificate directory (runtime)
-- `SSL_CERT_FILE`: SSL certificate file (runtime)
-- `REQUESTS_CA_BUNDLE`: Requests library CA certificate bundle
-- `CURL_CA_BUNDLE`: Curl library CA certificate bundle
-
-##### System Environment Variables
-
-- `LC_ALL`: System locale settings
-- `LANG`: System language settings
-- `DYLD_LIBRARY_PATH`: Dynamic library path (macOS specific)
-
-##### Environment Variable Management Features
-
-- **Real-time Viewing**: View current values of all environment variables in the path configuration interface
-- **Safe Editing**: Supports temporary editing, requires manual application of changes
-- **Path Selection**: Path-type variables provide file/folder selection functionality
-- **Batch Operations**: Supports batch application of changes and reapplication of all environment variables
-- **Debug Support**: All environment variable operations output detailed logs in Unity Console
-
-### Relative Path Description
-
-The system prioritizes relative paths, relative to the project root directory:
-
-- `Assets/UnityAIAgent/mcp_config.json` - MCP configuration file
-- `Library/PackageCache/com.gamelovers.mcp-unity@xxx/Server/build/index.js` - MCP server
-- `~/.nvm/current/bin/node` - Node.js (user home directory relative path)
+- `Library/PackageCache/com.ddpie.unity-strands-agent@xxx/Python/` - Python tools directory
+- `Assets/UnityAIAgent/PathConfiguration.asset` - Configuration file
 
 ### Troubleshooting
 
@@ -664,7 +582,7 @@ The system prioritizes relative paths, relative to the project root directory:
 If you encounter issues:
 
 1. Check Unity console for error logs
-2. Click "Configuration Summary" in settings page to view current configuration status
+2. Click "Validate Configuration" in settings page to view current configuration status
 3. Submit an issue to the GitHub repository with error logs
 
 ### Development and Contribution
@@ -701,9 +619,7 @@ unity-strands-agent/
 │   ├── ssl_config.py          # SSL configuration management
 │   ├── agent_core.py          # Core AI agent functionality
 │   ├── unity_non_interactive_tools.py # Non-interactive tools
-│   ├── requirements.txt       # Python dependencies
-│   ├── repl_state/            # REPL state management
-│   └── workflows/             # Workflow configurations
+│   └── requirements.txt       # Python dependencies
 ├── package.json               # Unity Package Manager configuration
 ├── README.md                  # Bilingual project documentation
 ├── LICENSE                    # MIT open source license

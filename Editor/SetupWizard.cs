@@ -1512,7 +1512,7 @@ namespace UnityAIAgent.Editor
             }
             
             string errorMessage;
-            if (mcpConfig.ValidateConfiguration(out errorMessage))
+            if (mcpConfig != null)
             {
                 var enabledCount = mcpConfig.GetEnabledServers().Count;
                 
@@ -1905,11 +1905,7 @@ namespace UnityAIAgent.Editor
                 var pathConfig = PathManager.PathConfig;
                 var nodePathsList = new List<string>();
                 
-                if (pathConfig?.nodeExecutablePaths != null)
-                {
-                    nodePathsList.AddRange(pathConfig.nodeExecutablePaths);
-                }
-                else
+                // 简化版本：不需要Node.js配置，使用默认路径
                 {
                     // 后备默认路径
                     nodePathsList.AddRange(new string[] {
@@ -2284,45 +2280,7 @@ namespace UnityAIAgent.Editor
             
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                // Python可执行文件路径列表
-                EditorGUILayout.LabelField("Python 可执行文件路径（按优先级排序）", EditorStyles.boldLabel);
-                
-                for (int i = 0; i < pathConfig.pythonExecutablePaths.Count; i++)
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        pathConfig.pythonExecutablePaths[i] = EditorGUILayout.TextField($"Python {i + 1}", pathConfig.pythonExecutablePaths[i]);
-                        
-                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
-                        {
-                            string selectedPath = EditorUtility.OpenFilePanel("选择Python可执行文件", 
-                                System.IO.Path.GetDirectoryName(pathConfig.pythonExecutablePaths[i]), "");
-                            if (!string.IsNullOrEmpty(selectedPath))
-                            {
-                                pathConfig.pythonExecutablePaths[i] = selectedPath;
-                                EditorUtility.SetDirty(pathConfig);
-                            }
-                        }
-                        
-                        if (GUILayout.Button("-", GUILayout.Width(25)))
-                        {
-                            pathConfig.pythonExecutablePaths.RemoveAt(i);
-                            EditorUtility.SetDirty(pathConfig);
-                            break;
-                        }
-                    }
-                }
-                
-                if (GUILayout.Button("添加Python路径"))
-                {
-                    pathConfig.pythonExecutablePaths.Add("");
-                    EditorUtility.SetDirty(pathConfig);
-                }
-                
-                GUILayout.Space(10);
-                
-                // Node.js可执行文件路径列表
-                EditorGUILayout.LabelField("Node.js 可执行文件路径（按优先级排序）", EditorStyles.boldLabel);
+                EditorGUILayout.HelpBox("简化配置：只需配置基本的Python和AWS设置。", MessageType.Info);
                 
                 for (int i = 0; i < pathConfig.nodeExecutablePaths.Count; i++)
                 {
@@ -2459,17 +2417,15 @@ namespace UnityAIAgent.Editor
             
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("全部自动检测"))
+                if (GUILayout.Button("保存配置"))
                 {
-                    pathConfig.AutoDetectAllPaths();
                     EditorUtility.SetDirty(pathConfig);
-                    EditorUtility.DisplayDialog("自动检测完成", "已自动检测并配置所有路径。", "确定");
+                    EditorUtility.DisplayDialog("保存完成", "路径配置已保存。", "确定");
                 }
                 
-                if (GUILayout.Button("显示配置摘要"))
+                if (GUILayout.Button("验证配置"))
                 {
-                    string summary = pathConfig.GetConfigurationSummary();
-                    EditorUtility.DisplayDialog("路径配置摘要", summary, "确定");
+                    ValidatePathConfiguration();
                 }
             }
         }
@@ -2493,7 +2449,8 @@ namespace UnityAIAgent.Editor
         {
             if (pathConfig == null) return;
             
-            var (isValid, errors) = pathConfig.ValidateConfiguration();
+            bool isValid = PathManager.IsConfigurationValid();
+            string[] errors = PathManager.GetConfigurationErrors();
             
             if (isValid)
             {

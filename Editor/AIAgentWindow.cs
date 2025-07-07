@@ -3127,24 +3127,7 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.EndHorizontal();
             
             // Node.js 路径
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(LanguageManager.GetText("Node.js 路径", "Node.js Path"), GUILayout.Width(120));
-            pathConfig.nodeExecutablePath = EditorGUILayout.TextField(pathConfig.nodeExecutablePath);
-            if (GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
-            {
-                string path = EditorUtility.OpenFilePanel(LanguageManager.GetText("选择Node.js可执行文件", "Select Node.js Executable"), pathConfig.nodeExecutablePath, "");
-                if (!string.IsNullOrEmpty(path))
-                {
-                    pathConfig.nodeExecutablePath = path;
-                    EditorUtility.SetDirty(pathConfig);
-                }
-            }
-            if (GUILayout.Button(LanguageManager.GetText("自动检测", "Auto Detect"), GUILayout.Width(80)))
-            {
-                pathConfig.nodeExecutablePath = PathManager.GetValidNodePath();
-                EditorUtility.SetDirty(pathConfig);
-            }
-            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.HelpBox(LanguageManager.GetText("简化版本：不需要Node.js配置", "Simplified version: No Node.js configuration needed"), MessageType.Info);
             
             // AI代理Python路径
             EditorGUILayout.BeginHorizontal();
@@ -3177,7 +3160,7 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button(LanguageManager.GetText("全部自动检测", "Auto Detect All"), GUILayout.Height(30)))
             {
-                pathConfig.AutoDetectAllPaths();
+                EditorUtility.SetDirty(pathConfig);
                 EditorUtility.SetDirty(pathConfig);
             }
             if (GUILayout.Button(LanguageManager.GetText("验证配置", "Validate Configuration"), GUILayout.Height(30)))

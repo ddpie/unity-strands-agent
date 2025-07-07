@@ -116,45 +116,6 @@ namespace UnityAIAgent.Editor
         }
         
         /// <summary>
-        /// 获取Node.js可执行文件路径
-        /// </summary>
-        public static string GetNodeExecutablePath()
-        {
-            if (PathConfig == null) return "";
-            
-            string nodePath = PathConfig.GetAbsolutePath(PathConfig.nodeExecutablePath);
-            if (!string.IsNullOrEmpty(nodePath) && File.Exists(nodePath))
-            {
-                return nodePath;
-            }
-            
-            // 尝试备用路径
-            string fallbackPath = PathConfig.GetAbsolutePath(PathConfig.fallbackNodePath);
-            if (!string.IsNullOrEmpty(fallbackPath) && File.Exists(fallbackPath))
-            {
-                return fallbackPath;
-            }
-            
-            return "";
-        }
-        
-        /// <summary>
-        /// 获取MCP Unity服务器路径
-        /// </summary>
-        public static string GetMCPUnityServerPath()
-        {
-            return PathConfig?.GetAbsolutePath(PathConfig.mcpUnityServerPath) ?? "";
-        }
-        
-        /// <summary>
-        /// 获取MCP配置文件路径
-        /// </summary>
-        public static string GetMCPConfigPath()
-        {
-            return PathConfig?.GetAbsolutePath(PathConfig.mcpConfigPath) ?? "";
-        }
-        
-        /// <summary>
         /// 获取Strands工具路径
         /// </summary>
         public static string GetStrandsToolsPath()
@@ -174,17 +135,13 @@ namespace UnityAIAgent.Editor
             // 查找可能的路径，优先级排序
             string[] possiblePaths = new string[]
             {
-                // 1. 优先使用配置的strandsToolsPath（支持自动部署的路径）
+                // 1. 优先使用配置的strandsToolsPath
                 PathConfig.strandsToolsPath,
-                // 2. 当前项目的Python目录（自动部署目标）
+                // 2. 当前项目的Python目录
                 Path.Combine(currentProjectPath, "Python"),
-                // 3. 当前项目如果是unity-strands-agent开发环境
-                Path.Combine(currentProjectPath, "Python"),
-                // 4. 相邻目录查找（开发环境后备）
+                // 3. 相邻目录查找（开发环境后备）
                 Path.Combine(currentProjectPath, "..", "unity-strands-agent", "Python"),
-                Path.Combine(currentProjectPath, "..", "..", "unity-strands-agent", "Python"),
-                // 5. 相对路径解析（最后的后备方案）
-                PathConfig.GetAbsolutePath("Python")
+                Path.Combine(currentProjectPath, "..", "..", "unity-strands-agent", "Python")
             };
             
             foreach (string path in possiblePaths)
@@ -203,75 +160,7 @@ namespace UnityAIAgent.Editor
                 }
             }
             
-            // 尝试获取相对于包的路径（原有逻辑）
-            string assemblyLocation = typeof(PathManager).Assembly.Location;
-            string packagePath = Path.GetDirectoryName(Path.GetDirectoryName(assemblyLocation));
-            string pythonPath = Path.Combine(packagePath, PathConfig.unityAgentPythonPath);
-            
-            if (Directory.Exists(pythonPath))
-            {
-                return pythonPath;
-            }
-            
-            // 后备方案：使用绝对路径
-            return PathConfig.GetAbsolutePath(PathConfig.unityAgentPythonPath);
-        }
-        
-        /// <summary>
-        /// 获取有效的Python可执行文件路径
-        /// </summary>
-        public static string GetValidPythonPath()
-        {
-            return PathConfig?.GetValidPythonPath() ?? "";
-        }
-        
-        /// <summary>
-        /// 获取有效的Node.js可执行文件路径
-        /// </summary>
-        public static string GetValidNodePath()
-        {
-            return PathConfig?.GetValidNodePath() ?? "";
-        }
-        
-        /// <summary>
-        /// 获取有效的SSL证书文件路径
-        /// </summary>
-        public static string GetValidSSLCertPath()
-        {
-            return PathConfig?.GetValidSSLCertPath() ?? "";
-        }
-        
-        /// <summary>
-        /// 获取有效的SSL证书目录路径
-        /// </summary>
-        public static string GetValidSSLCertDirectory()
-        {
-            return PathConfig?.GetValidSSLCertDirectory() ?? "";
-        }
-        
-        /// <summary>
-        /// 获取Shell可执行文件路径
-        /// </summary>
-        public static string GetShellExecutablePath()
-        {
-            return PathConfig?.shellExecutablePath ?? "/bin/bash";
-        }
-        
-        /// <summary>
-        /// 获取诊断配置路径列表
-        /// </summary>
-        public static string[] GetDiagnosticConfigPaths()
-        {
-            if (PathConfig?.diagnosticConfigPaths == null)
-                return new string[0];
-                
-            var paths = new string[PathConfig.diagnosticConfigPaths.Count];
-            for (int i = 0; i < PathConfig.diagnosticConfigPaths.Count; i++)
-            {
-                paths[i] = PathConfig.GetAbsolutePath(PathConfig.diagnosticConfigPaths[i]);
-            }
-            
-            return paths;
+            return "";
         }
         
         /// <summary>
@@ -281,8 +170,14 @@ namespace UnityAIAgent.Editor
         {
             if (PathConfig == null) return false;
             
-            var (isValid, _) = PathConfig.ValidateConfiguration();
-            return isValid;
+            // 简单检查：验证strandsToolsPath是否存在且包含agent_core.py
+            if (!string.IsNullOrEmpty(PathConfig.strandsToolsPath))
+            {
+                return Directory.Exists(PathConfig.strandsToolsPath) && 
+                       File.Exists(Path.Combine(PathConfig.strandsToolsPath, "agent_core.py"));
+            }
+            
+            return false;
         }
         
         /// <summary>
@@ -292,7 +187,21 @@ namespace UnityAIAgent.Editor
         {
             if (PathConfig == null) return new string[] { "路径配置未加载" };
             
-            var (_, errors) = PathConfig.ValidateConfiguration();
+            var errors = new System.Collections.Generic.List<string>();
+            
+            if (string.IsNullOrEmpty(PathConfig.strandsToolsPath))
+            {
+                errors.Add("Strands工具路径未配置");
+            }
+            else if (!Directory.Exists(PathConfig.strandsToolsPath))
+            {
+                errors.Add("Strands工具路径不存在");
+            }
+            else if (!File.Exists(Path.Combine(PathConfig.strandsToolsPath, "agent_core.py")))
+            {
+                errors.Add("Strands工具路径中未找到agent_core.py");
+            }
+            
             return errors.ToArray();
         }
         
