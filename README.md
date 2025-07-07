@@ -14,6 +14,41 @@ Unity Strands Agent 是基于 AWS 开源 Strands Agent SDK 的 Unity 开发智�
 
 Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，通过深度理解 Unity 开发流程，为开发者提供智能化的开发辅助。该插件基于模块化架构设计，支持多种 AI 模型，并提供丰富的工具生态系统。
 
+### 系统架构
+
+```mermaid
+graph TB
+    subgraph Unity[Unity Editor]
+        UI[AIAgentWindow]
+        PB[PythonBridge]
+        PM[PythonManager]
+        PC[PathConfiguration]
+    end
+    
+    subgraph Python[Python Backend]
+        UA[Unity Agent]
+        SP[Streaming Processor]
+        AC[Agent Core]
+        UT[Unity Tools]
+    end
+    
+    subgraph External[External Services]
+        AWS[Amazon Bedrock]
+        MCP[MCP Servers]
+        SDK[Strands SDK<br/>21 Tools]
+    end
+    
+    UI --> PB
+    PB --> UA
+    UA --> AC
+    AC --> AWS
+    AC --> SDK
+    PM --> MCP
+    
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
+    classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
+```
+
 ### 主要特性
 
 #### Unity 集成优势
@@ -281,6 +316,41 @@ Unity Strands Agent is a powerful AI-powered development assistant that brings t
 ### Project Overview
 
 Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your Unity development environment. Built on the robust Strands Agent SDK framework, this plugin understands Unity's unique development patterns, component systems, and best practices to deliver contextually relevant assistance. With support for 21+ built-in tools and extensible MCP (Model Context Protocol) integration, it adapts to your project's specific needs and coding standards.
+
+### System Architecture
+
+```mermaid
+graph TB
+    subgraph Unity[Unity Editor]
+        UI[AIAgentWindow]
+        PB[PythonBridge]
+        PM[PythonManager]
+        PC[PathConfiguration]
+    end
+    
+    subgraph Python[Python Backend]
+        UA[Unity Agent]
+        SP[Streaming Processor]
+        AC[Agent Core]
+        UT[Unity Tools]
+    end
+    
+    subgraph External[External Services]
+        AWS[Amazon Bedrock]
+        MCP[MCP Servers]
+        SDK[Strands SDK<br/>21 Tools]
+    end
+    
+    UI --> PB
+    PB --> UA
+    UA --> AC
+    AC --> AWS
+    AC --> SDK
+    PM --> MCP
+    
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
+    classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
+```
 
 ### Key Features
 
