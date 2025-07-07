@@ -40,18 +40,10 @@ namespace UnityAIAgent.Editor
         private PathConfiguration pathConfig;
         
         private readonly string[] setupSteps = {
-            "检测Python环境",
-            "检测Node.js环境",
-            "安装Node.js和npm",
-            "创建虚拟环境", 
-            "安装Strands Agent SDK",
-            "安装MCP支持包",
-            "安装SSL证书支持",
-            "安装其他依赖包",
-            "配置环境变量",
-            "配置MCP服务器",
-            "初始化Python桥接",
-            "验证AWS连接",
+            "自动检测Python路径",
+            "配置AWS凭证",
+            "初始化Python环境",
+            "验证配置",
             "完成设置"
         };
         

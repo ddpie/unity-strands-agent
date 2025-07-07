@@ -111,33 +111,9 @@ graph TB
 }
 ```
 
-**自动部署**
+**包安装**
 
-保存 `manifest.json` 文件后，Unity将：
-
-1. **自动下载包** - 从Git仓库下载最新代码
-2. **自动部署Python代码** - 将Python文件复制到项目的 `Python/` 目录
-3. **自动配置路径** - 更新PathConfiguration设置
-
-您会在Unity控制台看到类似的日志：
-
-```text
-[PythonAutoDeployer] 检测到Git URL安装，开始自动部署Python代码
-[PythonAutoDeployer] 复制文件: agent_core.py
-[PythonAutoDeployer] 复制文件: unity_agent.py
-[PythonAutoDeployer] Python代码部署成功，版本: 1.0.0
-```
-
-**配置 .gitignore**
-
-将以下内容添加到项目的 `.gitignore` 文件：
-
-```gitignore
-# Unity AI Agent 自动部署的Python代码
-/Python/
-!/Python/venv/
-!/Python/requirements.txt
-```
+保存 `manifest.json` 文件后，Unity将自动下载包。包中包含了所有必要的Python代码和依赖文件。
 
 ##### 方法二：本地开发安装
 
@@ -155,35 +131,24 @@ graph TB
 
 #### 配置步骤
 
-1. **路径配置**
-   - 打开 Unity 菜单 → Window → Unity Strands Agent
-   - 切换到"设置"标签页，然后选择"路径配置"
-   - 使用"自动检测"功能快速配置常见路径
-   - 展开"查看/编辑环境变量"查看和管理所有环境变量
+1. **打开设置窗口**
+   - 在Unity中选择菜单：Window → Unity Strands Agent
+   - 点击顶部的"Settings"标签页
 
-   ![路径配置](Assets/Resources/settings_1.png)
+2. **基础配置**
+   - 点击"自动检测"按钮，系统会自动找到包中的Python代码路径
+   - 配置AWS凭证：
+     - AWS Access Key ID
+     - AWS Secret Access Key  
+     - AWS Region（默认为us-east-1）
 
-2. **环境安装**
-   - 在"环境安装"标签页中点击"开始自动设置"
-   - 系统将自动完成 Python 环境、Strands Agent SDK 和依赖包的安装
-
-   ![环境安装](Assets/Resources/settings_2.png)
-
-3. **MCP 配置**
-   - 在"MCP配置"标签页中配置外部工具和服务
-   - 根据需要添加和配置 MCP 服务器
-
-   ![MCP配置](Assets/Resources/settings_3.png)
-
-4. **模型配置**
-   - 配置 AWS CLI 凭证以使用 Amazon Bedrock 服务
-   - 详细配置说明请参考 [Strands Agent SDK 官方文档](https://strandsagents.com/latest/)
+3. **验证配置**
+   - 点击"验证配置"按钮确保所有设置正确
+   - 如果显示绿色勾号，说明配置成功
 
 #### 更新插件
 
-##### 自动更新
-
-当您在 `manifest.json` 中更新版本标签时：
+更新插件很简单，只需在 `manifest.json` 中更新版本标签：
 
 ```json
 {
@@ -193,33 +158,7 @@ graph TB
 }
 ```
 
-Unity会自动检测版本变化并提示是否更新Python代码。
-
-##### 手动更新
-
-您也可以通过Unity菜单手动更新：`Tools > Unity AI Agent > Update Python Code`
-
-#### 安装后项目结构
-
-安装完成后，您的项目结构应该是：
-
-```text
-YourUnityProject/
-├── Assets/
-│   ├── UnityAIAgent/           # 配置文件
-│   │   ├── PathConfiguration.asset
-│   │   └── mcp_config.json
-│   └── Scripts/                # 您的项目脚本
-├── Python/                     # 自动部署的Python代码
-│   ├── agent_core.py
-│   ├── unity_agent.py
-│   ├── mcp_client.py
-│   ├── python_version.txt      # 版本标记文件
-│   └── venv/                   # Python虚拟环境
-├── Packages/
-│   └── manifest.json           # 包含Git URL引用
-└── .gitignore
-```
+Unity会自动下载新版本的包。
 
 ### 使用指南
 
@@ -330,44 +269,30 @@ YourUnityProject/
 
 ### 故障排除
 
-#### 安装相关问题
+#### 常见问题
 
-1. **Python代码未自动部署**：
-   - 检查Unity控制台是否有错误信息
-   - 确认项目目录是否有写入权限
-   - 验证Git URL是否正确且可访问
+1. **菜单项不显示**：
+   - 检查Unity控制台是否有编译错误
+   - 确认包已正确下载到Library/PackageCache目录
+   - 重启Unity编辑器
 
 2. **找不到agent_core模块**：
-   - 确保 `Python/` 目录存在且包含 `agent_core.py`
-   - 检查PathConfiguration.asset中的 `strandsToolsPath` 指向正确路径
-   - 验证Python虚拟环境正确配置
+   - 点击"自动检测"按钮重新检测Python路径
+   - 检查Library/PackageCache中是否有com.ddpie.unity-strands-agent包
+   - 确认包中的Python目录包含agent_core.py文件
 
-3. **版本冲突**：
-   - 删除 `Python/` 目录
-   - 使用菜单 `Tools > Unity AI Agent > Update Python Code` 重新部署
-
-#### 配置相关问题
-
-4. **路径不存在错误**：
-   - 使用"验证配置"功能检查所有路径
-   - 使用"自动检测"功能重新检测路径
-   - 手动使用"浏览"功能设置正确路径
-
-5. **Python模块找不到**：
-   - 检查Strands工具路径是否正确
-   - 确保STRANDS_TOOLS_PATH环境变量已设置
-
-6. **MCP连接失败**：
-   - 验证Node.js路径和MCP服务器路径
-   - 检查MCP配置文件是否存在
+3. **AWS连接失败**：
+   - 验证AWS Access Key和Secret Key是否正确
+   - 确认AWS Region设置正确
+   - 检查网络连接是否正常
 
 #### 获取支持
 
 如有问题，请：
 
 1. 检查Unity控制台的错误日志
-2. 查看 `Python/python_version.txt` 确认版本
-3. 提交Issue到GitHub仓库
+2. 在设置页面点击"配置摘要"查看当前配置状态
+3. 提交Issue到GitHub仓库并附上错误日志
 
 ### 开发和贡献
 
@@ -540,33 +465,9 @@ In your Unity project, open the `Packages/manifest.json` file and add to the `de
 }
 ```
 
-**Automatic Deployment**
+**Package Installation**
 
-After saving the `manifest.json` file, Unity will:
-
-1. **Auto Download Package** - Download the latest code from Git repository
-2. **Auto Deploy Python Code** - Copy Python files to the project's `Python/` directory
-3. **Auto Configure Paths** - Update PathConfiguration settings
-
-You will see logs like this in the Unity console:
-
-```text
-[PythonAutoDeployer] Detected Git URL installation, starting auto deployment of Python code
-[PythonAutoDeployer] Copying file: agent_core.py
-[PythonAutoDeployer] Copying file: unity_agent.py
-[PythonAutoDeployer] Python code deployment successful, version: 1.0.0
-```
-
-**Configure .gitignore**
-
-Add the following to your project's `.gitignore` file:
-
-```gitignore
-# Unity AI Agent auto-deployed Python code
-/Python/
-!/Python/venv/
-!/Python/requirements.txt
-```
+After saving the `manifest.json` file, Unity will automatically download the package, which contains all necessary Python code and dependencies.
 
 ##### Method 2: Local Development Installation
 
@@ -584,35 +485,24 @@ In this mode, Python code will not be automatically deployed, but will directly 
 
 #### Configuration Steps
 
-1. **Path Configuration**
-   - Open Unity Menu → Window → Unity Strands Agent
-   - Switch to "Settings" tab, then select "Path Configuration"
-   - Use "Auto Detect" function to quickly configure common paths
-   - Expand "View/Edit Environment Variables" to view and manage all environment variables
+1. **Open Settings Window**
+   - In Unity, select menu: Window → Unity Strands Agent
+   - Click the "Settings" tab at the top
 
-   ![Path Configuration](Assets/Resources/settings_1_en.png)
+2. **Basic Configuration**
+   - Click "Auto Detect" button, the system will automatically find the Python code path in the package
+   - Configure AWS credentials:
+     - AWS Access Key ID
+     - AWS Secret Access Key
+     - AWS Region (default is us-east-1)
 
-2. **Environment Installation**
-   - Click "Start Auto Setup" in the "Environment Installation" tab
-   - The system will automatically complete the installation of Python environment, Strands Agent SDK, and dependency packages
-
-   ![Environment Setup](Assets/Resources/settings_2_en.png)
-
-3. **MCP Configuration**
-   - Configure external tools and services in the "MCP Configuration" tab
-   - Add and configure MCP servers as needed
-
-   ![MCP Configuration](Assets/Resources/settings_3_en.png)
-
-4. **Model Configuration**
-   - Configure AWS CLI credentials to use Amazon Bedrock services
-   - For detailed configuration instructions, please refer to [Strands Agent SDK Official Documentation](https://strandsagents.com/latest/)
+3. **Verify Configuration**
+   - Click "Validate Configuration" button to ensure all settings are correct
+   - If you see a green checkmark, the configuration is successful
 
 #### Plugin Updates
 
-##### Automatic Updates
-
-When you update the version tag in `manifest.json`:
+Updating the plugin is simple, just update the version tag in `manifest.json`:
 
 ```json
 {
@@ -622,33 +512,7 @@ When you update the version tag in `manifest.json`:
 }
 ```
 
-Unity will automatically detect version changes and prompt whether to update Python code.
-
-##### Manual Updates
-
-You can also manually update through Unity menu: `Tools > Unity AI Agent > Update Python Code`
-
-#### Post-Installation Project Structure
-
-After installation, your project structure should be:
-
-```text
-YourUnityProject/
-├── Assets/
-│   ├── UnityAIAgent/           # Configuration files
-│   │   ├── PathConfiguration.asset
-│   │   └── mcp_config.json
-│   └── Scripts/                # Your project scripts
-├── Python/                     # Auto-deployed Python code
-│   ├── agent_core.py
-│   ├── unity_agent.py
-│   ├── mcp_client.py
-│   ├── python_version.txt      # Version marker file
-│   └── venv/                   # Python virtual environment
-├── Packages/
-│   └── manifest.json           # Contains Git URL reference
-└── .gitignore
-```
+Unity will automatically download the new version of the package.
 
 ### Getting Started
 
@@ -778,44 +642,30 @@ The system prioritizes relative paths, relative to the project root directory:
 
 ### Troubleshooting
 
-#### Installation Related Issues
+#### Common Issues
 
-1. **Python Code Not Auto-Deployed**:
-   - Check Unity console for error messages
-   - Verify project directory has write permissions
-   - Confirm Git URL is correct and accessible
+1. **Menu Item Not Showing**:
+   - Check Unity console for compilation errors
+   - Confirm package has been properly downloaded to Library/PackageCache directory
+   - Restart Unity Editor
 
 2. **Cannot Find agent_core Module**:
-   - Ensure `Python/` directory exists and contains `agent_core.py`
-   - Check that `strandsToolsPath` in PathConfiguration.asset points to correct path
-   - Verify Python virtual environment is properly configured
+   - Click "Auto Detect" button to re-detect Python path
+   - Check if com.ddpie.unity-strands-agent package exists in Library/PackageCache
+   - Confirm the package's Python directory contains agent_core.py file
 
-3. **Version Conflicts**:
-   - Delete `Python/` directory
-   - Use menu `Tools > Unity AI Agent > Update Python Code` to redeploy
-
-#### Configuration Related Issues
-
-4. **Path Not Found Error**:
-   - Use "Validate Configuration" function to check all paths
-   - Use "Auto Detect" function to re-detect paths
-   - Manually use "Browse" function to set correct paths
-
-5. **Python Module Not Found**:
-   - Check if Strands tools path is correct
-   - Ensure STRANDS_TOOLS_PATH environment variable is set
-
-6. **MCP Connection Failed**:
-   - Verify Node.js path and MCP server path
-   - Check if MCP configuration file exists
+3. **AWS Connection Failed**:
+   - Verify AWS Access Key and Secret Key are correct
+   - Confirm AWS Region is set correctly
+   - Check network connection
 
 #### Getting Support
 
 If you encounter issues:
 
 1. Check Unity console for error logs
-2. Verify version by checking `Python/python_version.txt`
-3. Submit an issue to the GitHub repository
+2. Click "Configuration Summary" in settings page to view current configuration status
+3. Submit an issue to the GitHub repository with error logs
 
 ### Development and Contribution
 
