@@ -30,7 +30,6 @@
   },
   "files": [
     "Editor/",
-    "Runtime/",
     "Python/",
     "package.json",
     "README.md",
