@@ -39,7 +39,6 @@ Thumbs.db
 
 # Unity
 *.unitypackage
-*.meta
 
 # Project specific
 chat_history.json
