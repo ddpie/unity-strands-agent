@@ -39,18 +39,18 @@ graph TB
         MCP[MCP Servers]
     end
     
-    UI --> SH
-    UI --> PB
-    PM --> PB
-    PB --> AC
-    AC --> UA
-    UA --> SP
-    UA --> UT
-    UA --> MM
-    UA --> SDK
-    SDK --> AWS
-    MM --> MCP
-    SH -.-> SP
+    UI -->|用户交互| SH
+    UI -->|调用Python| PB
+    PM -->|初始化环境| PB
+    PB -->|Python.NET| AC
+    AC -->|创建实例| UA
+    UA -->|处理流式响应| SP
+    UA -->|加载工具| UT
+    UA -->|管理MCP| MM
+    UA -->|调用SDK| SDK
+    SDK -->|AI推理| AWS
+    MM -->|连接服务| MCP
+    SH -.->|异步更新| SP
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
@@ -349,18 +349,18 @@ graph TB
         MCP[MCP Servers]
     end
     
-    UI --> SH
-    UI --> PB
-    PM --> PB
-    PB --> AC
-    AC --> UA
-    UA --> SP
-    UA --> UT
-    UA --> MM
-    UA --> SDK
-    SDK --> AWS
-    MM --> MCP
-    SH -.-> SP
+    UI -->|User Interaction| SH
+    UI -->|Invoke Python| PB
+    PM -->|Initialize Env| PB
+    PB -->|Python.NET| AC
+    AC -->|Create Instance| UA
+    UA -->|Stream Processing| SP
+    UA -->|Load Tools| UT
+    UA -->|Manage MCP| MM
+    UA -->|Call SDK| SDK
+    SDK -->|AI Inference| AWS
+    MM -->|Connect Services| MCP
+    SH -.->|Async Updates| SP
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
