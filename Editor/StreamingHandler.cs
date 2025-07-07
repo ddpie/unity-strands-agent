@@ -40,8 +40,22 @@ namespace UnityAIAgent.Editor
                 if (isStreaming)
                 {
                     Debug.LogWarning("[StreamingHandler] 强制停止流式处理");
+                    
+                    // 先处理所有队列中的数据，确保已接收的内容不会丢失
+                    ProcessAllQueuedChunks();
+                    
+                    // 发送一个特殊的完成信号，表示因模式切换而中断
+                    EnqueueChunk(new StreamChunk { 
+                        Type = "interrupted", 
+                        Content = $"\n\n⚠️ {LanguageManager.GetText("Unity模式切换，流式处理被中断", "Unity mode switch, streaming interrupted")}" 
+                    });
+                    
+                    // 停止流式处理
                     StopStreaming();
-                    OnStreamError?.Invoke("Unity模式切换，流式处理被中断");
+                    
+                    // 标记为完成，防止后续数据处理
+                    isCompleted = true;
+                    OnStreamCompleted?.Invoke();
                 }
             }
         }
@@ -253,6 +267,35 @@ namespace UnityAIAgent.Editor
         }
         
         /// <summary>
+        /// 立即处理所有队列中的数据块（用于紧急情况如模式切换）
+        /// </summary>
+        private void ProcessAllQueuedChunks()
+        {
+            Debug.Log($"[StreamingHandler] 紧急处理所有队列中的数据块，当前队列长度: {chunkQueue.Count}");
+            
+            List<StreamChunk> chunksToProcess = new List<StreamChunk>();
+            
+            // 先取出所有chunk
+            lock (queueLock)
+            {
+                while (chunkQueue.Count > 0)
+                {
+                    chunksToProcess.Add(chunkQueue.Dequeue());
+                }
+            }
+            
+            // 处理所有chunk
+            foreach (var chunk in chunksToProcess)
+            {
+                if (chunk.Type == "chunk" && !string.IsNullOrEmpty(chunk.Content))
+                {
+                    // 直接触发事件，不经过HandleChunk以避免状态检查
+                    OnChunkReceived?.Invoke(chunk.Content);
+                }
+            }
+        }
+        
+        /// <summary>
         /// 处理下一个数据块
         /// </summary>
         private void ProcessNextChunk()
@@ -339,6 +382,15 @@ namespace UnityAIAgent.Editor
                     else
                     {
                         Debug.Log($"[StreamingHandler] 忽略完成后的error: {chunk.Error}");
+                    }
+                    break;
+                    
+                case "interrupted":
+                    // 处理中断信号 - 添加中断提示但不触发错误
+                    Debug.Log($"[StreamingHandler] 触发中断信号，内容: {chunk.Content}");
+                    if (!string.IsNullOrEmpty(chunk.Content))
+                    {
+                        OnChunkReceived?.Invoke(chunk.Content);
                     }
                     break;
             }
