@@ -20,9 +20,9 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 graph TB
     subgraph Unity[Unity Editor]
         UI[AIAgentWindow]
+        SH[StreamingHandler]
         PB[PythonBridge]
         PM[PythonManager]
-        SH[StreamingHandler]
     end
     
     subgraph Python[Python Backend]
@@ -34,15 +34,15 @@ graph TB
     end
     
     subgraph External[External Services]
+        SDK[Strands Agent SDK]
         AWS[Amazon Bedrock]
         MCP[MCP Servers]
-        SDK[Strands Agent SDK]
     end
     
-    UI --> PB
     UI --> SH
-    PB --> AC
+    UI --> PB
     PM --> PB
+    PB --> AC
     AC --> UA
     UA --> SP
     UA --> UT
@@ -54,10 +54,6 @@ graph TB
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
-    
-    style Unity fill:#e8f4f8
-    style Python fill:#f8f8e8
-    style External fill:#fff
 ```
 
 ### 主要特性
@@ -334,9 +330,9 @@ Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your
 graph TB
     subgraph Unity[Unity Editor]
         UI[AIAgentWindow]
+        SH[StreamingHandler]
         PB[PythonBridge]
         PM[PythonManager]
-        SH[StreamingHandler]
     end
     
     subgraph Python[Python Backend]
@@ -348,15 +344,15 @@ graph TB
     end
     
     subgraph External[External Services]
+        SDK[Strands Agent SDK]
         AWS[Amazon Bedrock]
         MCP[MCP Servers]
-        SDK[Strands Agent SDK]
     end
     
-    UI --> PB
     UI --> SH
-    PB --> AC
+    UI --> PB
     PM --> PB
+    PB --> AC
     AC --> UA
     UA --> SP
     UA --> UT
@@ -368,10 +364,6 @@ graph TB
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
-    
-    style Unity fill:#e8f4f8
-    style Python fill:#f8f8e8
-    style External fill:#fff
 ```
 
 ### Key Features
