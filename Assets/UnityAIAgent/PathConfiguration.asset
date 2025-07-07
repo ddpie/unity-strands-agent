@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3dfe8d5e3a8b1432c95aac8b53864f0c, type: 3}
   m_Name: PathConfiguration
   m_EditorClassIdentifier: 
-  projectRootPath: /Users/caobao/projects/unity/CubeVerse
   nodeExecutablePath: /opt/homebrew/bin/node
   fallbackNodePath: ~/.nvm/current/bin/node
   mcpUnityServerPath: Packages/com.gamelovers.mcp-unity/Server/build/index.js

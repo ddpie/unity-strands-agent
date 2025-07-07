@@ -90,18 +90,68 @@ graph TB
 
 #### 安装方法
 
-##### 方法一：Unity Package Manager（推荐）
+##### 方法一：Git URL 安装（推荐）
+
+**通过 Unity Package Manager**
 
 1. 在 Unity 中打开 Package Manager
 2. 点击 "Add package from git URL"
 3. 输入：`https://github.com/ddpie/unity-strands-agent.git`
 4. 等待 Unity 自动下载和导入
 
-##### 方法二：本地安装
+**通过 manifest.json**
 
-1. 下载项目源码到本地
-2. 在 Unity Package Manager 中选择 "Add package from disk"
-3. 选择项目中的 `package.json` 文件
+在您的Unity项目中，打开 `Packages/manifest.json` 文件，在 `dependencies` 节点中添加：
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "https://github.com/ddpie/unity-strands-agent.git#v1.0.0"
+  }
+}
+```
+
+**自动部署**
+
+保存 `manifest.json` 文件后，Unity将：
+
+1. **自动下载包** - 从Git仓库下载最新代码
+2. **自动部署Python代码** - 将Python文件复制到项目的 `Python/` 目录
+3. **自动配置路径** - 更新PathConfiguration设置
+
+您会在Unity控制台看到类似的日志：
+
+```text
+[PythonAutoDeployer] 检测到Git URL安装，开始自动部署Python代码
+[PythonAutoDeployer] 复制文件: agent_core.py
+[PythonAutoDeployer] 复制文件: unity_agent.py
+[PythonAutoDeployer] Python代码部署成功，版本: 1.0.0
+```
+
+**配置 .gitignore**
+
+将以下内容添加到项目的 `.gitignore` 文件：
+
+```gitignore
+# Unity AI Agent 自动部署的Python代码
+/Python/
+!/Python/venv/
+!/Python/requirements.txt
+```
+
+##### 方法二：本地开发安装
+
+如果您正在开发或修改Unity AI Agent插件本身，可以使用本地文件引用：
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "file:/path/to/unity-strands-agent"
+  }
+}
+```
+
+在这种模式下，不会自动部署Python代码，而是直接使用源项目中的文件。
 
 #### 配置步骤
 
@@ -128,6 +178,48 @@ graph TB
 4. **模型配置**
    - 配置 AWS CLI 凭证以使用 Amazon Bedrock 服务
    - 详细配置说明请参考 [Strands Agent SDK 官方文档](https://strandsagents.com/latest/)
+
+#### 更新插件
+
+##### 自动更新
+
+当您在 `manifest.json` 中更新版本标签时：
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "https://github.com/ddpie/unity-strands-agent.git#v1.1.0"
+  }
+}
+```
+
+Unity会自动检测版本变化并提示是否更新Python代码。
+
+##### 手动更新
+
+您也可以通过Unity菜单手动更新：`Tools > Unity AI Agent > Update Python Code`
+
+#### 安装后项目结构
+
+安装完成后，您的项目结构应该是：
+
+```text
+YourUnityProject/
+├── Assets/
+│   ├── UnityAIAgent/           # 配置文件
+│   │   ├── PathConfiguration.asset
+│   │   └── mcp_config.json
+│   └── Scripts/                # 您的项目脚本
+├── Python/                     # 自动部署的Python代码
+│   ├── agent_core.py
+│   ├── unity_agent.py
+│   ├── mcp_client.py
+│   ├── python_version.txt      # 版本标记文件
+│   └── venv/                   # Python虚拟环境
+├── Packages/
+│   └── manifest.json           # 包含Git URL引用
+└── .gitignore
+```
 
 ### 使用指南
 
@@ -238,18 +330,44 @@ graph TB
 
 ### 故障排除
 
-1. **路径不存在错误**：
+#### 安装相关问题
+
+1. **Python代码未自动部署**：
+   - 检查Unity控制台是否有错误信息
+   - 确认项目目录是否有写入权限
+   - 验证Git URL是否正确且可访问
+
+2. **找不到agent_core模块**：
+   - 确保 `Python/` 目录存在且包含 `agent_core.py`
+   - 检查PathConfiguration.asset中的 `strandsToolsPath` 指向正确路径
+   - 验证Python虚拟环境正确配置
+
+3. **版本冲突**：
+   - 删除 `Python/` 目录
+   - 使用菜单 `Tools > Unity AI Agent > Update Python Code` 重新部署
+
+#### 配置相关问题
+
+4. **路径不存在错误**：
    - 使用"验证配置"功能检查所有路径
    - 使用"自动检测"功能重新检测路径
    - 手动使用"浏览"功能设置正确路径
 
-2. **Python模块找不到**：
+5. **Python模块找不到**：
    - 检查Strands工具路径是否正确
    - 确保STRANDS_TOOLS_PATH环境变量已设置
 
-3. **MCP连接失败**：
+6. **MCP连接失败**：
    - 验证Node.js路径和MCP服务器路径
    - 检查MCP配置文件是否存在
+
+#### 获取支持
+
+如有问题，请：
+
+1. 检查Unity控制台的错误日志
+2. 查看 `Python/python_version.txt` 确认版本
+3. 提交Issue到GitHub仓库
 
 ### 开发和贡献
 
@@ -401,18 +519,68 @@ graph TB
 
 #### Installation Methods
 
-##### Method 1: Unity Package Manager (Recommended)
+##### Method 1: Git URL Installation (Recommended)
+
+**Via Unity Package Manager**
 
 1. Open Package Manager in Unity
 2. Click "Add package from git URL"
 3. Enter: `https://github.com/ddpie/unity-strands-agent.git`
 4. Wait for Unity to automatically download and import
 
-##### Method 2: Local Installation
+**Via manifest.json**
 
-1. Download the project source code locally
-2. Select "Add package from disk" in Unity Package Manager
-3. Select the `package.json` file in the project
+In your Unity project, open the `Packages/manifest.json` file and add to the `dependencies` section:
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "https://github.com/ddpie/unity-strands-agent.git#v1.0.0"
+  }
+}
+```
+
+**Automatic Deployment**
+
+After saving the `manifest.json` file, Unity will:
+
+1. **Auto Download Package** - Download the latest code from Git repository
+2. **Auto Deploy Python Code** - Copy Python files to the project's `Python/` directory
+3. **Auto Configure Paths** - Update PathConfiguration settings
+
+You will see logs like this in the Unity console:
+
+```text
+[PythonAutoDeployer] Detected Git URL installation, starting auto deployment of Python code
+[PythonAutoDeployer] Copying file: agent_core.py
+[PythonAutoDeployer] Copying file: unity_agent.py
+[PythonAutoDeployer] Python code deployment successful, version: 1.0.0
+```
+
+**Configure .gitignore**
+
+Add the following to your project's `.gitignore` file:
+
+```gitignore
+# Unity AI Agent auto-deployed Python code
+/Python/
+!/Python/venv/
+!/Python/requirements.txt
+```
+
+##### Method 2: Local Development Installation
+
+If you are developing or modifying the Unity AI Agent plugin itself, you can use local file reference:
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "file:/path/to/unity-strands-agent"
+  }
+}
+```
+
+In this mode, Python code will not be automatically deployed, but will directly use files from the source project.
 
 #### Configuration Steps
 
@@ -439,6 +607,48 @@ graph TB
 4. **Model Configuration**
    - Configure AWS CLI credentials to use Amazon Bedrock services
    - For detailed configuration instructions, please refer to [Strands Agent SDK Official Documentation](https://strandsagents.com/latest/)
+
+#### Plugin Updates
+
+##### Automatic Updates
+
+When you update the version tag in `manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.ddpie.unity-strands-agent": "https://github.com/ddpie/unity-strands-agent.git#v1.1.0"
+  }
+}
+```
+
+Unity will automatically detect version changes and prompt whether to update Python code.
+
+##### Manual Updates
+
+You can also manually update through Unity menu: `Tools > Unity AI Agent > Update Python Code`
+
+#### Post-Installation Project Structure
+
+After installation, your project structure should be:
+
+```text
+YourUnityProject/
+├── Assets/
+│   ├── UnityAIAgent/           # Configuration files
+│   │   ├── PathConfiguration.asset
+│   │   └── mcp_config.json
+│   └── Scripts/                # Your project scripts
+├── Python/                     # Auto-deployed Python code
+│   ├── agent_core.py
+│   ├── unity_agent.py
+│   ├── mcp_client.py
+│   ├── python_version.txt      # Version marker file
+│   └── venv/                   # Python virtual environment
+├── Packages/
+│   └── manifest.json           # Contains Git URL reference
+└── .gitignore
+```
 
 ### Getting Started
 
@@ -568,18 +778,44 @@ The system prioritizes relative paths, relative to the project root directory:
 
 ### Troubleshooting
 
-1. **Path Not Found Error**:
+#### Installation Related Issues
+
+1. **Python Code Not Auto-Deployed**:
+   - Check Unity console for error messages
+   - Verify project directory has write permissions
+   - Confirm Git URL is correct and accessible
+
+2. **Cannot Find agent_core Module**:
+   - Ensure `Python/` directory exists and contains `agent_core.py`
+   - Check that `strandsToolsPath` in PathConfiguration.asset points to correct path
+   - Verify Python virtual environment is properly configured
+
+3. **Version Conflicts**:
+   - Delete `Python/` directory
+   - Use menu `Tools > Unity AI Agent > Update Python Code` to redeploy
+
+#### Configuration Related Issues
+
+4. **Path Not Found Error**:
    - Use "Validate Configuration" function to check all paths
    - Use "Auto Detect" function to re-detect paths
    - Manually use "Browse" function to set correct paths
 
-2. **Python Module Not Found**:
+5. **Python Module Not Found**:
    - Check if Strands tools path is correct
    - Ensure STRANDS_TOOLS_PATH environment variable is set
 
-3. **MCP Connection Failed**:
+6. **MCP Connection Failed**:
    - Verify Node.js path and MCP server path
    - Check if MCP configuration file exists
+
+#### Getting Support
+
+If you encounter issues:
+
+1. Check Unity console for error logs
+2. Verify version by checking `Python/python_version.txt`
+3. Submit an issue to the GitHub repository
 
 ### Development and Contribution
 

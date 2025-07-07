@@ -169,24 +169,28 @@ namespace UnityAIAgent.Editor
         {
             if (PathConfig == null) return "";
             
-            // 首先尝试查找unity-strands-agent项目中的Python目录
             string currentProjectPath = GetProjectRootPath();
             
-            // 查找可能的路径
+            // 查找可能的路径，优先级排序
             string[] possiblePaths = new string[]
             {
-                // 当前项目如果是unity-strands-agent
+                // 1. 优先使用配置的strandsToolsPath（支持自动部署的路径）
+                PathConfig.strandsToolsPath,
+                // 2. 当前项目的Python目录（自动部署目标）
                 Path.Combine(currentProjectPath, "Python"),
-                // 相邻项目目录
+                // 3. 当前项目如果是unity-strands-agent开发环境
+                Path.Combine(currentProjectPath, "Python"),
+                // 4. 相邻目录查找（开发环境后备）
                 Path.Combine(currentProjectPath, "..", "unity-strands-agent", "Python"),
-                // 如果当前是CubeVerse，尝试找unity-strands-agent
                 Path.Combine(currentProjectPath, "..", "..", "unity-strands-agent", "Python"),
-                // 从配置中获取路径
+                // 5. 相对路径解析（最后的后备方案）
                 PathConfig.GetAbsolutePath("Python")
             };
             
             foreach (string path in possiblePaths)
             {
+                if (string.IsNullOrEmpty(path)) continue;
+                
                 string normalizedPath = Path.GetFullPath(path);
                 if (Directory.Exists(normalizedPath))
                 {
