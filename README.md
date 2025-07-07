@@ -22,31 +22,42 @@ graph TB
         UI[AIAgentWindow]
         PB[PythonBridge]
         PM[PythonManager]
-        PC[PathConfiguration]
+        SH[StreamingHandler]
     end
     
     subgraph Python[Python Backend]
-        UA[Unity Agent]
-        SP[Streaming Processor]
-        AC[Agent Core]
-        UT[Unity Tools]
+        AC[agent_core]
+        UA[UnityAgent]
+        SP[StreamingProcessor]
+        UT[unity_tools]
+        MM[MCPManager]
     end
     
     subgraph External[External Services]
         AWS[Amazon Bedrock]
         MCP[MCP Servers]
-        SDK[Strands SDK<br/>21 Tools]
+        SDK[Strands Agent SDK]
     end
     
     UI --> PB
-    PB --> UA
-    UA --> AC
-    AC --> AWS
-    AC --> SDK
-    PM --> MCP
+    UI --> SH
+    PB --> AC
+    PM --> PB
+    AC --> UA
+    UA --> SP
+    UA --> UT
+    UA --> MM
+    UA --> SDK
+    SDK --> AWS
+    MM --> MCP
+    SH -.-> SP
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
+    
+    style Unity fill:#e8f4f8
+    style Python fill:#f8f8e8
+    style External fill:#fff
 ```
 
 ### 主要特性
@@ -325,31 +336,42 @@ graph TB
         UI[AIAgentWindow]
         PB[PythonBridge]
         PM[PythonManager]
-        PC[PathConfiguration]
+        SH[StreamingHandler]
     end
     
     subgraph Python[Python Backend]
-        UA[Unity Agent]
-        SP[Streaming Processor]
-        AC[Agent Core]
-        UT[Unity Tools]
+        AC[agent_core]
+        UA[UnityAgent]
+        SP[StreamingProcessor]
+        UT[unity_tools]
+        MM[MCPManager]
     end
     
     subgraph External[External Services]
         AWS[Amazon Bedrock]
         MCP[MCP Servers]
-        SDK[Strands SDK<br/>21 Tools]
+        SDK[Strands Agent SDK]
     end
     
     UI --> PB
-    PB --> UA
-    UA --> AC
-    AC --> AWS
-    AC --> SDK
-    PM --> MCP
+    UI --> SH
+    PB --> AC
+    PM --> PB
+    AC --> UA
+    UA --> SP
+    UA --> UT
+    UA --> MM
+    UA --> SDK
+    SDK --> AWS
+    MM --> MCP
+    SH -.-> SP
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
+    
+    style Unity fill:#e8f4f8
+    style Python fill:#f8f8e8
+    style External fill:#fff
 ```
 
 ### Key Features
