@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Diagnostics;
 using System.Collections;
+using System.Runtime.InteropServices;
 
 namespace UnityAIAgent.Editor
 {
@@ -63,13 +64,45 @@ namespace UnityAIAgent.Editor
                 // 重要：必须在主线程初始化Python
                 if (!PythonEngine.IsInitialized)
                 {
-                    // 设置Python路径
-                    PythonEngine.PythonHome = pythonHome;
-                    PythonEngine.PythonPath = Environment.GetEnvironmentVariable("PYTHONPATH");
-                    
-                    // 初始化
-                    PythonEngine.Initialize();
-                    PythonEngine.BeginAllowThreads();
+                    try
+                    {
+                        // 清理可能冲突的环境变量
+                        Environment.SetEnvironmentVariable("PYTHONHOME", pythonHome);
+                        Environment.SetEnvironmentVariable("PYTHONPATH", Environment.GetEnvironmentVariable("PYTHONPATH"));
+                        
+                        // 设置Python路径 - 注意：PythonHome和PythonPath必须在Initialize之前设置
+                        PythonEngine.PythonHome = pythonHome;
+                        PythonEngine.PythonPath = Environment.GetEnvironmentVariable("PYTHONPATH");
+                        
+                        // 禁用Python的站点包初始化，避免某些初始化问题
+                        Environment.SetEnvironmentVariable("PYTHONNOUSERSITE", "1");
+                        
+                        // 初始化
+                        PythonEngine.Initialize();
+                        PythonEngine.BeginAllowThreads();
+                        
+                        // 验证Python是否正确初始化
+                        using (Py.GIL())
+                        {
+                            dynamic sys = Py.Import("sys");
+                            dynamic version = sys.version;
+                            EditorApplication.delayCall += () => {
+                                UnityEngine.Debug.Log($"Python引擎初始化成功: {version.ToString()}");
+                            };
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // 如果初始化失败，尝试清理并重新抛出错误
+                        if (PythonEngine.IsInitialized)
+                        {
+                            PythonEngine.Shutdown();
+                        }
+                        throw new Exception($"Python引擎初始化失败: {e.Message}\n\n" +
+                            $"PYTHONHOME: {pythonHome}\n" +
+                            $"PYTHONPATH: {Environment.GetEnvironmentVariable("PYTHONPATH")}\n" +
+                            $"Python DLL: {Runtime.PythonDLL}", e);
+                    }
                 }
                 
                 isPythonInitialized = true;
@@ -163,17 +196,27 @@ namespace UnityAIAgent.Editor
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    // 不要在StartInfo中直接设置Environment，而是使用EnvironmentVariables
+                    EnvironmentVariables = {
+                        // 清理环境变量，避免干扰
+                        ["PYTHONPATH"] = "",
+                        ["PYTHONHOME"] = "",
+                        ["PYTHONNOUSERSITE"] = "1"
+                    }
                 }
             };
             
+            // 复制必要的环境变量
+            process.StartInfo.EnvironmentVariables["PATH"] = Environment.GetEnvironmentVariable("PATH");
+            
             process.Start();
             string output = process.StandardOutput.ReadToEnd().Trim();
+            string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
             
-            if (process.ExitCode != 0)
+            if (process.ExitCode != 0 || !string.IsNullOrEmpty(error))
             {
-                string error = process.StandardError.ReadToEnd();
                 throw new Exception($"获取Python信息失败: {error}");
             }
             
@@ -284,9 +327,55 @@ namespace UnityAIAgent.Editor
             string venvLib = Path.Combine(venvPath, "lib", $"python{pythonVersion}");
             string venvSitePackages = Path.Combine(venvLib, "site-packages");
             
-            // Python标准库路径
-            string pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
-            string pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+            // Python标准库路径 - 需要正确处理macOS Homebrew的特殊路径结构
+            string pythonStdLib = "";
+            string pythonStdLibDynload = "";
+            
+            // macOS Homebrew Python的标准库在Frameworks目录下
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // 检查是否是Homebrew的Python（通过路径特征判断）
+                if (pythonHome.Contains("/Frameworks/Python.framework/"))
+                {
+                    // Homebrew Python的标准库路径
+                    pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
+                    pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+                }
+                else if (pythonHome.Contains("/homebrew/") || pythonHome.Contains("/usr/local/"))
+                {
+                    // 尝试查找Frameworks路径
+                    string frameworksPath = Path.Combine(pythonHome, "..", "..", "Frameworks", "Python.framework", "Versions", pythonVersion);
+                    if (Directory.Exists(frameworksPath))
+                    {
+                        pythonStdLib = Path.Combine(frameworksPath, "lib", $"python{pythonVersion}");
+                        pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+                    }
+                    else
+                    {
+                        // 使用默认路径
+                        pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
+                        pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+                    }
+                }
+                else
+                {
+                    // 其他情况使用默认路径
+                    pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
+                    pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+                }
+            }
+            else
+            {
+                // 其他平台使用默认路径
+                pythonStdLib = Path.Combine(pythonHome, "lib", $"python{pythonVersion}");
+                pythonStdLibDynload = Path.Combine(pythonStdLib, "lib-dynload");
+            }
+            
+            // 验证标准库路径存在
+            if (!Directory.Exists(pythonStdLib))
+            {
+                throw new Exception($"Python标准库路径不存在: {pythonStdLib}\n请检查Python安装是否完整。");
+            }
             
             // 插件Python模块路径
             string assemblyLocation = typeof(PythonManager).Assembly.Location;
@@ -309,7 +398,16 @@ namespace UnityAIAgent.Editor
             };
             
             // 组合完整的PYTHONPATH（标准库 + 插件模块 + 虚拟环境）
-            string fullPythonPath = $"{pythonStdLib}:{pythonStdLibDynload}:{pluginPythonPath}:{venvSitePackages}";
+            // 注意：在某些情况下，我们需要包含Python的基础模块路径
+            string pythonBaseLib = Path.Combine(pythonHome, "lib");
+            string fullPythonPath = $"{pythonStdLib}:{pythonStdLibDynload}:{pythonBaseLib}:{pluginPythonPath}:{venvSitePackages}";
+            
+            // 添加Python的zip文件（如果存在）
+            string pythonZip = Path.Combine(pythonHome, "lib", $"python{pythonVersion.Split('.')[0]}{pythonVersion.Split('.')[1]}.zip");
+            if (File.Exists(pythonZip))
+            {
+                fullPythonPath = $"{pythonZip}:{fullPythonPath}";
+            }
             Environment.SetEnvironmentVariable("PYTHONPATH", fullPythonPath);
             
             // 设置UTF-8编码环境变量
