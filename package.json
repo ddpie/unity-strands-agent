@@ -2,7 +2,7 @@
   "name": "com.ddpie.unity-strands-agent",
   "version": "0.1.0-beta",
   "displayName": "Unity Strands Agent",
-  "description": "基于Strands Agent SDK的Unity AI智能助手插件，支持通过Git URL安装并自动部署Python代码",
+  "description": "Unity AI assistant powered by AWS Strands Agents SDK with intelligent code generation, automated problem-solving, and context-aware development suggestions for Unity projects",
   "unity": "2022.3",
   "license": "MIT",
   "author": {
@@ -14,16 +14,19 @@
   },
   "keywords": [
     "ai",
-    "agent",
+    "artificial-intelligence",
     "assistant",
-    "strands",
-    "bedrock",
-    "python",
-    "智能助手",
-    "中文",
-    "多语言",
-    "git-url",
-    "auto-deploy"
+    "strands-agents",
+    "aws-bedrock",
+    "claude",
+    "unity-editor",
+    "code-generation",
+    "development-tools",
+    "mcp-protocol",
+    "python-integration",
+    "streaming-response",
+    "context-aware",
+    "unity-tools"
   ],
   "dependencies": {
     "com.unity.textmeshpro": "3.0.6"
