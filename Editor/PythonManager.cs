@@ -638,44 +638,28 @@ namespace UnityAIAgent.Editor
             
             UnityEngine.Debug.Log($"[pip3] 执行命令: {pipPath} install {packageName} --verbose");
             
-            // 实时读取输出
-            string fullOutput = "";
-            string fullError = "";
-            
-            process.OutputDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    fullOutput += e.Data + "\n";
-                    EditorApplication.delayCall += () => {
-                        UnityEngine.Debug.Log($"[pip3] {e.Data}");
-                    };
-                }
-            };
-            
-            process.ErrorDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    fullError += e.Data + "\n";
-                    EditorApplication.delayCall += () => {
-                        UnityEngine.Debug.LogWarning($"[pip3] {e.Data}");
-                    };
-                }
-            };
-            
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
+            
+            // 输出详细日志
+            if (!string.IsNullOrEmpty(output))
+            {
+                UnityEngine.Debug.Log($"[pip3 OUTPUT] {output}");
+            }
+            if (!string.IsNullOrEmpty(error))
+            {
+                UnityEngine.Debug.LogWarning($"[pip3 ERROR] {error}");
+            }
             
             if (process.ExitCode != 0)
             {
                 UnityEngine.Debug.LogError($"[pip3] 包安装失败: {packageName} (退出代码: {process.ExitCode})");
-                throw new Exception($"包安装失败 ({packageName}): {fullError}");
+                throw new Exception($"包安装失败 ({packageName}): {error}");
             }
             
-            EditorApplication.delayCall += () => {
-                UnityEngine.Debug.Log($"[pip3] 包安装成功: {packageName}");
-            };
+            UnityEngine.Debug.Log($"[pip3] 包安装成功: {packageName}");
         }
         
         /// <summary>
@@ -718,42 +702,28 @@ namespace UnityAIAgent.Editor
             
             UnityEngine.Debug.Log($"[pip3] 执行命令: {pipPath} install -r \"{requirementsPath}\" --verbose");
             
-            // 实时读取输出
-            string fullOutput = "";
-            string fullError = "";
-            
-            process.OutputDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    fullOutput += e.Data + "\n";
-                    EditorApplication.delayCall += () => {
-                        UnityEngine.Debug.Log($"[pip3] {e.Data}");
-                    };
-                }
-            };
-            
-            process.ErrorDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    fullError += e.Data + "\n";
-                    EditorApplication.delayCall += () => {
-                        UnityEngine.Debug.LogWarning($"[pip3] {e.Data}");
-                    };
-                }
-            };
-            
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
+            
+            // 输出详细日志
+            if (!string.IsNullOrEmpty(output))
+            {
+                UnityEngine.Debug.Log($"[pip3 OUTPUT] {output}");
+            }
+            if (!string.IsNullOrEmpty(error))
+            {
+                UnityEngine.Debug.LogWarning($"[pip3 ERROR] {error}");
+            }
             
             if (process.ExitCode != 0)
             {
                 UnityEngine.Debug.LogError($"[pip3] 安装失败 (退出代码: {process.ExitCode})");
-                throw new Exception($"pip安装失败 (退出代码: {process.ExitCode})\n输出: {fullOutput}\n错误: {fullError}");
+                throw new Exception($"pip安装失败 (退出代码: {process.ExitCode})\n输出: {output}\n错误: {error}");
             }
             
-            UnityEngine.Debug.Log($"[pip3] 安装成功完成");
+            UnityEngine.Debug.Log($"[pip3] requirements.txt安装成功完成");
         }
         
         /// <summary>
