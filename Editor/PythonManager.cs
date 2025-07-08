@@ -126,15 +126,14 @@ namespace UnityAIAgent.Editor
         
         private static void DetectPython()
         {
-            // 从路径配置中获取Python路径列表
-            var pathConfig = PathManager.PathConfig;
-            string[] pythonPaths = pathConfig?.pythonExecutablePaths?.ToArray() ?? new string[] {
-                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",  // Apple Silicon Homebrew (刚安装的)
-                "/opt/homebrew/bin/python3.11",               // Apple Silicon Homebrew 符号链接
+            // 强制优先使用Python 3.11，严格按照版本要求检测
+            string[] pythonPaths = new string[] {
+                "/opt/homebrew/bin/python3.11",               // Apple Silicon Homebrew 符号链接 (首选)
+                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",  // Apple Silicon Homebrew 直接路径
                 "/usr/local/opt/python@3.11/bin/python3.11",  // Intel Homebrew Python 3.11
                 "/usr/local/opt/python@3.11/bin/python3",     // Intel Homebrew Python 3.11 别名
-                "/usr/local/bin/python3.11",                  // 标准位置
-                "/usr/bin/python3"                             // 系统Python（后备）
+                "/usr/local/bin/python3.11"                   // 标准位置
+                // 注意：移除了 /usr/bin/python3 以避免使用系统Python 3.9
             };
             
             pythonExecutable = null;
@@ -142,20 +141,59 @@ namespace UnityAIAgent.Editor
             {
                 if (File.Exists(path))
                 {
-                    pythonExecutable = path;
-                    break;
+                    // 验证这确实是Python 3.11
+                    try
+                    {
+                        var versionCheck = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = path,
+                                Arguments = "--version",
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                CreateNoWindow = true
+                            }
+                        };
+                        versionCheck.Start();
+                        string versionOutput = versionCheck.StandardOutput.ReadToEnd() + versionCheck.StandardError.ReadToEnd();
+                        versionCheck.WaitForExit();
+                        
+                        if (versionOutput.Contains("3.11"))
+                        {
+                            pythonExecutable = path;
+                            EditorApplication.delayCall += () => {
+                                UnityEngine.Debug.Log($"选择Python 3.11: {path} (版本: {versionOutput.Trim()})");
+                            };
+                            break;
+                        }
+                        else
+                        {
+                            EditorApplication.delayCall += () => {
+                                UnityEngine.Debug.LogWarning($"跳过非3.11版本: {path} (版本: {versionOutput.Trim()})");
+                            };
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        EditorApplication.delayCall += () => {
+                            UnityEngine.Debug.LogWarning($"无法检查Python版本 {path}: {e.Message}");
+                        };
+                    }
                 }
             }
             
-            // 如果没找到，使用which命令
+            // 如果没找到，使用which命令寻找Python 3.11
             if (string.IsNullOrEmpty(pythonExecutable))
             {
+                // 优先寻找python3.11
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "/bin/bash",
-                        Arguments = "-c \"which python3\"",
+                        Arguments = "-c \"which python3.11\"",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -166,6 +204,19 @@ namespace UnityAIAgent.Editor
                 process.Start();
                 pythonExecutable = process.StandardOutput.ReadToEnd().Trim();
                 process.WaitForExit();
+                
+                // 如果找到python3.11，验证版本
+                if (!string.IsNullOrEmpty(pythonExecutable) && File.Exists(pythonExecutable))
+                {
+                    EditorApplication.delayCall += () => {
+                        UnityEngine.Debug.Log($"通过which找到Python 3.11: {pythonExecutable}");
+                    };
+                }
+                else
+                {
+                    // 如果找不到python3.11，记录错误而不是降级到python3
+                    pythonExecutable = null;
+                }
             }
             
             if (string.IsNullOrEmpty(pythonExecutable) || !File.Exists(pythonExecutable))
