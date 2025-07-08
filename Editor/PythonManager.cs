@@ -513,7 +513,7 @@ namespace UnityAIAgent.Editor
             {
                 Environment.SetEnvironmentVariable("SSL_CERT_FILE", sslCertFile);
             }
-            // 设置certifi证书路径
+            // 设置certifi证书路径（如果已安装）
             string certifiPath = Path.Combine(venvSitePackages, "certifi", "cacert.pem");
             if (File.Exists(certifiPath))
             {
@@ -522,6 +522,12 @@ namespace UnityAIAgent.Editor
                 EditorApplication.delayCall += () => {
                     UnityEngine.Debug.Log($"设置certifi证书路径: {certifiPath}");
                 };
+            }
+            else
+            {
+                // 如果certifi还未安装，先清除这些环境变量，避免pip安装时出错
+                Environment.SetEnvironmentVariable("REQUESTS_CA_BUNDLE", null);
+                Environment.SetEnvironmentVariable("CURL_CA_BUNDLE", null);
             }
             
             // 设置DYLD_LIBRARY_PATH（macOS特定）
