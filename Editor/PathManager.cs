@@ -166,17 +166,23 @@ namespace UnityAIAgent.Editor
             {
                 if (string.IsNullOrEmpty(path)) continue;
                 
+                Debug.Log($"检查路径: {path}");
+                
                 // 处理包含通配符的路径
                 if (path.Contains("*"))
                 {
                     string baseDir = Path.GetDirectoryName(path);
                     string pattern = Path.GetFileName(path);
                     
+                    Debug.Log($"通配符路径 - 基础目录: {baseDir}, 模式: {pattern}");
+                    
                     if (Directory.Exists(baseDir))
                     {
                         string[] matchingDirs = Directory.GetDirectories(baseDir, pattern);
+                        Debug.Log($"找到 {matchingDirs.Length} 个匹配目录");
                         foreach (string dir in matchingDirs)
                         {
+                            Debug.Log($"检查匹配目录: {dir}");
                             // 注意：路径中已经包含了"Python"，所以不需要再添加
                             if (Directory.Exists(dir) && File.Exists(Path.Combine(dir, "agent_core.py")))
                             {
@@ -184,6 +190,10 @@ namespace UnityAIAgent.Editor
                                 return dir;
                             }
                         }
+                    }
+                    else
+                    {
+                        Debug.Log($"基础目录不存在: {baseDir}");
                     }
                 }
                 else
