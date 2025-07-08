@@ -178,7 +178,6 @@ namespace UnityAIAgent.Editor
             catch (System.NullReferenceException)
             {
                 // EditorStyles 还未准备好，跳过样式初始化
-                Debug.Log("EditorStyles not ready, will retry in OnGUI");
             }
             InitializeStreamingHandler();
             
@@ -2175,12 +2174,10 @@ namespace UnityAIAgent.Editor
         // 流式响应回调方法
         private void OnStreamChunkReceived(string chunk)
         {
-            Debug.Log($"[AIAgentWindow] Received streaming chunk: {chunk}, active stream: {hasActiveStream}");
             
             // 严格检查：只有在有活跃流的情况下才处理chunk
             if (!hasActiveStream)
             {
-                Debug.Log($"[AIAgentWindow] No active stream, ignoring chunk: {chunk}");
                 return;
             }
             
@@ -2194,7 +2191,6 @@ namespace UnityAIAgent.Editor
                     timestamp = DateTime.Now
                 });
                 currentStreamingMessageIndex = messages.Count - 1;
-                Debug.Log($"[AIAgentWindow] Created unique streaming message, index: {currentStreamingMessageIndex}");
             }
             
             // 更新消息内容
@@ -2202,7 +2198,6 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText + "▌";
-                Debug.Log($"[AIAgentWindow] Updated message, current length: {currentStreamText.Length}");
             }
             
             // 直接更新UI，避免delayCall导致的竞态条件
@@ -2212,7 +2207,6 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamComplete()
         {
-            Debug.Log($"[AIAgentWindow] Streaming response completed, closing active stream immediately");
             
             // 立即关闭活跃流，阻止任何后续chunk
             hasActiveStream = false;
@@ -2221,7 +2215,6 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count)
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText;
-                Debug.Log($"[AIAgentWindow] Completed message, final length: {currentStreamText.Length}");
             }
             
             // 重置所有状态
@@ -2236,7 +2229,6 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamError(string error)
         {
-            Debug.Log($"[AIAgentWindow] Streaming response error: {error}");
             
             // 立即关闭活跃流
             hasActiveStream = false;
@@ -2280,7 +2272,6 @@ namespace UnityAIAgent.Editor
         
         private void OnStreamCancelled()
         {
-            Debug.Log($"[AIAgentWindow] Streaming response cancelled by user");
             
             // 立即关闭活跃流
             hasActiveStream = false;
@@ -2290,7 +2281,6 @@ namespace UnityAIAgent.Editor
             if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count && !string.IsNullOrEmpty(currentStreamText))
             {
                 messages[currentStreamingMessageIndex].content = currentStreamText + "\n\n⚠️ " + LanguageManager.GetText("用户取消了响应", "User cancelled response");
-                Debug.Log($"[AIAgentWindow] Cancelled message, final length: {currentStreamText.Length}");
             }
             
             // 重置流式状态

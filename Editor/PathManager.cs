@@ -21,7 +21,6 @@ namespace UnityAIAgent.Editor
             {
                 if (_pathConfig == null)
                 {
-                    Debug.Log("PathConfig为空，重新加载配置");
                     LoadPathConfiguration();
                 }
                 return _pathConfig;
@@ -42,12 +41,10 @@ namespace UnityAIAgent.Editor
             string configPath = "Assets/UnityAIAgent/PathConfiguration.asset";
             
             // 添加调试信息
-            Debug.Log($"尝试加载路径配置: {configPath}");
             
             // 检查文件是否物理存在
             string fullPath = System.IO.Path.Combine(Application.dataPath.Replace("Assets", ""), configPath);
             bool fileExists = System.IO.File.Exists(fullPath);
-            Debug.Log($"配置文件物理存在: {fileExists}, 路径: {fullPath}");
             
             _pathConfig = AssetDatabase.LoadAssetAtPath<PathConfiguration>(configPath);
             
@@ -67,12 +64,10 @@ namespace UnityAIAgent.Editor
                 }
                 else
                 {
-                    Debug.Log("刷新后成功加载路径配置");
                 }
             }
             else
             {
-                Debug.Log($"已加载路径配置: {_pathConfig.name}");
             }
         }
         
@@ -95,7 +90,6 @@ namespace UnityAIAgent.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             
-            Debug.Log($"已创建默认路径配置：{configPath}");
         }
         
         /// <summary>
@@ -199,7 +193,6 @@ namespace UnityAIAgent.Editor
                             
                             if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "agent_core.py")))
                             {
-                                Debug.Log($"找到Unity Agent Python路径: {fullPath}");
                                 return fullPath;
                             }
                         }
@@ -213,7 +206,6 @@ namespace UnityAIAgent.Editor
                         // 验证这个目录包含agent_core.py
                         if (File.Exists(Path.Combine(normalizedPath, "agent_core.py")))
                         {
-                            Debug.Log($"找到Unity Agent Python路径: {normalizedPath}");
                             return normalizedPath;
                         }
                     }

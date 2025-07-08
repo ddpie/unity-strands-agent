@@ -81,14 +81,12 @@ namespace UnityAIAgent.Editor
 
             try
             {
-                Debug.Log($"[Unity] 开始处理同步消息: {message.Substring(0, Math.Min(message.Length, 50))}{(message.Length > 50 ? "..." : "")}");
                 
                 using (Py.GIL())
                 {
                     dynamic result = agentCore.process_sync(message);
                     string response = result.ToString();
                     
-                    Debug.Log($"[Unity] 同步处理完成，响应长度: {response.Length}字符");
                     
                     return response;
                 }
@@ -118,7 +116,6 @@ namespace UnityAIAgent.Editor
 
             try
             {
-                Debug.Log($"[Unity] 开始流式处理消息: {message.Substring(0, Math.Min(message.Length, 50))}{(message.Length > 50 ? "..." : "")}");
                 
                 // 使用EditorCoroutine代替Task.Run来避免线程中止
                 var processCompleted = false;
@@ -159,11 +156,9 @@ namespace UnityAIAgent.Editor
                         try
                         {
                             // 获取流式生成器
-                            Debug.Log("[Unity] 创建流式生成器");
                             // 使用agent_core的流式处理功能
                             dynamic unityAgent = agentCore.get_agent();
                             dynamic streamGen = unityAgent.process_message_stream(message);
-                            Debug.Log("[Unity] 流式生成器创建成功，开始处理流...");
                             
                             // 处理流式数据
                             int chunkIndex = 0;
@@ -174,7 +169,6 @@ namespace UnityAIAgent.Editor
                                     // 检查取消令牌
                                     if (cancellationToken.IsCancellationRequested)
                                     {
-                                        Debug.Log("[Unity] 检测到取消请求，停止流式处理");
                                         EditorApplication.delayCall += () => onError?.Invoke("用户取消了流式处理");
                                         break;
                                     }
@@ -188,31 +182,19 @@ namespace UnityAIAgent.Editor
                                     }
                                     
                                     chunkIndex++;
-                                    Debug.Log($"[Unity] 等待第 {chunkIndex} 个chunk...");
                                     dynamic chunk = loop.run_until_complete(streamGen.__anext__());
                                     string chunkStr = chunk.ToString();
-                                    Debug.Log($"[Unity] 收到第 {chunkIndex} 个chunk，长度: {chunkStr.Length}");
                                     
                                     // 解析JSON
                                     var chunkData = JsonUtility.FromJson<StreamChunk>(chunkStr);
-                                    Debug.Log($"[Unity] 解析chunk数据: type={chunkData.type}");
                                     
                                     if (chunkData.type == "chunk")
                                     {
                                         string content = chunkData.content;
-                                        Debug.Log($"[Unity] 收到Agent响应块: {content.Substring(0, Math.Min(content.Length, 100))}{(content.Length > 100 ? "..." : "")}");
-                                        
-                                        // 专门检查file_read相关内容
-                                        if (content.Contains("[FILE_READ]") || content.Contains("file_read"))
-                                        {
-                                            Debug.Log($"[Unity] 📖 检测到FILE_READ相关内容: {content}");
-                                        }
-                                        
                                         EditorApplication.delayCall += () => onChunk?.Invoke(content);
                                     }
                                     else if (chunkData.type == "complete")
                                     {
-                                        Debug.Log("[Unity] Agent流式响应完成");
                                         EditorApplication.delayCall += () => onComplete?.Invoke();
                                         break;
                                     }
@@ -225,8 +207,6 @@ namespace UnityAIAgent.Editor
                                 }
                                 catch (PythonException stopIteration) when (stopIteration.Message.Contains("StopAsyncIteration"))
                                 {
-                                    // 流正常结束
-                                    Debug.Log($"[Unity] Agent流式响应正常结束，总共处理了 {chunkIndex} 个chunk");
                                     EditorApplication.delayCall += () => onComplete?.Invoke();
                                     break;
                                 }
@@ -415,7 +395,6 @@ print('[Python] Unity日志处理器配置完成')
                     var scope = Py.CreateScope();
                     scope.Exec(loggerSetupCode);
                     
-                    Debug.Log("Python日志配置完成");
                 }
             }
             catch (Exception e)
@@ -452,7 +431,6 @@ print('[Python] Unity日志处理器配置完成')
                             gc.InvokeMethod("collect");
                         }
                     }
-                    Debug.Log("Python桥接已清理");
                 }
                 catch (Exception e)
                 {

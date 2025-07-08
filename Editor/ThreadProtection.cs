@@ -27,13 +27,11 @@ namespace UnityAIAgent.Editor
                 case PlayModeStateChange.ExitingEditMode:
                 case PlayModeStateChange.ExitingPlayMode:
                     isUnityChangingMode = true;
-                    Debug.Log($"[ThreadProtection] Unity开始切换模式: {state}");
                     break;
                     
                 case PlayModeStateChange.EnteredEditMode:
                 case PlayModeStateChange.EnteredPlayMode:
                     isUnityChangingMode = false;
-                    Debug.Log($"[ThreadProtection] Unity完成模式切换: {state}");
                     break;
             }
         }
@@ -41,7 +39,6 @@ namespace UnityAIAgent.Editor
         private static void OnBeforeAssemblyReload()
         {
             isUnityChangingMode = true;
-            Debug.Log("[ThreadProtection] Unity开始重新加载程序集");
             
             // 通知StreamingManager停止所有流式处理
             try
@@ -57,7 +54,6 @@ namespace UnityAIAgent.Editor
         private static void OnAfterAssemblyReload()
         {
             isUnityChangingMode = false;
-            Debug.Log("[ThreadProtection] Unity完成程序集重新加载");
         }
         
         /// <summary>
