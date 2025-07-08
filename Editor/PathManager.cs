@@ -152,11 +152,11 @@ namespace UnityAIAgent.Editor
             // 查找可能的路径，优先级排序
             string[] possiblePaths = new string[]
             {
-                // 1. 优先使用配置的strandsToolsPath（支持自动部署的路径）
+                // 1. 最优先：PackageCache中的插件Python目录
+                Path.Combine(currentProjectPath, "Library", "PackageCache", "com.ddpie.unity-strands-agent*", "Python"),
+                // 2. 其次使用配置的strandsToolsPath（支持自动部署的路径）
                 PathConfig.strandsToolsPath,
-                // 2. 当前项目的Python目录（自动部署目标）
-                Path.Combine(currentProjectPath, "Python"),
-                // 3. 当前项目如果是unity-strands-agent开发环境
+                // 3. 当前项目的Python目录（自动部署目标）
                 Path.Combine(currentProjectPath, "Python"),
                 // 4. 相邻目录查找（开发环境后备）
                 Path.Combine(currentProjectPath, "..", "unity-strands-agent", "Python"),
@@ -169,14 +169,37 @@ namespace UnityAIAgent.Editor
             {
                 if (string.IsNullOrEmpty(path)) continue;
                 
-                string normalizedPath = Path.GetFullPath(path);
-                if (Directory.Exists(normalizedPath))
+                // 处理包含通配符的路径
+                if (path.Contains("*"))
                 {
-                    // 验证这个目录包含agent_core.py
-                    if (File.Exists(Path.Combine(normalizedPath, "agent_core.py")))
+                    string baseDir = Path.GetDirectoryName(path);
+                    string pattern = Path.GetFileName(path);
+                    
+                    if (Directory.Exists(baseDir))
                     {
-                        Debug.Log($"找到Unity Agent Python路径: {normalizedPath}");
-                        return normalizedPath;
+                        string[] matchingDirs = Directory.GetDirectories(baseDir, pattern);
+                        foreach (string dir in matchingDirs)
+                        {
+                            // 注意：路径中已经包含了"Python"，所以不需要再添加
+                            if (Directory.Exists(dir) && File.Exists(Path.Combine(dir, "agent_core.py")))
+                            {
+                                Debug.Log($"找到Unity Agent Python路径: {dir}");
+                                return dir;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    string normalizedPath = Path.GetFullPath(path);
+                    if (Directory.Exists(normalizedPath))
+                    {
+                        // 验证这个目录包含agent_core.py
+                        if (File.Exists(Path.Combine(normalizedPath, "agent_core.py")))
+                        {
+                            Debug.Log($"找到Unity Agent Python路径: {normalizedPath}");
+                            return normalizedPath;
+                        }
                     }
                 }
             }
