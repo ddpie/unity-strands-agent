@@ -128,11 +128,32 @@ namespace UnityAIAgent.Editor
         {
             // 强制优先使用Python 3.11，严格按照版本要求检测
             string[] pythonPaths = new string[] {
-                "/opt/homebrew/bin/python3.11",               // Apple Silicon Homebrew 符号链接 (首选)
-                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",  // Apple Silicon Homebrew 直接路径
-                "/usr/local/opt/python@3.11/bin/python3.11",  // Intel Homebrew Python 3.11
-                "/usr/local/opt/python@3.11/bin/python3",     // Intel Homebrew Python 3.11 别名
-                "/usr/local/bin/python3.11"                   // 标准位置
+                // Homebrew Apple Silicon (M1/M2) - 优先级最高
+                "/opt/homebrew/bin/python3.11",
+                "/opt/homebrew/opt/python@3.11/bin/python3.11",
+                "/opt/homebrew/opt/python@3.11/bin/python3",
+                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.12/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.11/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.10/bin/python3.11",
+                
+                // Homebrew Intel Mac
+                "/usr/local/bin/python3.11",
+                "/usr/local/opt/python@3.11/bin/python3.11",
+                "/usr/local/opt/python@3.11/bin/python3",
+                "/usr/local/Cellar/python@3.11/3.11.13/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.12/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.11/bin/python3.11",
+                
+                // Python.org官方安装
+                "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+                "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+                
+                // MacPorts
+                "/opt/local/bin/python3.11",
+                
+                // 标准位置
+                "/usr/bin/python3.11"
                 // 注意：移除了 /usr/bin/python3 以避免使用系统Python 3.9
             };
             

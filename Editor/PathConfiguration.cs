@@ -171,12 +171,61 @@ namespace UnityAIAgent.Editor
             // 初始化Python路径列表
             pythonExecutablePaths = new List<string>
             {
-                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",
+                // Homebrew Apple Silicon (M1/M2)
                 "/opt/homebrew/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.12/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.11/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.10/bin/python3.11",
+                "/opt/homebrew/Cellar/python@3.11/3.11.9/bin/python3.11",
+                "/opt/homebrew/opt/python@3.11/bin/python3.11",
+                "/opt/homebrew/opt/python@3.11/bin/python3",
+                
+                // Homebrew Intel Mac
+                "/usr/local/bin/python3.11",
                 "/usr/local/opt/python@3.11/bin/python3.11",
                 "/usr/local/opt/python@3.11/bin/python3",
+                "/usr/local/Cellar/python@3.11/3.11.13/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.12/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.11/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.10/bin/python3.11",
+                "/usr/local/Cellar/python@3.11/3.11.9/bin/python3.11",
+                
+                // MacPorts
+                "/opt/local/bin/python3.11",
+                "/opt/local/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+                
+                // pyenv
+                "~/.pyenv/versions/3.11.13/bin/python",
+                "~/.pyenv/versions/3.11.12/bin/python",
+                "~/.pyenv/versions/3.11.11/bin/python",
+                "~/.pyenv/versions/3.11.10/bin/python",
+                "~/.pyenv/versions/3.11.9/bin/python",
+                "~/.pyenv/versions/3.11.8/bin/python",
+                "~/.pyenv/versions/3.11.7/bin/python",
+                "~/.pyenv/versions/3.11.6/bin/python",
+                "~/.pyenv/versions/3.11.5/bin/python",
+                "~/.pyenv/shims/python3.11",
+                
+                // 标准系统位置
                 "/usr/local/bin/python3.11",
-                "/usr/bin/python3"
+                "/usr/bin/python3.11",
+                
+                // Python.org官方安装
+                "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+                "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+                
+                // conda/miniconda/anaconda
+                "~/anaconda3/envs/python311/bin/python",
+                "~/miniconda3/envs/python311/bin/python",
+                "~/miniforge3/envs/python311/bin/python",
+                "/opt/anaconda3/envs/python311/bin/python",
+                "/opt/miniconda3/envs/python311/bin/python",
+                "/opt/miniforge3/envs/python311/bin/python",
+                
+                // 其他常见位置
+                "/Applications/Python 3.11/python3.11",
+                "~/Library/Python/3.11/bin/python3.11"
             };
             
             
@@ -378,12 +427,61 @@ namespace UnityAIAgent.Editor
             {
                 pythonExecutablePaths = new List<string>
                 {
-                    "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",
+                    // Homebrew Apple Silicon (M1/M2)
                     "/opt/homebrew/bin/python3.11",
+                    "/opt/homebrew/Cellar/python@3.11/3.11.13/bin/python3.11",
+                    "/opt/homebrew/Cellar/python@3.11/3.11.12/bin/python3.11",
+                    "/opt/homebrew/Cellar/python@3.11/3.11.11/bin/python3.11",
+                    "/opt/homebrew/Cellar/python@3.11/3.11.10/bin/python3.11",
+                    "/opt/homebrew/Cellar/python@3.11/3.11.9/bin/python3.11",
+                    "/opt/homebrew/opt/python@3.11/bin/python3.11",
+                    "/opt/homebrew/opt/python@3.11/bin/python3",
+                    
+                    // Homebrew Intel Mac
+                    "/usr/local/bin/python3.11",
                     "/usr/local/opt/python@3.11/bin/python3.11",
                     "/usr/local/opt/python@3.11/bin/python3",
+                    "/usr/local/Cellar/python@3.11/3.11.13/bin/python3.11",
+                    "/usr/local/Cellar/python@3.11/3.11.12/bin/python3.11",
+                    "/usr/local/Cellar/python@3.11/3.11.11/bin/python3.11",
+                    "/usr/local/Cellar/python@3.11/3.11.10/bin/python3.11",
+                    "/usr/local/Cellar/python@3.11/3.11.9/bin/python3.11",
+                    
+                    // MacPorts
+                    "/opt/local/bin/python3.11",
+                    "/opt/local/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+                    
+                    // pyenv
+                    "~/.pyenv/versions/3.11.13/bin/python",
+                    "~/.pyenv/versions/3.11.12/bin/python",
+                    "~/.pyenv/versions/3.11.11/bin/python",
+                    "~/.pyenv/versions/3.11.10/bin/python",
+                    "~/.pyenv/versions/3.11.9/bin/python",
+                    "~/.pyenv/versions/3.11.8/bin/python",
+                    "~/.pyenv/versions/3.11.7/bin/python",
+                    "~/.pyenv/versions/3.11.6/bin/python",
+                    "~/.pyenv/versions/3.11.5/bin/python",
+                    "~/.pyenv/shims/python3.11",
+                    
+                    // 标准系统位置
                     "/usr/local/bin/python3.11",
-                    "/usr/bin/python3"
+                    "/usr/bin/python3.11",
+                    
+                    // Python.org官方安装
+                    "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11",
+                    "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+                    
+                    // conda/miniconda/anaconda
+                    "~/anaconda3/envs/python311/bin/python",
+                    "~/miniconda3/envs/python311/bin/python",
+                    "~/miniforge3/envs/python311/bin/python",
+                    "/opt/anaconda3/envs/python311/bin/python",
+                    "/opt/miniconda3/envs/python311/bin/python",
+                    "/opt/miniforge3/envs/python311/bin/python",
+                    
+                    // 其他常见位置
+                    "/Applications/Python 3.11/python3.11",
+                    "~/Library/Python/3.11/bin/python3.11"
                 };
             }
             
