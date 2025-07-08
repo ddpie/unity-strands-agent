@@ -17,8 +17,10 @@ graph TB
     subgraph Unity[Unity Editor]
         UI[AIAgentWindow]
         SH[StreamingHandler]
+        SM[StreamingManager]
         PB[PythonBridge]
         PM[PythonManager]
+        PATH[PathManager]
     end
     
     subgraph Python[Python Backend]
@@ -37,7 +39,9 @@ graph TB
     
     UI -->|用户交互| SH
     UI -->|调用Python| PB
+    SH -->|管理流式| SM
     PM -->|初始化环境| PB
+    PM -->|配置路径| PATH
     PB -->|Python.NET| AC
     AC -->|创建实例| UA
     UA -->|处理流式响应| SP
@@ -46,7 +50,8 @@ graph TB
     UA -->|调用SDK| SDK
     SDK -->|AI推理| AWS
     MM -->|连接服务| MCP
-    SH -.->|异步更新| SP
+    SP -.->|流式数据| SM
+    SM -.->|异步更新| SH
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
@@ -152,8 +157,10 @@ graph TB
     subgraph Unity[Unity Editor]
         UI[AIAgentWindow]
         SH[StreamingHandler]
+        SM[StreamingManager]
         PB[PythonBridge]
         PM[PythonManager]
+        PATH[PathManager]
     end
     
     subgraph Python[Python Backend]
@@ -172,7 +179,9 @@ graph TB
     
     UI -->|User Interaction| SH
     UI -->|Invoke Python| PB
+    SH -->|Manage Streaming| SM
     PM -->|Initialize Env| PB
+    PM -->|Configure Paths| PATH
     PB -->|Python.NET| AC
     AC -->|Create Instance| UA
     UA -->|Stream Processing| SP
@@ -181,7 +190,8 @@ graph TB
     UA -->|Call SDK| SDK
     SDK -->|AI Inference| AWS
     MM -->|Connect Services| MCP
-    SH -.->|Async Updates| SP
+    SP -.->|Stream Data| SM
+    SM -.->|Async Updates| SH
     
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
     classDef external fill:#fff,stroke:#666,stroke-width:2px,color:#000
