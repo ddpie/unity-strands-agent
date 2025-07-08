@@ -777,12 +777,6 @@ namespace UnityAIAgent.Editor
                     Environment.SetEnvironmentVariable("STRANDS_TOOLS_PATH", pathConfig.strandsToolsPath);
                 }
                 
-                // 设置Node.js路径
-                string nodeExecutablePath = PathManager.GetValidNodePath();
-                if (!string.IsNullOrEmpty(nodeExecutablePath))
-                {
-                    Environment.SetEnvironmentVariable("NODE_EXECUTABLE_PATH", nodeExecutablePath);
-                }
                 
                 // 设置SSL证书路径
                 string sslCertFile = PathManager.GetValidSSLCertPath();

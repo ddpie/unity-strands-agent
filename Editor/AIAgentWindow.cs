@@ -3261,7 +3261,6 @@ namespace UnityAIAgent.Editor
                 var environmentVariables = new Dictionary<string, (string description, bool isPath)>
                 {
                     {"PROJECT_ROOT_PATH", (LanguageManager.GetText("项目根目录路径", "Project Root Path"), true)},
-                    {"NODE_EXECUTABLE_PATH", (LanguageManager.GetText("Node.js可执行文件路径", "Node.js Executable Path"), true)},
                     {"MCP_CONFIG_PATH", (LanguageManager.GetText("MCP配置文件路径", "MCP Configuration File Path"), true)},
                     {"PYTHONHOME", (LanguageManager.GetText("Python主目录", "Python Home Directory"), true)},
                     {"PYTHONPATH", (LanguageManager.GetText("Python模块搜索路径", "Python Module Search Path"), true)}

@@ -115,28 +115,6 @@ namespace UnityAIAgent.Editor
             return PathConfig?.projectRootPath ?? Path.GetDirectoryName(Application.dataPath);
         }
         
-        /// <summary>
-        /// 获取Node.js可执行文件路径
-        /// </summary>
-        public static string GetNodeExecutablePath()
-        {
-            if (PathConfig == null) return "";
-            
-            string nodePath = PathConfig.GetAbsolutePath(PathConfig.nodeExecutablePath);
-            if (!string.IsNullOrEmpty(nodePath) && File.Exists(nodePath))
-            {
-                return nodePath;
-            }
-            
-            // 尝试备用路径
-            string fallbackPath = PathConfig.GetAbsolutePath(PathConfig.fallbackNodePath);
-            if (!string.IsNullOrEmpty(fallbackPath) && File.Exists(fallbackPath))
-            {
-                return fallbackPath;
-            }
-            
-            return "";
-        }
         
         /// <summary>
         /// 获取MCP Unity服务器路径
@@ -225,13 +203,6 @@ namespace UnityAIAgent.Editor
             return PathConfig?.GetValidPythonPath() ?? "";
         }
         
-        /// <summary>
-        /// 获取有效的Node.js可执行文件路径
-        /// </summary>
-        public static string GetValidNodePath()
-        {
-            return PathConfig?.GetValidNodePath() ?? "";
-        }
         
         /// <summary>
         /// 获取有效的SSL证书文件路径

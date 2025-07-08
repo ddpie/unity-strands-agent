@@ -2189,44 +2189,6 @@ namespace UnityAIAgent.Editor
                 
                 GUILayout.Space(5);
                 
-                // Node.js配置
-                EditorGUILayout.LabelField("Node.js 配置", EditorStyles.boldLabel);
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    pathConfig.nodeExecutablePath = EditorGUILayout.TextField("主要Node.js路径", pathConfig.nodeExecutablePath);
-                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
-                    {
-                        string selectedPath = EditorUtility.OpenFilePanel("选择Node.js可执行文件", 
-                            System.IO.Path.GetDirectoryName(pathConfig.GetAbsolutePath(pathConfig.nodeExecutablePath)), "");
-                        if (!string.IsNullOrEmpty(selectedPath))
-                        {
-                            pathConfig.nodeExecutablePath = selectedPath;
-                            EditorUtility.SetDirty(pathConfig);
-                        }
-                    }
-                    if (GUILayout.Button("自动检测", GUILayout.Width(80)))
-                    {
-                        pathConfig.AutoDetectNodePath();
-                        EditorUtility.SetDirty(pathConfig);
-                    }
-                }
-                
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    pathConfig.fallbackNodePath = EditorGUILayout.TextField("备用Node.js路径", pathConfig.fallbackNodePath);
-                    if (GUILayout.Button("浏览", GUILayout.Width(60)))
-                    {
-                        string selectedPath = EditorUtility.OpenFilePanel("选择备用Node.js可执行文件", 
-                            System.IO.Path.GetDirectoryName(pathConfig.GetAbsolutePath(pathConfig.fallbackNodePath)), "");
-                        if (!string.IsNullOrEmpty(selectedPath))
-                        {
-                            pathConfig.fallbackNodePath = selectedPath;
-                            EditorUtility.SetDirty(pathConfig);
-                        }
-                    }
-                }
-                
-                GUILayout.Space(5);
                 
                 // Strands工具路径
                 EditorGUILayout.LabelField("Strands 工具配置", EditorStyles.boldLabel);
@@ -2273,39 +2235,6 @@ namespace UnityAIAgent.Editor
             {
                 EditorGUILayout.HelpBox("简化配置：只需配置基本的Python和AWS设置。", MessageType.Info);
                 
-                for (int i = 0; i < pathConfig.nodeExecutablePaths.Count; i++)
-                {
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        pathConfig.nodeExecutablePaths[i] = EditorGUILayout.TextField($"Node.js {i + 1}", pathConfig.nodeExecutablePaths[i]);
-                        
-                        if (GUILayout.Button("浏览", GUILayout.Width(60)))
-                        {
-                            string selectedPath = EditorUtility.OpenFilePanel("选择Node.js可执行文件", 
-                                System.IO.Path.GetDirectoryName(pathConfig.nodeExecutablePaths[i]), "");
-                            if (!string.IsNullOrEmpty(selectedPath))
-                            {
-                                pathConfig.nodeExecutablePaths[i] = selectedPath;
-                                EditorUtility.SetDirty(pathConfig);
-                            }
-                        }
-                        
-                        if (GUILayout.Button("-", GUILayout.Width(25)))
-                        {
-                            pathConfig.nodeExecutablePaths.RemoveAt(i);
-                            EditorUtility.SetDirty(pathConfig);
-                            break;
-                        }
-                    }
-                }
-                
-                if (GUILayout.Button("添加Node.js路径"))
-                {
-                    pathConfig.nodeExecutablePaths.Add("");
-                    EditorUtility.SetDirty(pathConfig);
-                }
-                
-                GUILayout.Space(10);
                 
                 // SSL证书配置
                 EditorGUILayout.LabelField("SSL 证书配置", EditorStyles.boldLabel);

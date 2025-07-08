@@ -15,12 +15,6 @@ namespace UnityAIAgent.Editor
         [Tooltip("Unity项目的根目录路径，其他路径将相对于此目录")]
         public string projectRootPath = "";
         
-        [Header("Node.js 配置")]
-        [Tooltip("Node.js 可执行文件路径")]
-        public string nodeExecutablePath = "";
-        
-        [Tooltip("备用 Node.js 路径")]
-        public string fallbackNodePath = "";
         
         [Header("MCP 服务器配置")]
         [Tooltip("MCP Unity服务器构建文件路径（相对于项目根目录）")]
@@ -40,9 +34,6 @@ namespace UnityAIAgent.Editor
         [Tooltip("Python 3.11 可执行文件路径列表（按优先级排序）")]
         public List<string> pythonExecutablePaths = new List<string>();
         
-        [Header("Node.js 可执行文件路径")]
-        [Tooltip("Node.js 可执行文件路径列表（按优先级排序）")]
-        public List<string> nodeExecutablePaths = new List<string>();
         
         [Header("系统路径配置")]
         [Tooltip("SSL 证书目录路径列表")]
@@ -134,15 +125,6 @@ namespace UnityAIAgent.Editor
                 errors.Add($"项目根目录不存在: {projectRootPath}");
             }
             
-            // 验证Node.js路径
-            if (!string.IsNullOrEmpty(nodeExecutablePath))
-            {
-                string nodeAbsPath = GetAbsolutePath(nodeExecutablePath);
-                if (!File.Exists(nodeAbsPath))
-                {
-                    errors.Add($"Node.js可执行文件不存在: {nodeAbsPath}");
-                }
-            }
             
             // 验证MCP服务器路径
             if (!string.IsNullOrEmpty(mcpUnityServerPath))
@@ -197,15 +179,6 @@ namespace UnityAIAgent.Editor
                 "/usr/bin/python3"
             };
             
-            // 初始化Node.js路径列表
-            nodeExecutablePaths = new List<string>
-            {
-                "/opt/homebrew/bin/node",
-                "/usr/local/bin/node",
-                "/usr/bin/node",
-                "~/.nvm/current/bin/node",
-                "~/.nvm/versions/node/v20.19.1/bin/node"
-            };
             
             // 初始化SSL证书路径
             sslCertDirectories = new List<string>
@@ -231,8 +204,7 @@ namespace UnityAIAgent.Editor
                 "../../Assets/UnityAIAgent/mcp_config.json"
             };
             
-            // 自动检测Node.js和其他路径
-            AutoDetectNodePath();
+            // 自动检测其他路径
             AutoDetectMCPServerPath();
         }
         
@@ -246,28 +218,6 @@ namespace UnityAIAgent.Editor
             projectRootPath = currentProjectPath;
         }
         
-        /// <summary>
-        /// 自动检测Node.js路径
-        /// </summary>
-        public void AutoDetectNodePath()
-        {
-            // 从配置的路径列表中查找第一个存在的路径
-            foreach (string path in nodeExecutablePaths)
-            {
-                string absPath = GetAbsolutePath(path);
-                if (File.Exists(absPath))
-                {
-                    nodeExecutablePath = path;
-                    break;
-                }
-            }
-            
-            // 设置备用路径
-            if (string.IsNullOrEmpty(fallbackNodePath))
-            {
-                fallbackNodePath = "~/.nvm/current/bin/node";
-            }
-        }
         
         /// <summary>
         /// 自动检测MCP服务器路径
@@ -327,7 +277,6 @@ namespace UnityAIAgent.Editor
         {
             var summary = new System.Text.StringBuilder();
             summary.AppendLine($"项目根目录: {projectRootPath}");
-            summary.AppendLine($"Node.js路径: {GetAbsolutePath(nodeExecutablePath)}");
             summary.AppendLine($"MCP服务器路径: {GetAbsolutePath(mcpUnityServerPath)}");
             summary.AppendLine($"Strands工具路径: {strandsToolsPath}");
             
@@ -366,47 +315,6 @@ namespace UnityAIAgent.Editor
             return "";
         }
         
-        /// <summary>
-        /// 获取第一个有效的Node.js可执行文件路径
-        /// </summary>
-        /// <returns>Node.js可执行文件的绝对路径</returns>
-        public string GetValidNodePath()
-        {
-            // 先检查主要配置的路径
-            if (!string.IsNullOrEmpty(nodeExecutablePath))
-            {
-                string absPath = GetAbsolutePath(nodeExecutablePath);
-                if (File.Exists(absPath))
-                {
-                    return absPath;
-                }
-            }
-            
-            // 再检查路径列表
-            foreach (string nodePath in nodeExecutablePaths)
-            {
-                if (!string.IsNullOrEmpty(nodePath))
-                {
-                    string absPath = GetAbsolutePath(nodePath);
-                    if (File.Exists(absPath))
-                    {
-                        return absPath;
-                    }
-                }
-            }
-            
-            // 最后检查备用路径
-            if (!string.IsNullOrEmpty(fallbackNodePath))
-            {
-                string absPath = GetAbsolutePath(fallbackNodePath);
-                if (File.Exists(absPath))
-                {
-                    return absPath;
-                }
-            }
-            
-            return "";
-        }
         
         /// <summary>
         /// 获取第一个有效的SSL证书文件路径
@@ -461,11 +369,6 @@ namespace UnityAIAgent.Editor
                 AutoDetectProjectRoot();
             }
             
-            // 检测Node.js路径
-            if (string.IsNullOrEmpty(nodeExecutablePath))
-            {
-                AutoDetectNodePath();
-            }
             
             // 检测MCP服务器路径
             AutoDetectMCPServerPath();
@@ -484,17 +387,6 @@ namespace UnityAIAgent.Editor
                 };
             }
             
-            if (nodeExecutablePaths.Count == 0)
-            {
-                nodeExecutablePaths = new List<string>
-                {
-                    "/opt/homebrew/bin/node",
-                    "/usr/local/bin/node",
-                    "/usr/bin/node",
-                    "~/.nvm/current/bin/node",
-                    "~/.nvm/versions/node/v20.19.1/bin/node"
-                };
-            }
             
             if (sslCertFiles.Count == 0)
             {
@@ -546,39 +438,6 @@ namespace UnityAIAgent.Editor
             return isValid;
         }
         
-        private string DetectNodePath()
-        {
-            // 先检查现有的nodeExecutablePaths列表
-            if (nodeExecutablePaths != null)
-            {
-                foreach (var path in nodeExecutablePaths)
-                {
-                    if (!string.IsNullOrEmpty(path) && File.Exists(GetAbsolutePath(path)))
-                    {
-                        return path;
-                    }
-                }
-            }
-            
-            // 如果列表为空或没有找到，使用默认路径
-            var defaultPaths = new List<string>
-            {
-                "/opt/homebrew/bin/node",
-                "/usr/local/bin/node",
-                "/usr/bin/node",
-                "~/.nvm/current/bin/node",
-                "~/.nvm/versions/node/v20.19.1/bin/node"
-            };
-            
-            foreach (var path in defaultPaths)
-            {
-                if (File.Exists(GetAbsolutePath(path)))
-                {
-                    return path;
-                }
-            }
-            return "";
-        }
         
         private string GetProjectRootPath()
         {

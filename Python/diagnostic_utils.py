@@ -142,18 +142,13 @@ def diagnose_unity_mcp_issue() -> str:
             logger.error(f"❌ Node.js测试失败: {e}")
         
         # 测试2.5: 使用绝对路径的Node.js测试
-        # 从环境变量获取Node.js路径，如果没有则使用默认列表
-        node_path_env = os.environ.get('NODE_EXECUTABLE_PATH')
-        
-        if node_path_env:
-            node_paths = [node_path_env]
-        else:
-            node_paths = [
-                '/usr/local/bin/node',
-                '/opt/homebrew/bin/node',
-                '/usr/bin/node',
-                os.path.expanduser('~/.nvm/current/bin/node')
-            ]
+        # 使用默认的Node.js路径列表
+        node_paths = [
+            '/usr/local/bin/node',
+            '/opt/homebrew/bin/node',
+            '/usr/bin/node',
+            os.path.expanduser('~/.nvm/current/bin/node')
+        ]
         
         for node_path in node_paths:
             if os.path.exists(node_path):

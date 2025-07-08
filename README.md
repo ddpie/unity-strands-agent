@@ -122,6 +122,18 @@ graph TD
 
 配置文件保存在 `Assets/UnityAIAgent/PathConfiguration.asset` 中，会自动加载。插件使用 AWS credentials 配置文件访问 Bedrock 服务。
 
+**MCP 服务器配置**：在 `Assets/UnityAIAgent/mcp_config.json` 中配置 MCP 服务器时，建议使用绝对路径配置 `command` 字段，例如：
+```json
+{
+  "mcpServers": {
+    "mcp-unity": {
+      "command": "/usr/local/bin/node",
+      "args": ["/path/to/your/mcp-server/index.js"]
+    }
+  }
+}
+```
+
 ### 故障排除
 
 **菜单项不显示**
@@ -265,6 +277,18 @@ The plugin automatically sets the following environment variables:
 - `STRANDS_TOOLS_PATH`: Strands tools path
 
 Configuration is saved in `Assets/UnityAIAgent/PathConfiguration.asset` and will be automatically loaded. The plugin uses AWS credentials configuration files to access Bedrock services.
+
+**MCP Server Configuration**: When configuring MCP servers in `Assets/UnityAIAgent/mcp_config.json`, it's recommended to use absolute paths for the `command` field, for example:
+```json
+{
+  "mcpServers": {
+    "mcp-unity": {
+      "command": "/usr/local/bin/node",
+      "args": ["/path/to/your/mcp-server/index.js"]
+    }
+  }
+}
+```
 
 ### Troubleshooting
 
