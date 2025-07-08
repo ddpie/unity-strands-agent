@@ -310,134 +310,6 @@ namespace UnityAIAgent.Editor
             EditorGUILayout.EndVertical();
         }
         
-        private void DrawQuickInstallOptions()
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            
-            EditorGUILayout.LabelField("快速安装选项", EditorStyles.boldLabel);
-            
-            EditorGUILayout.HelpBox(
-                "如果安装MCP包时遇到问题，可以选择跳过MCP功能，稍后手动配置。",
-                MessageType.Info);
-            
-            EditorGUILayout.BeginHorizontal();
-            
-            if (GUILayout.Button("跳过MCP，快速安装"))
-            {
-                if (EditorUtility.DisplayDialog("跳过MCP安装", 
-                    "这将跳过MCP功能安装，您可以稍后手动安装MCP包。\n\n继续吗？", "跳过MCP", "取消"))
-                {
-                    _ = StartSetupWithoutMCP();
-                }
-            }
-            
-            EditorGUILayout.EndHorizontal();
-            
-            EditorGUILayout.EndVertical();
-        }
-        
-        private async Task StartSetupWithoutMCP()
-        {
-            if (isProcessing) return;
-            
-            isProcessing = true;
-            setupCompleted = false;
-            currentStep = 0;
-            statusMessage = "正在开始设置...";
-            progress = 0f;
-            Repaint();
-            
-            try
-            {
-                // 步骤1: 检测Python环境
-                UpdateProgress("检测Python环境...", 0.1f);
-                await Task.Delay(500);
-                
-                // 步骤2: 创建虚拟环境
-                UpdateProgress("创建虚拟环境...", 0.2f);
-                await Task.Run(() => {
-                    PythonManager.CreateVirtualEnvironment();
-                });
-                
-                // 步骤3: 安装Strands Agent SDK (带重试)
-                UpdateProgress("安装Strands Agent SDK...", 0.3f);
-                await RetryOperation(() => {
-                    PythonManager.InstallPythonPackage("strands-agents>=0.2.0");
-                }, "Strands Agent SDK");
-                
-                // 跳过MCP安装
-                UnityEngine.Debug.Log("⚠️ 跳过MCP支持包安装");
-                
-                // 步骤5: 安装SSL证书支持 (带重试)
-                UpdateProgress("安装SSL证书支持...", 0.5f);
-                await RetryOperation(() => {
-                    PythonManager.InstallPythonPackage("certifi>=2023.0.0");
-                }, "SSL证书支持");
-                
-                // 步骤6: 安装其他依赖包 (带重试)
-                UpdateProgress("安装其他依赖包...", 0.6f);
-                await RetryOperation(() => {
-                    PythonManager.InstallMultiplePackages(new[] {
-                        "pydantic>=2.0.0,<3.0.0",
-                        "typing-extensions>=4.13.2,<5.0.0",
-                        "aiofiles>=23.0.0",
-                        "colorlog>=6.7.0",
-                        "orjson>=3.9.0"
-                    });
-                }, "其他依赖包");
-                
-                // 步骤7: 配置环境变量
-                UpdateProgress("配置环境变量...", 0.7f);
-                await Task.Run(() => {
-                    PythonManager.ConfigureSSLEnvironment();
-                });
-                
-                // 跳过MCP服务器配置
-                UnityEngine.Debug.Log("⚠️ 跳过MCP服务器配置");
-                
-                // 步骤9: 初始化Python桥接
-                UpdateProgress("初始化Python桥接...", 0.8f);
-                await Task.Run(() => {
-                    PythonBridge.Initialize();
-                });
-                
-                // 步骤10: 验证AWS连接 (可选)
-                UpdateProgress("验证AWS连接...", 0.9f);
-                try
-                {
-                    await Task.Run(() => {
-                        // AWS验证逻辑
-                    });
-                }
-                catch (Exception awsEx)
-                {
-                    UnityEngine.Debug.LogWarning($"AWS连接验证失败: {awsEx.Message}");
-                }
-                
-                // 完成
-                UpdateProgress("安装完成！", 1.0f);
-                setupCompleted = true;
-                statusMessage = "AI助手安装完成！（MCP功能已跳过）";
-                
-                EditorUtility.DisplayDialog("安装成功", 
-                    "Unity AI助手安装完成！\n\nMCP功能已跳过，您可以稍后手动配置。", "确定");
-            }
-            catch (Exception ex)
-            {
-                statusMessage = $"安装失败: {ex.Message}";
-                progress = -1f;
-                UnityEngine.Debug.LogError($"安装过程出错: {ex}");
-                
-                EditorUtility.DisplayDialog("安装失败", 
-                    $"安装过程中出现错误：\n{ex.Message}\n\n请检查Python环境和网络连接。", "确定");
-            }
-            finally
-            {
-                isProcessing = false;
-                Repaint();
-            }
-        }
-
         private void InitializeStyles()
         {
             if (headerStyle == null)
@@ -716,6 +588,12 @@ namespace UnityAIAgent.Editor
                         "orjson>=3.9.0"
                     });
                 }, "其他依赖包");
+                
+                // 步骤8.5: 安装requirements.txt中的依赖 (带重试)
+                UpdateProgress("安装插件Python依赖...", 0.55f);
+                await RetryOperation(() => {
+                    InstallRequirementsTxt();
+                }, "插件Python依赖");
                 
                 // 步骤9: 配置环境变量
                 UpdateProgress("配置环境变量...", 0.6f);
@@ -2385,6 +2263,38 @@ namespace UnityAIAgent.Editor
                     errorMessage += $"• {error}\n";
                 }
                 EditorUtility.DisplayDialog("验证失败", errorMessage, "确定");
+            }
+        }
+        
+        /// <summary>
+        /// 安装插件Python目录中requirements.txt的依赖
+        /// </summary>
+        private void InstallRequirementsTxt()
+        {
+            try
+            {
+                string pythonPath = PathManager.GetUnityAgentPythonPath();
+                if (string.IsNullOrEmpty(pythonPath))
+                {
+                    UnityEngine.Debug.LogWarning("无法找到插件Python路径，跳过requirements.txt安装");
+                    return;
+                }
+                
+                string requirementsPath = Path.Combine(pythonPath, "requirements.txt");
+                if (!File.Exists(requirementsPath))
+                {
+                    UnityEngine.Debug.LogWarning($"未找到requirements.txt文件: {requirementsPath}");
+                    return;
+                }
+                
+                UnityEngine.Debug.Log($"正在安装requirements.txt依赖: {requirementsPath}");
+                PythonManager.InstallFromRequirements(requirementsPath);
+                UnityEngine.Debug.Log("requirements.txt依赖安装完成");
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"安装requirements.txt依赖时出错: {ex.Message}");
+                throw;
             }
         }
     }

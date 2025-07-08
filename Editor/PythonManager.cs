@@ -662,6 +662,48 @@ namespace UnityAIAgent.Editor
         }
         
         /// <summary>
+        /// 从requirements.txt文件安装依赖
+        /// </summary>
+        /// <param name="requirementsPath">requirements.txt文件的完整路径</param>
+        public static void InstallFromRequirements(string requirementsPath)
+        {
+            if (string.IsNullOrEmpty(requirementsPath) || !File.Exists(requirementsPath))
+            {
+                throw new FileNotFoundException($"requirements.txt文件不存在: {requirementsPath}");
+            }
+            
+            EnsureInitialized();
+            
+            string pipPath = GetPipPath();
+            if (string.IsNullOrEmpty(pipPath))
+            {
+                throw new InvalidOperationException("无法找到pip可执行文件");
+            }
+            
+            var process = new Process();
+            process.StartInfo.FileName = pipPath;
+            process.StartInfo.Arguments = $"install -r \"{requirementsPath}\"";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.CreateNoWindow = true;
+            
+            UnityEngine.Debug.Log($"执行pip命令: {pipPath} install -r \"{requirementsPath}\"");
+            
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"pip安装失败 (退出代码: {process.ExitCode})\n输出: {output}\n错误: {error}");
+            }
+            
+            UnityEngine.Debug.Log($"pip安装成功: {output}");
+        }
+        
+        /// <summary>
         /// 配置SSL环境
         /// </summary>
         public static void ConfigureSSLEnvironment()
