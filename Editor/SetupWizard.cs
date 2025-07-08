@@ -591,9 +591,11 @@ namespace UnityAIAgent.Editor
                 
                 // 步骤8.5: 安装requirements.txt中的依赖 (带重试)
                 UpdateProgress("安装插件Python依赖...", 0.55f);
+                UnityEngine.Debug.Log("[Environment Setup] 开始安装requirements.txt依赖");
                 await RetryOperation(() => {
                     InstallRequirementsTxt();
                 }, "插件Python依赖");
+                UnityEngine.Debug.Log("[Environment Setup] requirements.txt依赖安装完成");
                 
                 // 步骤9: 配置环境变量
                 UpdateProgress("配置环境变量...", 0.6f);
@@ -2273,27 +2275,30 @@ namespace UnityAIAgent.Editor
         {
             try
             {
+                UnityEngine.Debug.Log("[Environment Setup] 开始查找插件Python路径");
                 string pythonPath = PathManager.GetUnityAgentPythonPath();
                 if (string.IsNullOrEmpty(pythonPath))
                 {
-                    UnityEngine.Debug.LogWarning("无法找到插件Python路径，跳过requirements.txt安装");
+                    UnityEngine.Debug.LogWarning("[Environment Setup] 无法找到插件Python路径，跳过requirements.txt安装");
                     return;
                 }
+                UnityEngine.Debug.Log($"[Environment Setup] 找到插件Python路径: {pythonPath}");
                 
                 string requirementsPath = Path.Combine(pythonPath, "requirements.txt");
+                UnityEngine.Debug.Log($"[Environment Setup] 检查requirements.txt文件: {requirementsPath}");
                 if (!File.Exists(requirementsPath))
                 {
-                    UnityEngine.Debug.LogWarning($"未找到requirements.txt文件: {requirementsPath}");
+                    UnityEngine.Debug.LogWarning($"[Environment Setup] 未找到requirements.txt文件: {requirementsPath}");
                     return;
                 }
                 
-                UnityEngine.Debug.Log($"正在安装requirements.txt依赖: {requirementsPath}");
+                UnityEngine.Debug.Log($"[Environment Setup] 正在安装requirements.txt依赖: {requirementsPath}");
                 PythonManager.InstallFromRequirements(requirementsPath);
-                UnityEngine.Debug.Log("requirements.txt依赖安装完成");
+                UnityEngine.Debug.Log("[Environment Setup] requirements.txt依赖安装完成");
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"安装requirements.txt依赖时出错: {ex.Message}");
+                UnityEngine.Debug.LogError($"[Environment Setup] 安装requirements.txt依赖时出错: {ex.Message}");
                 throw;
             }
         }
