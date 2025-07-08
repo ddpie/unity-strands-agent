@@ -3125,7 +3125,7 @@ namespace UnityAIAgent.Editor
                 statusMessage = "设置已取消";
                 
                 EditorUtility.DisplayDialog("设置取消", "设置过程已被用户取消。", "确定");
-                Repaint();
+                EditorApplication.delayCall += () => Repaint();
             }
         }
         
@@ -3140,7 +3140,7 @@ namespace UnityAIAgent.Editor
                 progress = 0f;
                 
                 Debug.Log("Setup has been reset");
-                Repaint();
+                EditorApplication.delayCall += () => Repaint();
             }
         }
 
