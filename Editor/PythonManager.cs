@@ -621,7 +621,21 @@ namespace UnityAIAgent.Editor
         /// </summary>
         public static void InstallPythonPackage(string packageName)
         {
+            UnityEngine.Debug.Log($"[pip3] venvPath = {venvPath}");
             string pipPath = Path.Combine(venvPath, "bin", "pip3");
+            UnityEngine.Debug.Log($"[pip3] 检查pip3路径: {pipPath}");
+            
+            if (!File.Exists(pipPath))
+            {
+                UnityEngine.Debug.LogError($"[pip3] pip3文件不存在: {pipPath}");
+                // 尝试macOS的路径
+                pipPath = Path.Combine(venvPath, "bin", "pip");
+                UnityEngine.Debug.Log($"[pip3] 尝试pip路径: {pipPath}");
+                if (!File.Exists(pipPath))
+                {
+                    throw new InvalidOperationException($"无法找到pip可执行文件: {pipPath}");
+                }
+            }
             
             var process = new Process
             {
@@ -686,10 +700,20 @@ namespace UnityAIAgent.Editor
             
             EnsureInitialized();
             
+            UnityEngine.Debug.Log($"[pip3] venvPath = {venvPath}");
             string pipPath = Path.Combine(venvPath, "bin", "pip3");
+            UnityEngine.Debug.Log($"[pip3] 检查pip3路径: {pipPath}");
+            
             if (!File.Exists(pipPath))
             {
-                throw new InvalidOperationException($"无法找到pip3可执行文件: {pipPath}");
+                UnityEngine.Debug.LogError($"[pip3] pip3文件不存在: {pipPath}");
+                // 尝试macOS的路径
+                pipPath = Path.Combine(venvPath, "bin", "pip");
+                UnityEngine.Debug.Log($"[pip3] 尝试pip路径: {pipPath}");
+                if (!File.Exists(pipPath))
+                {
+                    throw new InvalidOperationException($"无法找到pip可执行文件: {pipPath}");
+                }
             }
             
             var process = new Process();
