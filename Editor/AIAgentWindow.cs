@@ -211,7 +211,7 @@ namespace UnityAIAgent.Editor
             {
                 statusMessage = message;
                 progress = Mathf.Max(0, progressValue);
-                Repaint();
+                EditorApplication.delayCall += () => Repaint();
             }
         }
         
