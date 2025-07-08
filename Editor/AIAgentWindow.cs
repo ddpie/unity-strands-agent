@@ -197,11 +197,6 @@ namespace UnityAIAgent.Editor
             };
         }
         
-        private void OnDisable()
-        {
-            // 取消订阅Python初始化进度事件
-            PythonManager.OnInitProgress -= OnPythonInitProgress;
-        }
         
         private void OnPythonInitProgress(string message, float progressValue)
         {
@@ -235,6 +230,9 @@ namespace UnityAIAgent.Editor
         private void OnDisable()
         {
             SaveChatHistory();
+            
+            // 取消订阅Python初始化进度事件
+            PythonManager.OnInitProgress -= OnPythonInitProgress;
             
             // 清理事件订阅
             if (streamingHandler != null)
