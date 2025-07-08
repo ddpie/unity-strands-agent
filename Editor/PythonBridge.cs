@@ -110,7 +110,8 @@ namespace UnityAIAgent.Editor
             string message, 
             Action<string> onChunk, 
             Action onComplete, 
-            Action<string> onError)
+            Action<string> onError,
+            CancellationToken cancellationToken = default)
         {
             EnsureInitialized();
 
@@ -169,6 +170,14 @@ namespace UnityAIAgent.Editor
                             {
                                 try
                                 {
+                                    // 检查取消令牌
+                                    if (cancellationToken.IsCancellationRequested)
+                                    {
+                                        Debug.Log("[Unity] 检测到取消请求，停止流式处理");
+                                        EditorApplication.delayCall += () => onError?.Invoke("用户取消了流式处理");
+                                        break;
+                                    }
+                                    
                                     // 在每个循环中检查Unity状态
                                     if (ThreadProtection.IsUnityChangingMode || !PythonEngine.IsInitialized)
                                     {

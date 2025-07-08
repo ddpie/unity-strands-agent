@@ -138,13 +138,24 @@ namespace UnityAIAgent.Editor
             {
                 try
                 {
+                    Debug.Log("[StreamingHandler] 用户主动停止流式处理");
                     cancellationTokenSource.Cancel();
-                    Debug.Log("正在停止流式处理...");
+                    
+                    // 立即更新状态
+                    isStreaming = false;
+                    isCompleted = true;
+                    
+                    // 触发取消事件
+                    OnStreamCancelled?.Invoke();
                 }
                 catch (ObjectDisposedException)
                 {
-                    Debug.Log("流式处理已经结束");
+                    Debug.Log("[StreamingHandler] 流式处理已经结束");
                 }
+            }
+            else
+            {
+                Debug.Log("[StreamingHandler] 没有正在进行的流式处理需要停止");
             }
         }
         
@@ -203,7 +214,8 @@ namespace UnityAIAgent.Editor
                         {
                             // CancellationTokenSource已被释放，忽略此回调
                         }
-                    }
+                    },
+                    cancellationToken
                 );
                 
                 // 注意：队列处理已经在EnqueueChunk中进行

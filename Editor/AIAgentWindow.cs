@@ -218,6 +218,7 @@ namespace UnityAIAgent.Editor
                     streamingHandler.OnChunkReceived += OnStreamChunkReceived;
                     streamingHandler.OnStreamCompleted += OnStreamComplete;
                     streamingHandler.OnStreamError += OnStreamError;
+                    streamingHandler.OnStreamCancelled += OnStreamCancelled;
                 }
                 catch (Exception e)
                 {
@@ -240,6 +241,7 @@ namespace UnityAIAgent.Editor
                 streamingHandler.OnChunkReceived -= OnStreamChunkReceived;
                 streamingHandler.OnStreamCompleted -= OnStreamComplete;
                 streamingHandler.OnStreamError -= OnStreamError;
+                streamingHandler.OnStreamCancelled -= OnStreamCancelled;
             }
             
             // Clean up texture cache and handle domain reload
@@ -2265,6 +2267,30 @@ namespace UnityAIAgent.Editor
                     isUser = false,
                     timestamp = DateTime.Now
                 });
+            }
+            
+            // 重置流式状态
+            currentStreamText = "";
+            currentStreamingMessageIndex = -1;
+            
+            // 直接更新UI和保存历史
+            SaveChatHistory();
+            Repaint();
+        }
+        
+        private void OnStreamCancelled()
+        {
+            Debug.Log($"[AIAgentWindow] Streaming response cancelled by user");
+            
+            // 立即关闭活跃流
+            hasActiveStream = false;
+            isProcessing = false;
+            
+            // 完成当前消息（如果有内容）
+            if (currentStreamingMessageIndex >= 0 && currentStreamingMessageIndex < messages.Count && !string.IsNullOrEmpty(currentStreamText))
+            {
+                messages[currentStreamingMessageIndex].content = currentStreamText + "\n\n⚠️ " + LanguageManager.GetText("用户取消了响应", "User cancelled response");
+                Debug.Log($"[AIAgentWindow] Cancelled message, final length: {currentStreamText.Length}");
             }
             
             // 重置流式状态
