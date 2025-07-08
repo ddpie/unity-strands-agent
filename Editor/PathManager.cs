@@ -158,10 +158,7 @@ namespace UnityAIAgent.Editor
                 PathConfig.strandsToolsPath,
                 // 3. 当前项目的Python目录（自动部署目标）
                 Path.Combine(currentProjectPath, "Python"),
-                // 4. 相邻目录查找（开发环境后备）
-                Path.Combine(currentProjectPath, "..", "unity-strands-agent", "Python"),
-                Path.Combine(currentProjectPath, "..", "..", "unity-strands-agent", "Python"),
-                // 5. 相对路径解析（最后的后备方案）
+                // 4. 相对路径解析（最后的后备方案）
                 PathConfig.GetAbsolutePath("Python")
             };
             
