@@ -677,7 +677,7 @@ namespace UnityAIAgent.Editor
             string pipPath = Path.Combine(venvPath, "bin", "pip3");
             if (!File.Exists(pipPath))
             {
-                throw new InvalidOperationException($"无法找到pip可执行文件: {pipPath}");
+                throw new InvalidOperationException($"无法找到pip3可执行文件: {pipPath}");
             }
             
             var process = new Process();
