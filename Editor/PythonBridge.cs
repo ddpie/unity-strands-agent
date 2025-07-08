@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using Python.Runtime;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace UnityAIAgent.Editor
