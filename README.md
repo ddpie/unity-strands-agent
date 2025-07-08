@@ -1,6 +1,6 @@
 # Unity Strands Agent
 
-基于 AWS Strands Agent SDK 的 Unity 编辑器 AI 插件，在 Unity 编辑器中直接与 AI 对话，获得智能代码生成、问题解答和开发建议。
+基于 AWS [Strands Agent SDK](https://strandsagents.com/latest/) 的 Unity 编辑器 AI 插件，在 Unity 编辑器中直接与 AI 对话，获得智能代码生成、问题解答和开发建议。
 
 **Language / 语言**: [中文](#中文版本) | [English](#english-version)
 
@@ -32,7 +32,7 @@ graph TD
     end
     
     subgraph "External Services"
-        SDK[Strands Agent SDK<br/>Strands代理SDK]
+        SDK[<a href="https://strandsagents.com/latest/">Strands Agent SDK</a><br/>Strands代理SDK]
         AWS[Amazon Bedrock<br/>Amazon AI服务]
         MCP[MCP Servers<br/>MCP服务器]
     end
@@ -169,9 +169,9 @@ graph TD
 
 ## English Version
 
-Unity Strands Agent is a powerful AI-powered development assistant that brings the capabilities of AWS's open-source Strands Agent SDK directly into the Unity Editor. This plugin transforms your Unity development workflow by providing intelligent code generation, automated problem-solving, and context-aware development suggestions.
+Unity Strands Agent is a powerful AI-powered development assistant that brings the capabilities of AWS's open-source [Strands Agent SDK](https://strandsagents.com/latest/) directly into the Unity Editor. This plugin transforms your Unity development workflow by providing intelligent code generation, automated problem-solving, and context-aware development suggestions.
 
-Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your Unity development environment. Built on the robust Strands Agent SDK framework, this plugin understands Unity's unique development patterns, component systems, and best practices to deliver contextually relevant assistance.
+Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your Unity development environment. Built on the robust [Strands Agent SDK](https://strandsagents.com/latest/) framework, this plugin understands Unity's unique development patterns, component systems, and best practices to deliver contextually relevant assistance.
 
 ### System Architecture
 
@@ -195,7 +195,7 @@ graph TD
     end
     
     subgraph "External Services"
-        SDK[Strands Agent SDK<br/>Strands SDK]
+        SDK[<a href="https://strandsagents.com/latest/">Strands Agent SDK</a><br/>Strands SDK]
         AWS[Amazon Bedrock<br/>Amazon AI Service]
         MCP[MCP Servers<br/>MCP Servers]
     end
