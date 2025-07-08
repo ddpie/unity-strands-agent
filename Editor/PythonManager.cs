@@ -326,8 +326,18 @@ namespace UnityAIAgent.Editor
         
         public static void CreateVirtualEnvironment()
         {
-            string projectPath = Path.GetDirectoryName(Application.dataPath);
-            venvPath = Path.Combine(projectPath, "Python", "venv");
+            // 强制使用插件目录下的虚拟环境
+            string packagePythonPath = PathManager.GetUnityAgentPythonPath();
+            if (string.IsNullOrEmpty(packagePythonPath))
+            {
+                throw new Exception("无法找到插件Python目录，无法创建虚拟环境");
+            }
+            
+            // 强制在插件的Python目录下使用venv
+            venvPath = Path.Combine(packagePythonPath, "venv");
+            EditorApplication.delayCall += () => {
+                UnityEngine.Debug.Log($"强制使用插件目录虚拟环境: {venvPath}");
+            };
             
             if (!Directory.Exists(venvPath))
             {
@@ -511,8 +521,22 @@ namespace UnityAIAgent.Editor
         private static void InstallDependencies()
         {
             string pipPath = Path.Combine(venvPath, "bin", "pip");
-            string requirementsPath = Path.Combine(Path.GetDirectoryName(Application.dataPath), 
-                "Python", "requirements.txt");
+            
+            // 强制使用插件目录的requirements.txt
+            string packagePythonPath = PathManager.GetUnityAgentPythonPath();
+            if (string.IsNullOrEmpty(packagePythonPath))
+            {
+                throw new Exception("无法找到插件Python目录，无法安装依赖");
+            }
+            
+            string requirementsPath = Path.Combine(packagePythonPath, "requirements.txt");
+            if (!File.Exists(requirementsPath))
+            {
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.LogWarning($"requirements.txt不存在: {requirementsPath}，跳过依赖安装");
+                };
+                return;
+            }
             
             ReportProgress("正在安装依赖...", 0.5f);
             
