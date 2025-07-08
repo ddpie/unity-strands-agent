@@ -80,8 +80,11 @@ graph TD
 - Unity 2022.3 LTS 或更高版本
 - Python 3.11（插件会自动检测和配置）
 - AWS credentials 配置（用于 Amazon Bedrock 服务）
+- **仅支持 macOS 系统**
 
-**重要**: 本插件专门针对 Python 3.11 进行了优化，不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
+**重要**: 
+- 本插件专门针对 Python 3.11 进行了优化，不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
+- 首次打开 Unity Strands Agent 可能需要较长时间进行环境初始化，请耐心等待。
 
 #### 安装方法
 
@@ -236,8 +239,11 @@ graph TD
 - Unity 2022.3 LTS or higher
 - Python 3.11 (plugin automatically detects and configures)
 - AWS credentials configuration (for Amazon Bedrock services)
+- **macOS only**
 
-**Important**: This plugin is specifically optimized for Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
+**Important**: 
+- This plugin is specifically optimized for Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
+- First-time opening of Unity Strands Agent may take some time for environment initialization, please be patient.
 
 #### Installation
 
