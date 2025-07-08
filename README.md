@@ -13,70 +13,50 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 ### 系统架构
 
 ```mermaid
-flowchart TB
-    Unity["Unity Editor"]
-    Python["Python Backend"] 
-    External["External Services"]
-    
-    Unity --> Python
-    Python --> External
-    
-    subgraph Unity
+graph TD
+    subgraph "Unity Editor"
         UI[AIAgentWindow<br/>主界面]
-        
-        subgraph Streaming["流式处理层"]
-            SH[StreamingHandler<br/>流式处理器]
-            SM[StreamingManager<br/>流式管理器]
-        end
-        
-        subgraph Core["核心服务层"]
-            PB[PythonBridge<br/>Python桥接]
-            PM[PythonManager<br/>Python管理器]
-            PATH[PathManager<br/>路径管理器]
-        end
+        SH[StreamingHandler<br/>流式处理器]
+        SM[StreamingManager<br/>流式管理器]
+        PB[PythonBridge<br/>Python桥接]
+        PM[PythonManager<br/>Python管理器]
+        PATH[PathManager<br/>路径管理器]
     end
     
-    subgraph Python
+    subgraph "Python Backend"
         AC[agent_core<br/>代理核心]
         UA[UnityAgent<br/>Unity代理]
-        
-        subgraph Tools["工具与处理层"]
-            SP[StreamingProcessor<br/>流式处理器]
-            UT[unity_tools<br/>Unity工具集]
-            MM[MCPManager<br/>MCP管理器]
-        end
+        SP[StreamingProcessor<br/>流式处理器]
+        UT[unity_tools<br/>Unity工具集]
+        MM[MCPManager<br/>MCP管理器]
     end
     
-    subgraph External
+    subgraph "External Services"
         SDK[Strands Agent SDK<br/>Strands代理SDK]
         AWS[Amazon Bedrock<br/>Amazon AI服务]
         MCP[MCP Servers<br/>MCP服务器]
     end
     
-    %% 数据流
-    UI -.->|用户输入| SH
-    UI -.->|调用Python| PB
-    SH -.->|管理| SM
+    UI -->|用户输入| SH
+    UI -->|调用Python| PB
+    SH -->|管理| SM
     SM -.->|异步数据| SP
-    PM -.->|初始化| PB
-    PM -.->|配置| PATH
-    PB -.->|Python.NET| AC
-    AC -.->|创建实例| UA
-    UA -.->|流式响应| SP
-    UA -.->|加载工具| UT
-    UA -.->|管理MCP| MM
-    UA -.->|调用SDK| SDK
-    SDK -.->|AI推理| AWS
-    MM -.->|连接| MCP
+    PM -->|初始化| PB
+    PM -->|配置| PATH
+    PB -->|Python.NET| AC
+    AC -->|创建实例| UA
+    UA -->|流式响应| SP
+    UA -->|加载工具| UT
+    UA -->|管理MCP| MM
+    UA -->|调用SDK| SDK
+    SDK -->|AI推理| AWS
+    MM -->|连接| MCP
     
-    %% 样式定义
     classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
     classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
     classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef streamStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
     
-    class UI,PB,PM,PATH unityStyle
-    class SH,SM streamStyle
+    class UI,SH,SM,PB,PM,PATH unityStyle
     class AC,UA,SP,UT,MM pythonStyle
     class SDK,AWS,MCP externalStyle
 ```
@@ -177,70 +157,50 @@ Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your
 ### System Architecture
 
 ```mermaid
-flowchart TB
-    Unity["Unity Editor"]
-    Python["Python Backend"] 
-    External["External Services"]
-    
-    Unity --> Python
-    Python --> External
-    
-    subgraph Unity
+graph TD
+    subgraph "Unity Editor"
         UI[AIAgentWindow<br/>Main Interface]
-        
-        subgraph Streaming["Streaming Layer"]
-            SH[StreamingHandler<br/>Stream Handler]
-            SM[StreamingManager<br/>Stream Manager]
-        end
-        
-        subgraph Core["Core Services"]
-            PB[PythonBridge<br/>Python Bridge]
-            PM[PythonManager<br/>Python Manager]
-            PATH[PathManager<br/>Path Manager]
-        end
+        SH[StreamingHandler<br/>Stream Handler]
+        SM[StreamingManager<br/>Stream Manager]
+        PB[PythonBridge<br/>Python Bridge]
+        PM[PythonManager<br/>Python Manager]
+        PATH[PathManager<br/>Path Manager]
     end
     
-    subgraph Python
+    subgraph "Python Backend"
         AC[agent_core<br/>Agent Core]
         UA[UnityAgent<br/>Unity Agent]
-        
-        subgraph Tools["Tools & Processing"]
-            SP[StreamingProcessor<br/>Stream Processor]
-            UT[unity_tools<br/>Unity Tools]
-            MM[MCPManager<br/>MCP Manager]
-        end
+        SP[StreamingProcessor<br/>Stream Processor]
+        UT[unity_tools<br/>Unity Tools]
+        MM[MCPManager<br/>MCP Manager]
     end
     
-    subgraph External
+    subgraph "External Services"
         SDK[Strands Agent SDK<br/>Strands SDK]
         AWS[Amazon Bedrock<br/>Amazon AI Service]
         MCP[MCP Servers<br/>MCP Servers]
     end
     
-    %% Data flow
-    UI -.->|User Input| SH
-    UI -.->|Invoke Python| PB
-    SH -.->|Manage| SM
+    UI -->|User Input| SH
+    UI -->|Invoke Python| PB
+    SH -->|Manage| SM
     SM -.->|Async Data| SP
-    PM -.->|Initialize| PB
-    PM -.->|Configure| PATH
-    PB -.->|Python.NET| AC
-    AC -.->|Create Instance| UA
-    UA -.->|Stream Response| SP
-    UA -.->|Load Tools| UT
-    UA -.->|Manage MCP| MM
-    UA -.->|Call SDK| SDK
-    SDK -.->|AI Inference| AWS
-    MM -.->|Connect| MCP
+    PM -->|Initialize| PB
+    PM -->|Configure| PATH
+    PB -->|Python.NET| AC
+    AC -->|Create Instance| UA
+    UA -->|Stream Response| SP
+    UA -->|Load Tools| UT
+    UA -->|Manage MCP| MM
+    UA -->|Call SDK| SDK
+    SDK -->|AI Inference| AWS
+    MM -->|Connect| MCP
     
-    %% Style definitions
     classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
     classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
     classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
-    classDef streamStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
     
-    class UI,PB,PM,PATH unityStyle
-    class SH,SM streamStyle
+    class UI,SH,SM,PB,PM,PATH unityStyle
     class AC,UA,SP,UT,MM pythonStyle
     class SDK,AWS,MCP externalStyle
 ```
