@@ -13,37 +13,40 @@ Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，�
 ### 系统架构
 
 ```mermaid
-graph TB
-    subgraph Unity["🎮 Unity Editor"]
-        direction TB
+graph TD
+    subgraph Unity["Unity Editor"]
+        direction LR
         UI[AIAgentWindow<br/>主界面]
         
         subgraph Streaming["流式处理层"]
+            direction LR
             SH[StreamingHandler<br/>流式处理器]
             SM[StreamingManager<br/>流式管理器]
         end
         
         subgraph Core["核心服务层"]
+            direction LR
             PB[PythonBridge<br/>Python桥接]
             PM[PythonManager<br/>Python管理器]
             PATH[PathManager<br/>路径管理器]
         end
     end
     
-    subgraph Python["🐍 Python Backend"]
-        direction TB
+    subgraph Python["Python Backend"]
+        direction LR
         AC[agent_core<br/>代理核心]
         UA[UnityAgent<br/>Unity代理]
         
         subgraph Tools["工具与处理层"]
+            direction LR
             SP[StreamingProcessor<br/>流式处理器]
             UT[unity_tools<br/>Unity工具集]
             MM[MCPManager<br/>MCP管理器]
         end
     end
     
-    subgraph External["🌐 External Services"]
-        direction TB
+    subgraph External["External Services"]
+        direction LR
         SDK[Strands Agent SDK<br/>Strands代理SDK]
         AWS[Amazon Bedrock<br/>Amazon AI服务]
         MCP[MCP Servers<br/>MCP服务器]
@@ -181,37 +184,40 @@ Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your
 ### System Architecture
 
 ```mermaid
-graph TB
-    subgraph Unity["🎮 Unity Editor"]
-        direction TB
+graph TD
+    subgraph Unity["Unity Editor"]
+        direction LR
         UI[AIAgentWindow<br/>Main Interface]
         
         subgraph Streaming["Streaming Layer"]
+            direction LR
             SH[StreamingHandler<br/>Stream Handler]
             SM[StreamingManager<br/>Stream Manager]
         end
         
         subgraph Core["Core Services"]
+            direction LR
             PB[PythonBridge<br/>Python Bridge]
             PM[PythonManager<br/>Python Manager]
             PATH[PathManager<br/>Path Manager]
         end
     end
     
-    subgraph Python["🐍 Python Backend"]
-        direction TB
+    subgraph Python["Python Backend"]
+        direction LR
         AC[agent_core<br/>Agent Core]
         UA[UnityAgent<br/>Unity Agent]
         
         subgraph Tools["Tools & Processing"]
+            direction LR
             SP[StreamingProcessor<br/>Stream Processor]
             UT[unity_tools<br/>Unity Tools]
             MM[MCPManager<br/>MCP Manager]
         end
     end
     
-    subgraph External["🌐 External Services"]
-        direction TB
+    subgraph External["External Services"]
+        direction LR
         SDK[Strands Agent SDK<br/>Strands SDK]
         AWS[Amazon Bedrock<br/>Amazon AI Service]
         MCP[MCP Servers<br/>MCP Servers]
