@@ -1511,25 +1511,16 @@ namespace UnityAIAgent.Editor
                 return;
             }
             
-            string errorMessage;
-            if (mcpConfig != null)
-            {
-                var enabledCount = mcpConfig.GetEnabledServers().Count;
-                
-                // 通知Python端重新加载MCP配置
-                ReloadMCPConfigInPython();
-                
-                EditorUtility.DisplayDialog("验证成功", 
-                    $"MCP配置验证成功！\n\n" +
-                    $"启用状态：{(mcpConfig.enableMCP ? "已启用" : "已禁用")}\n" +
-                    $"启用的服务器数量：{enabledCount}\n\n" +
-                    "Python端已重新加载MCP配置。", "确定");
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("验证失败", 
-                    $"MCP配置验证失败：\n\n{errorMessage}", "确定");
-            }
+            var enabledCount = mcpConfig.GetEnabledServers().Count;
+            
+            // 通知Python端重新加载MCP配置
+            ReloadMCPConfigInPython();
+            
+            EditorUtility.DisplayDialog("验证成功", 
+                $"MCP配置验证成功！\n\n" +
+                $"启用状态：{(mcpConfig.enableMCP ? "已启用" : "已禁用")}\n" +
+                $"启用的服务器数量：{enabledCount}\n\n" +
+                "Python端已重新加载MCP配置。", "确定");
         }
         
         private void ExportMCPJsonFile()
