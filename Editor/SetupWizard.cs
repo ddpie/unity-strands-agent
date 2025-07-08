@@ -41,11 +41,12 @@ namespace UnityAIAgent.Editor
         private PathConfiguration pathConfig;
         
         private readonly string[] setupSteps = {
-            "自动检测Python路径",
-            "配置AWS凭证",
-            "初始化Python环境",
-            "验证配置",
-            "完成设置"
+            "Detecting Python Environment",
+            "Creating Virtual Environment",
+            "Installing Python Dependencies", 
+            "Configuring Environment Variables",
+            "Initializing Python Bridge",
+            "Setup Complete"
         };
         
         [MenuItem("Window/Unity Strands Agent Setup")]
@@ -523,62 +524,46 @@ namespace UnityAIAgent.Editor
             
             try
             {
-                // 步骤1: 检测Python环境
-                UpdateProgress("检测Python环境...", 0.08f);
-                await Task.Delay(500);
+                UnityEngine.Debug.Log("[Environment Setup] 开始环境设置流程");
                 
-                // 步骤2: 检测Node.js环境
-                UpdateProgress("检测Node.js环境...", 0.12f);
-                bool nodeInstalled = await CheckNodeJsInstalled();
+                // Step 1: Detecting Python Environment (0.0 - 0.2)
+                UpdateProgress("Detecting Python Environment...", 0.1f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 1: Detecting Python Environment");
                 
-                // 步骤3: 安装Node.js和npm
-                if (!nodeInstalled)
-                {
-                    UpdateProgress("安装Node.js和npm...", 0.16f);
-                    await InstallNodeJs();
-                }
-                else
-                {
-                    UpdateProgress("Node.js已安装，跳过...", 0.16f);
-                    await Task.Delay(300);
-                }
+                // 检测和配置Python环境
+                await Task.Run(() => {
+                    PythonManager.EnsureInitialized();
+                });
                 
-                // 步骤4: 创建虚拟环境
-                UpdateProgress("创建虚拟环境...", 0.2f);
+                // Step 2: Creating Virtual Environment (0.2 - 0.4)
+                UpdateProgress("Creating Virtual Environment...", 0.3f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 2: Creating Virtual Environment");
                 await Task.Run(() => {
                     PythonManager.CreateVirtualEnvironment();
                 });
+                UnityEngine.Debug.Log("[Environment Setup] Virtual environment created");
                 
-                // 步骤5: 安装Strands Agent SDK (带重试)
-                UpdateProgress("安装Strands Agent SDK...", 0.25f);
+                // Step 3: Installing Python Dependencies (0.4 - 0.8)
+                UpdateProgress("Installing Python Dependencies...", 0.5f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 3: Installing Python Dependencies");
+                
+                // 安装Strands Agent SDK
+                UnityEngine.Debug.Log("[Environment Setup] Installing Strands Agent SDK");
                 await RetryOperation(() => {
                     PythonManager.InstallPythonPackage("strands-agents>=0.2.0");
                 }, "Strands Agent SDK");
                 
-                // 步骤6: 安装MCP支持包 (可选，允许失败)
-                UpdateProgress("安装MCP支持包...", 0.3f);
-                try
-                {
-                    await RetryOperation(() => {
-                        // 根据strands项目要求安装MCP 1.8.x版本
-                        PythonManager.InstallPythonPackage("mcp>=1.8.0,<2.0.0");
-                    }, "MCP支持包");
-                    UnityEngine.Debug.Log("✓ MCP支持包安装成功 (version 1.8.x)");
-                }
-                catch (Exception mcpEx)
-                {
-                    UnityEngine.Debug.LogWarning($"⚠️ MCP支持包安装失败，将跳过MCP功能: {mcpEx.Message}");
-                    // 继续安装，不中断流程
-                }
                 
-                // 步骤7: 安装SSL证书支持 (带重试)
-                UpdateProgress("安装SSL证书支持...", 0.4f);
+                // 安装SSL证书支持
+                UpdateProgress("Installing Python Dependencies...", 0.6f);
+                UnityEngine.Debug.Log("[Environment Setup] Installing SSL certificate support");
                 await RetryOperation(() => {
                     PythonManager.InstallPythonPackage("certifi>=2023.0.0");
                 }, "SSL证书支持");
                 
-                // 步骤8: 安装其他依赖包 (带重试)
-                UpdateProgress("安装其他依赖包...", 0.5f);
+                // 安装其他依赖包
+                UpdateProgress("Installing Python Dependencies...", 0.65f);
+                UnityEngine.Debug.Log("[Environment Setup] Installing additional dependencies");
                 await RetryOperation(() => {
                     PythonManager.InstallMultiplePackages(new[] {
                         "strands-agents-tools>=0.1.8",
@@ -589,40 +574,31 @@ namespace UnityAIAgent.Editor
                     });
                 }, "其他依赖包");
                 
-                // 步骤8.5: 安装requirements.txt中的依赖 (带重试)
-                UpdateProgress("安装插件Python依赖...", 0.55f);
-                UnityEngine.Debug.Log("[Environment Setup] 开始安装requirements.txt依赖");
+                // 安装requirements.txt依赖
+                UpdateProgress("Installing Python Dependencies...", 0.7f);
+                UnityEngine.Debug.Log("[Environment Setup] Installing requirements.txt dependencies");
                 await RetryOperation(() => {
                     InstallRequirementsTxt();
                 }, "插件Python依赖");
-                UnityEngine.Debug.Log("[Environment Setup] requirements.txt依赖安装完成");
+                UnityEngine.Debug.Log("[Environment Setup] Python dependencies installation completed");
                 
-                // 步骤9: 配置环境变量
-                UpdateProgress("配置环境变量...", 0.6f);
+                // Step 4: Configuring Environment Variables (0.8 - 0.9)
+                UpdateProgress("Configuring Environment Variables...", 0.85f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 4: Configuring Environment Variables");
                 await Task.Run(() => {
                     PythonManager.ConfigureSSLEnvironment();
                 });
                 
-                // 步骤10: 配置MCP服务器
-                UpdateProgress("配置MCP服务器...", 0.7f);
-                await Task.Run(() => {
-                    SetupMCPConfiguration();
-                });
-                
-                // 步骤11: 初始化Python桥接
-                UpdateProgress("初始化Python桥接...", 0.8f);
+                // Step 5: Initializing Python Bridge (0.9 - 1.0)
+                UpdateProgress("Initializing Python Bridge...", 0.95f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 5: Initializing Python Bridge");
                 await Task.Run(() => {
                     PythonManager.EnsureInitialized();
                 });
                 
-                // 步骤12: 验证AWS连接
-                UpdateProgress("验证AWS连接...", 0.9f);
-                await Task.Run(() => {
-                    PythonManager.TestAWSConnection();
-                });
-                
-                // 步骤13: 完成设置
-                UpdateProgress("设置完成！AI助手已就绪。", 1.0f);
+                // Step 6: Setup Complete
+                UpdateProgress("Setup Complete", 1.0f);
+                UnityEngine.Debug.Log("[Environment Setup] Step 6: Setup Complete - AI Assistant is ready!");
                 
                 setupCompleted = true;
                 currentStep = setupSteps.Length;
