@@ -103,6 +103,7 @@ namespace UnityAIAgent.Editor
         // Environment variables
         private Vector2 envVarScrollPosition;
         private bool envVarExpanded = false;
+        private bool advancedConfigExpanded = false;
         private Dictionary<string, string> tempEnvVars = new Dictionary<string, string>();
         
         private string[] setupSteps;
@@ -3126,43 +3127,13 @@ namespace UnityAIAgent.Editor
             }
             EditorGUILayout.EndHorizontal();
             
-            // Node.js 路径
-            EditorGUILayout.HelpBox(LanguageManager.GetText("简化版本：不需要Node.js配置", "Simplified version: No Node.js configuration needed"), MessageType.Info);
-            
-            // AI代理Python路径
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(LanguageManager.GetText("AI代理Python路径", "AI Agent Python Path"), GUILayout.Width(120));
-            pathConfig.strandsToolsPath = EditorGUILayout.TextField(pathConfig.strandsToolsPath);
-            if (GUILayout.Button(LanguageManager.GetText("浏览", "Browse"), GUILayout.Width(60)))
-            {
-                string path = EditorUtility.OpenFolderPanel(LanguageManager.GetText("选择AI代理Python目录", "Select AI Agent Python Directory"), pathConfig.strandsToolsPath, "");
-                if (!string.IsNullOrEmpty(path))
-                {
-                    pathConfig.strandsToolsPath = path;
-                    EditorUtility.SetDirty(pathConfig);
-                }
-            }
-            if (GUILayout.Button(LanguageManager.GetText("自动检测", "Auto Detect"), GUILayout.Width(80)))
-            {
-                // AI代理Python路径自动检测，使用Unity Agent Python路径作为默认值
-                pathConfig.strandsToolsPath = PathManager.GetStrandsToolsPath();
-                if (string.IsNullOrEmpty(pathConfig.strandsToolsPath))
-                {
-                    pathConfig.strandsToolsPath = PathManager.GetUnityAgentPythonPath();
-                }
-                EditorUtility.SetDirty(pathConfig);
-            }
-            EditorGUILayout.EndHorizontal();
+            // 简化说明
+            EditorGUILayout.HelpBox(LanguageManager.GetText("插件会自动检测和配置Python环境，通常无需手动配置", "The plugin will automatically detect and configure the Python environment, usually no manual configuration is needed"), MessageType.Info);
             
             EditorGUILayout.Space(15);
             
             // 操作按钮
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button(LanguageManager.GetText("全部自动检测", "Auto Detect All"), GUILayout.Height(30)))
-            {
-                EditorUtility.SetDirty(pathConfig);
-                EditorUtility.SetDirty(pathConfig);
-            }
             if (GUILayout.Button(LanguageManager.GetText("验证配置", "Validate Configuration"), GUILayout.Height(30)))
             {
                 pathConfig.ValidateAllPaths();
@@ -3178,14 +3149,25 @@ namespace UnityAIAgent.Editor
             
             EditorGUILayout.Space(10);
             
-            // 环境变量配置
-            EditorGUILayout.LabelField(LanguageManager.GetText("环境变量配置", "Environment Variable Configuration"), EditorStyles.boldLabel);
-            EditorGUILayout.Space(5);
+            // 高级配置折叠面板
+            advancedConfigExpanded = EditorGUILayout.Foldout(advancedConfigExpanded, LanguageManager.GetText("高级配置", "Advanced Configuration"), true);
             
-            EditorGUILayout.HelpBox(LanguageManager.GetText("这些环境变量会在Python初始化时自动设置，您可以查看和调试当前值", "These environment variables will be automatically set when Python initializes. You can view and debug current values"), MessageType.Info);
-            EditorGUILayout.Space(5);
-            
-            DrawEnvironmentVariables();
+            if (advancedConfigExpanded)
+            {
+                EditorGUILayout.BeginVertical("box");
+                EditorGUILayout.Space(5);
+                
+                // 环境变量配置
+                EditorGUILayout.LabelField(LanguageManager.GetText("环境变量配置", "Environment Variable Configuration"), EditorStyles.boldLabel);
+                EditorGUILayout.Space(5);
+                
+                EditorGUILayout.HelpBox(LanguageManager.GetText("这些环境变量会在Python初始化时自动设置，您可以查看和调试当前值", "These environment variables will be automatically set when Python initializes. You can view and debug current values"), MessageType.Info);
+                EditorGUILayout.Space(5);
+                
+                DrawEnvironmentVariables();
+                
+                EditorGUILayout.EndVertical();
+            }
             
             EditorGUILayout.Space(10);
             
@@ -3214,31 +3196,17 @@ namespace UnityAIAgent.Editor
             {
                 EditorGUILayout.BeginVertical("box");
                 
-                // 定义所有项目相关的环境变量
+                // 定义核心环境变量
                 var environmentVariables = new Dictionary<string, (string description, bool isPath)>
                 {
                     {"PROJECT_ROOT_PATH", (LanguageManager.GetText("项目根目录路径", "Project Root Path"), true)},
-                    {"STRANDS_TOOLS_PATH", (LanguageManager.GetText("Strands工具路径", "Strands Tools Path"), true)},
                     {"NODE_EXECUTABLE_PATH", (LanguageManager.GetText("Node.js可执行文件路径", "Node.js Executable Path"), true)},
                     {"MCP_CONFIG_PATH", (LanguageManager.GetText("MCP配置文件路径", "MCP Configuration File Path"), true)},
-                    {"MCP_UNITY_SERVER_PATH", (LanguageManager.GetText("MCP Unity服务器路径", "MCP Unity Server Path"), true)},
-                    {"SSL_CERT_FILE_PATH", (LanguageManager.GetText("SSL证书文件路径", "SSL Certificate File Path"), true)},
-                    {"SSL_CERT_DIR_PATH", (LanguageManager.GetText("SSL证书目录路径", "SSL Certificate Directory Path"), true)},
-                    {"SHELL_EXECUTABLE_PATH", (LanguageManager.GetText("Shell可执行文件路径", "Shell Executable Path"), true)},
                     {"PYTHONHOME", (LanguageManager.GetText("Python主目录", "Python Home Directory"), true)},
-                    {"PYTHONPATH", (LanguageManager.GetText("Python模块搜索路径", "Python Module Search Path"), true)},
-                    {"PYTHONIOENCODING", (LanguageManager.GetText("Python IO编码", "Python IO Encoding"), false)},
-                    {"LC_ALL", (LanguageManager.GetText("系统语言环境", "System Locale"), false)},
-                    {"LANG", (LanguageManager.GetText("系统语言", "System Language"), false)},
-                    {"PYTHONHTTPSVERIFY", (LanguageManager.GetText("Python HTTPS验证", "Python HTTPS Verification"), false)},
-                    {"SSL_CERT_DIR", (LanguageManager.GetText("SSL证书目录", "SSL Certificate Directory"), true)},
-                    {"SSL_CERT_FILE", (LanguageManager.GetText("SSL证书文件", "SSL Certificate File"), true)},
-                    {"REQUESTS_CA_BUNDLE", (LanguageManager.GetText("Requests CA证书包", "Requests CA Bundle"), true)},
-                    {"CURL_CA_BUNDLE", (LanguageManager.GetText("Curl CA证书包", "Curl CA Bundle"), true)},
-                    {"DYLD_LIBRARY_PATH", (LanguageManager.GetText("动态库路径 (macOS)", "Dynamic Library Path (macOS)"), true)}
+                    {"PYTHONPATH", (LanguageManager.GetText("Python模块搜索路径", "Python Module Search Path"), true)}
                 };
                 
-                envVarScrollPosition = EditorGUILayout.BeginScrollView(envVarScrollPosition, GUILayout.Height(300));
+                envVarScrollPosition = EditorGUILayout.BeginScrollView(envVarScrollPosition, GUILayout.Height(200));
                 
                 foreach (var kvp in environmentVariables)
                 {
