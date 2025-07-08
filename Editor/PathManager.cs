@@ -171,10 +171,28 @@ namespace UnityAIAgent.Editor
                 // 处理包含通配符的路径
                 if (path.Contains("*"))
                 {
-                    string baseDir = Path.GetDirectoryName(path);
-                    string pattern = Path.GetFileName(path);
+                    // 找到通配符的位置，分离路径和模式
+                    string[] pathParts = path.Split(Path.DirectorySeparatorChar);
+                    string baseDir = "";
+                    string pattern = "";
+                    string remainingPath = "";
                     
-                    Debug.Log($"通配符路径 - 基础目录: {baseDir}, 模式: {pattern}");
+                    for (int i = 0; i < pathParts.Length; i++)
+                    {
+                        if (pathParts[i].Contains("*"))
+                        {
+                            // 找到通配符部分
+                            baseDir = string.Join(Path.DirectorySeparatorChar.ToString(), pathParts, 0, i);
+                            pattern = pathParts[i];
+                            if (i + 1 < pathParts.Length)
+                            {
+                                remainingPath = string.Join(Path.DirectorySeparatorChar.ToString(), pathParts, i + 1, pathParts.Length - i - 1);
+                            }
+                            break;
+                        }
+                    }
+                    
+                    Debug.Log($"通配符路径 - 基础目录: {baseDir}, 模式: {pattern}, 剩余路径: {remainingPath}");
                     
                     if (Directory.Exists(baseDir))
                     {
@@ -182,12 +200,13 @@ namespace UnityAIAgent.Editor
                         Debug.Log($"找到 {matchingDirs.Length} 个匹配目录");
                         foreach (string dir in matchingDirs)
                         {
-                            Debug.Log($"检查匹配目录: {dir}");
-                            // 注意：路径中已经包含了"Python"，所以不需要再添加
-                            if (Directory.Exists(dir) && File.Exists(Path.Combine(dir, "agent_core.py")))
+                            string fullPath = string.IsNullOrEmpty(remainingPath) ? dir : Path.Combine(dir, remainingPath);
+                            Debug.Log($"检查匹配目录: {fullPath}");
+                            
+                            if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "agent_core.py")))
                             {
-                                Debug.Log($"找到Unity Agent Python路径: {dir}");
-                                return dir;
+                                Debug.Log($"找到Unity Agent Python路径: {fullPath}");
+                                return fullPath;
                             }
                         }
                     }
