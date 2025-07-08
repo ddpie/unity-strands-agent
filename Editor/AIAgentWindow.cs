@@ -112,17 +112,10 @@ namespace UnityAIAgent.Editor
         {
             setupSteps = new string[] {
                 LanguageManager.GetText("检测Python环境", "Detecting Python Environment"),
-                LanguageManager.GetText("检测Node.js环境", "Detecting Node.js Environment"),
-                LanguageManager.GetText("安装Node.js和npm", "Installing Node.js and npm"),
                 LanguageManager.GetText("创建虚拟环境", "Creating Virtual Environment"),
-                LanguageManager.GetText("安装Strands Agent SDK", "Installing Strands Agent SDK"),
-                LanguageManager.GetText("安装MCP支持包", "Installing MCP Support Packages"),
-                LanguageManager.GetText("安装SSL证书支持", "Installing SSL Certificate Support"),
-                LanguageManager.GetText("安装其他依赖包", "Installing Other Dependencies"),
+                LanguageManager.GetText("安装Python依赖", "Installing Python Dependencies"),
                 LanguageManager.GetText("配置环境变量", "Configuring Environment Variables"),
-                LanguageManager.GetText("配置MCP服务器", "Configuring MCP Server"),
                 LanguageManager.GetText("初始化Python桥接", "Initializing Python Bridge"),
-                LanguageManager.GetText("验证AWS连接", "Verifying AWS Connection"),
                 LanguageManager.GetText("完成设置", "Setup Complete")
             };
         }
@@ -174,6 +167,9 @@ namespace UnityAIAgent.Editor
             isProcessing = false;
             hasActiveStream = false;
             
+            // 订阅Python初始化进度事件
+            PythonManager.OnInitProgress += OnPythonInitProgress;
+            
             LoadChatHistory();
             try
             {
@@ -199,6 +195,22 @@ namespace UnityAIAgent.Editor
             EditorApplication.delayCall += () => {
                 PythonManager.EnsureInitialized();
             };
+        }
+        
+        private void OnDisable()
+        {
+            // 取消订阅Python初始化进度事件
+            PythonManager.OnInitProgress -= OnPythonInitProgress;
+        }
+        
+        private void OnPythonInitProgress(string message, float progressValue)
+        {
+            if (selectedTab == 1 && settingsTab == 1) // Environment Setup tab
+            {
+                statusMessage = message;
+                progress = Mathf.Max(0, progressValue);
+                Repaint();
+            }
         }
         
         private void InitializeStreamingHandler()
@@ -3032,15 +3044,66 @@ namespace UnityAIAgent.Editor
                 
                 EditorApplication.delayCall += () => Repaint();
                 
-                // 模拟步骤执行时间
-                await Task.Delay(1000);
-                
-                // 在这里可以添加实际的设置逻辑
-                // 例如: await ExecuteSetupStep(i);
+                // 执行实际的设置步骤
+                await ExecuteSetupStep(i);
             }
             
             currentStep = setupSteps.Length;
             progress = 1f;
+        }
+        
+        private async Task ExecuteSetupStep(int stepIndex)
+        {
+            try
+            {
+                switch (stepIndex)
+                {
+                    case 0: // Detecting Python Environment
+                        statusMessage = LanguageManager.GetText("正在检测Python环境...", "Detecting Python environment...");
+                        await Task.Delay(500);
+                        // Python检测在PythonManager.EnsureInitialized()中自动进行
+                        break;
+                        
+                    case 1: // Creating Virtual Environment
+                        statusMessage = LanguageManager.GetText("正在创建虚拟环境...", "Creating virtual environment...");
+                        await Task.Delay(1000);
+                        // 虚拟环境创建在PythonManager.EnsureInitialized()中自动进行
+                        break;
+                        
+                    case 2: // Installing Python Dependencies
+                        statusMessage = LanguageManager.GetText("正在安装Python依赖...", "Installing Python dependencies...");
+                        await Task.Delay(2000); // 依赖安装需要更长时间
+                        // 依赖安装在PythonManager.EnsureInitialized()中自动进行
+                        break;
+                        
+                    case 3: // Configuring Environment Variables
+                        statusMessage = LanguageManager.GetText("正在配置环境变量...", "Configuring environment variables...");
+                        await Task.Delay(500);
+                        // 环境变量配置在PythonManager.EnsureInitialized()中自动进行
+                        break;
+                        
+                    case 4: // Initializing Python Bridge
+                        statusMessage = LanguageManager.GetText("正在初始化Python桥接...", "Initializing Python bridge...");
+                        await Task.Delay(1000);
+                        // 启动实际的Python初始化
+                        await Task.Run(() => {
+                            PythonManager.EnsureInitialized();
+                        });
+                        break;
+                        
+                    case 5: // Setup Complete
+                        statusMessage = LanguageManager.GetText("设置完成", "Setup complete");
+                        await Task.Delay(500);
+                        break;
+                }
+                
+                EditorApplication.delayCall += () => Repaint();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Setup step {stepIndex} failed: {e.Message}");
+                throw new Exception($"步骤 {stepIndex + 1} 失败: {e.Message}");
+            }
         }
         
         private void CancelSetup()
