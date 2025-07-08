@@ -126,15 +126,8 @@ namespace UnityAIAgent.Editor
             }
             
             
-            // 验证MCP服务器路径
-            if (!string.IsNullOrEmpty(mcpUnityServerPath))
-            {
-                string mcpServerAbsPath = GetAbsolutePath(mcpUnityServerPath);
-                if (!File.Exists(mcpServerAbsPath))
-                {
-                    errors.Add($"MCP服务器文件不存在: {mcpServerAbsPath}");
-                }
-            }
+            // MCP服务器路径验证（可选，不影响整体配置有效性）
+            ValidateMCPServerPath();
             
             // 验证Python路径
             bool foundValidPython = false;
@@ -153,6 +146,22 @@ namespace UnityAIAgent.Editor
             }
             
             return (errors.Count == 0, errors);
+        }
+        
+        /// <summary>
+        /// 验证MCP服务器路径（可选验证，仅显示警告）
+        /// </summary>
+        private void ValidateMCPServerPath()
+        {
+            if (!string.IsNullOrEmpty(mcpUnityServerPath))
+            {
+                string mcpServerAbsPath = GetAbsolutePath(mcpUnityServerPath);
+                if (!File.Exists(mcpServerAbsPath))
+                {
+                    Debug.LogWarning($"⚠️ MCP服务器文件不存在: {mcpServerAbsPath}\n" +
+                        "这是可选功能，不影响Unity Strands Agent核心功能的使用。");
+                }
+            }
         }
         
         /// <summary>
