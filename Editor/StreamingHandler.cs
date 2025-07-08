@@ -17,7 +17,7 @@ namespace UnityAIAgent.Editor
         private bool isCompleted = false;
         private CancellationTokenSource cancellationTokenSource;
         private Queue<StreamChunk> chunkQueue = new Queue<StreamChunk>();
-        private readonly object queueLock = new object();
+        private bool isProcessingQueue = false;
         
         // 构造函数 - 注册播放模式状态变化监听
         public StreamingHandler()
@@ -206,8 +206,7 @@ namespace UnityAIAgent.Editor
                     }
                 );
                 
-                // 处理队列中的数据块
-                ProcessChunkQueue();
+                // 注意：队列处理已经在EnqueueChunk中进行
             }
             catch (OperationCanceledException)
             {
@@ -222,47 +221,43 @@ namespace UnityAIAgent.Editor
         }
         
         /// <summary>
-        /// 将数据块加入队列
+        /// 将数据块加入队列并立即处理
         /// </summary>
         private void EnqueueChunk(StreamChunk chunk)
         {
-            lock (queueLock)
-            {
-                chunkQueue.Enqueue(chunk);
-                Debug.Log($"[StreamingHandler] 入队chunk类型: {chunk.Type}，队列长度: {chunkQueue.Count}");
-            }
+            chunkQueue.Enqueue(chunk);
+            Debug.Log($"[StreamingHandler] 入队chunk类型: {chunk.Type}，队列长度: {chunkQueue.Count}");
             
-            // 在主线程中处理
-            EditorApplication.delayCall += ProcessAllChunks;
+            // 单线程处理 - 立即处理chunk
+            ProcessSingleChunk();
         }
         
         /// <summary>
-        /// 处理所有待处理的数据块
+        /// 单线程处理队列中的chunk
         /// </summary>
-        private void ProcessAllChunks()
+        private void ProcessSingleChunk()
         {
-            // 一次性处理队列中的所有chunk，确保顺序
-            while (true)
+            // 防止重入
+            if (isProcessingQueue)
             {
-                StreamChunk chunk = null;
-                
-                lock (queueLock)
+                return;
+            }
+            
+            isProcessingQueue = true;
+            
+            try
+            {
+                // 处理队列中所有chunk，确保顺序
+                while (chunkQueue.Count > 0)
                 {
-                    if (chunkQueue.Count > 0)
-                    {
-                        chunk = chunkQueue.Dequeue();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                
-                if (chunk != null)
-                {
-                    Debug.Log($"[StreamingHandler] 出队处理chunk类型: {chunk.Type}");
+                    var chunk = chunkQueue.Dequeue();
+                    Debug.Log($"[StreamingHandler] 处理chunk类型: {chunk.Type}");
                     HandleChunk(chunk);
                 }
+            }
+            finally
+            {
+                isProcessingQueue = false;
             }
         }
         
@@ -273,20 +268,10 @@ namespace UnityAIAgent.Editor
         {
             Debug.Log($"[StreamingHandler] 紧急处理所有队列中的数据块，当前队列长度: {chunkQueue.Count}");
             
-            List<StreamChunk> chunksToProcess = new List<StreamChunk>();
-            
-            // 先取出所有chunk
-            lock (queueLock)
+            // 单线程顺序处理所有chunk
+            while (chunkQueue.Count > 0)
             {
-                while (chunkQueue.Count > 0)
-                {
-                    chunksToProcess.Add(chunkQueue.Dequeue());
-                }
-            }
-            
-            // 处理所有chunk
-            foreach (var chunk in chunksToProcess)
-            {
+                var chunk = chunkQueue.Dequeue();
                 if (chunk.Type == "chunk" && !string.IsNullOrEmpty(chunk.Content))
                 {
                     // 直接触发事件，不经过HandleChunk以避免状态检查
@@ -295,54 +280,6 @@ namespace UnityAIAgent.Editor
             }
         }
         
-        /// <summary>
-        /// 处理下一个数据块
-        /// </summary>
-        private void ProcessNextChunk()
-        {
-            StreamChunk chunk = null;
-            
-            lock (queueLock)
-            {
-                if (chunkQueue.Count > 0)
-                {
-                    chunk = chunkQueue.Dequeue();
-                }
-            }
-            
-            if (chunk != null)
-            {
-                HandleChunk(chunk);
-            }
-        }
-        
-        /// <summary>
-        /// 处理所有队列中的数据块
-        /// </summary>
-        private void ProcessChunkQueue()
-        {
-            while (true)
-            {
-                StreamChunk chunk = null;
-                
-                lock (queueLock)
-                {
-                    if (chunkQueue.Count > 0)
-                    {
-                        chunk = chunkQueue.Dequeue();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                
-                if (chunk != null)
-                {
-                    EditorApplication.delayCall += () => HandleChunk(chunk);
-                }
-            }
-        }
         
         /// <summary>
         /// 处理单个数据块
@@ -405,10 +342,7 @@ namespace UnityAIAgent.Editor
             {
                 StopStreaming();
                 
-                lock (queueLock)
-                {
-                    chunkQueue.Clear();
-                }
+                chunkQueue.Clear();
                 
                 OnChunkReceived = null;
                 OnStreamStarted = null;

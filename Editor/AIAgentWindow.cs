@@ -2203,14 +2203,9 @@ namespace UnityAIAgent.Editor
                 Debug.Log($"[AIAgentWindow] Updated message, current length: {currentStreamText.Length}");
             }
             
-            // UI更新
-            EditorApplication.delayCall += () => {
-                if (this != null)
-                {
-                    scrollToBottom = true;
-                    Repaint();
-                }
-            };
+            // 直接更新UI，避免delayCall导致的竞态条件
+            scrollToBottom = true;
+            Repaint();
         }
         
         private void OnStreamComplete()
@@ -2232,14 +2227,9 @@ namespace UnityAIAgent.Editor
             currentStreamingMessageIndex = -1;
             isProcessing = false;
             
-            // UI更新
-            EditorApplication.delayCall += () => {
-                if (this != null)
-                {
-                    SaveChatHistory();
-                    Repaint();
-                }
-            };
+            // 直接更新UI和保存历史
+            SaveChatHistory();
+            Repaint();
         }
         
         private void OnStreamError(string error)
@@ -2281,13 +2271,9 @@ namespace UnityAIAgent.Editor
             currentStreamText = "";
             currentStreamingMessageIndex = -1;
             
-            EditorApplication.delayCall += () => {
-                if (this != null)
-                {
-                    SaveChatHistory();
-                    Repaint();
-                }
-            };
+            // 直接更新UI和保存历史
+            SaveChatHistory();
+            Repaint();
         }
         
         private void DrawSettingsInterface()
