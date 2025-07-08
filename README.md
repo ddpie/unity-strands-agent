@@ -110,6 +110,8 @@ graph TD
 2. 在聊天界面输入问题或需求
 3. Unity Strands Agent 将提供代码生成、优化建议和问题解决方案
 
+**视频教程**: [Unity Strands Agent 功能演示](https://www.bilibili.com/video/BV1jgGJzhEZs/)
+
 ![Unity Strands Agent 中文界面](Assets/Resources/unity_strands_agent_demo.png)
 
 主要功能包括：
@@ -270,6 +272,8 @@ Through Unity Package Manager:
 1. Navigate to `Window → Unity Strands Agent` in Unity Editor
 2. Type your development questions or describe what you want to build
 3. Receive contextual code suggestions, explanations, and step-by-step solutions
+
+**Video Demo**: [Unity Strands Agent Demo](https://www.bilibili.com/video/BV1jgGJzhEZs/)
 
 ![Unity Strands Agent English Interface](Assets/Resources/unity_strands_agent_demo_en.png)
 
