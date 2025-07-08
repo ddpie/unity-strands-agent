@@ -1,6 +1,6 @@
 {
   "name": "com.ddpie.unity-strands-agent",
-  "version": "1.0.0",
+  "version": "0.1.0-beta",
   "displayName": "Unity Strands Agent",
   "description": "基于Strands Agent SDK的Unity AI智能助手插件，支持通过Git URL安装并自动部署Python代码",
   "unity": "2022.3",
