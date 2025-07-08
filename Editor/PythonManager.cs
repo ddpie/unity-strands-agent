@@ -674,10 +674,10 @@ namespace UnityAIAgent.Editor
             
             EnsureInitialized();
             
-            string pipPath = GetPipPath();
-            if (string.IsNullOrEmpty(pipPath))
+            string pipPath = Path.Combine(venvPath, "bin", "pip");
+            if (!File.Exists(pipPath))
             {
-                throw new InvalidOperationException("无法找到pip可执行文件");
+                throw new InvalidOperationException($"无法找到pip可执行文件: {pipPath}");
             }
             
             var process = new Process();

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Python.Runtime;
@@ -199,8 +200,7 @@ namespace UnityAIAgent.Editor
             
             GUILayout.Space(10);
             
-            // 快速安装选项
-            DrawQuickInstallOptions();
+            // 快速安装选项已移除
         }
         
         private void DrawPathConfigContent()
