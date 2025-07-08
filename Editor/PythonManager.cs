@@ -326,17 +326,12 @@ namespace UnityAIAgent.Editor
         
         public static void CreateVirtualEnvironment()
         {
-            // 强制使用插件目录下的虚拟环境
-            string packagePythonPath = PathManager.GetUnityAgentPythonPath();
-            if (string.IsNullOrEmpty(packagePythonPath))
-            {
-                throw new Exception("无法找到插件Python目录，无法创建虚拟环境");
-            }
+            // 使用项目目录下的虚拟环境
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
+            venvPath = Path.Combine(projectPath, "Python", "venv");
             
-            // 强制在插件的Python目录下使用venv
-            venvPath = Path.Combine(packagePythonPath, "venv");
             EditorApplication.delayCall += () => {
-                UnityEngine.Debug.Log($"强制使用插件目录虚拟环境: {venvPath}");
+                UnityEngine.Debug.Log($"使用项目目录虚拟环境: {venvPath}");
             };
             
             if (!Directory.Exists(venvPath))
@@ -522,18 +517,37 @@ namespace UnityAIAgent.Editor
         {
             string pipPath = Path.Combine(venvPath, "bin", "pip");
             
-            // 强制使用插件目录的requirements.txt
-            string packagePythonPath = PathManager.GetUnityAgentPythonPath();
-            if (string.IsNullOrEmpty(packagePythonPath))
+            // 首先尝试使用项目目录的requirements.txt
+            string projectPath = Path.GetDirectoryName(Application.dataPath);
+            string requirementsPath = Path.Combine(projectPath, "Python", "requirements.txt");
+            
+            // 如果项目目录没有requirements.txt，尝试使用插件目录的
+            if (!File.Exists(requirementsPath))
             {
-                throw new Exception("无法找到插件Python目录，无法安装依赖");
+                string packagePythonPath = PathManager.GetUnityAgentPythonPath();
+                if (!string.IsNullOrEmpty(packagePythonPath))
+                {
+                    string pluginRequirementsPath = Path.Combine(packagePythonPath, "requirements.txt");
+                    if (File.Exists(pluginRequirementsPath))
+                    {
+                        requirementsPath = pluginRequirementsPath;
+                        EditorApplication.delayCall += () => {
+                            UnityEngine.Debug.Log($"使用插件目录的requirements.txt: {requirementsPath}");
+                        };
+                    }
+                }
+            }
+            else
+            {
+                EditorApplication.delayCall += () => {
+                    UnityEngine.Debug.Log($"使用项目目录的requirements.txt: {requirementsPath}");
+                };
             }
             
-            string requirementsPath = Path.Combine(packagePythonPath, "requirements.txt");
             if (!File.Exists(requirementsPath))
             {
                 EditorApplication.delayCall += () => {
-                    UnityEngine.Debug.LogWarning($"requirements.txt不存在: {requirementsPath}，跳过依赖安装");
+                    UnityEngine.Debug.LogWarning($"requirements.txt不存在，跳过依赖安装");
                 };
                 return;
             }
