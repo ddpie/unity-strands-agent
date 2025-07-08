@@ -181,14 +181,22 @@ namespace UnityAIAgent.Editor
             }
             InitializeStreamingHandler();
             
+            // 只加载必要的基础配置，不执行耗时的初始化操作
+            CheckSetupStatus();
+        }
+        
+        /// <summary>
+        /// 执行完整的环境初始化，包括MCP配置、路径配置和Python环境
+        /// 这个方法只在用户点击"Start Setup"按钮时调用
+        /// </summary>
+        private void PerformFullInitialization()
+        {
             // Initialize MCP configuration - 强制重新加载
             mcpJsonConfig = null; // 清除缓存，强制重新加载
             LoadMCPConfiguration();
             
             // Initialize Path configuration
             LoadPathConfiguration();
-            
-            CheckSetupStatus();
             
             // Ensure Python is initialized
             EditorApplication.delayCall += () => {
@@ -3011,7 +3019,10 @@ namespace UnityAIAgent.Editor
             
             try
             {
-                // 执行实际的设置步骤
+                // 首先执行完整的环境初始化
+                PerformFullInitialization();
+                
+                // 然后执行设置步骤
                 await PerformSetupSteps();
                 
                 setupCompleted = true;
