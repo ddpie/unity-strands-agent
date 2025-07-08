@@ -110,6 +110,8 @@ graph TD
 2. 在聊天界面输入问题或需求
 3. Unity Strands Agent 将提供代码生成、优化建议和问题解决方案
 
+![Unity Strands Agent 中文界面](Assets/Resources/unity_strands_agent_demo.png)
+
 主要功能包括：
 - 项目结构分析和组件关系理解
 - 根据需求生成符合项目风格的 C# 脚本
@@ -268,6 +270,8 @@ Through Unity Package Manager:
 1. Navigate to `Window → Unity Strands Agent` in Unity Editor
 2. Type your development questions or describe what you want to build
 3. Receive contextual code suggestions, explanations, and step-by-step solutions
+
+![Unity Strands Agent English Interface](Assets/Resources/unity_strands_agent_demo_en.png)
 
 Main capabilities include:
 - Smart code analysis and suggestions that match your project's style
