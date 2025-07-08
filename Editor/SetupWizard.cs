@@ -515,6 +515,7 @@ namespace UnityAIAgent.Editor
 
         private async void StartSetup()
         {
+            UnityEngine.Debug.Log("========== [SETUP] StartSetup 方法被调用 ==========");
             isProcessing = true;
             currentStep = 0;
             setupCompleted = false;

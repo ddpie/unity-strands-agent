@@ -53,10 +53,15 @@ namespace UnityAIAgent.Editor
                 // 2. 创建虚拟环境
                 CreateVirtualEnvironment();
                 
-                ReportProgress("正在配置环境...", 0.6f);
+                ReportProgress("正在配置环境...", 0.4f);
                 
                 // 3. 配置环境变量
                 ConfigureEnvironment();
+                
+                ReportProgress("正在安装Python依赖...", 0.6f);
+                
+                // 4. 安装必要的Python依赖包
+                InstallDependencies();
                 
                 ReportProgress("正在初始化Python引擎...", 0.8f);
                 
