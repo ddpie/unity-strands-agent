@@ -536,7 +536,7 @@ namespace UnityAIAgent.Editor
         
         private static void InstallDependencies()
         {
-            string pipPath = Path.Combine(venvPath, "bin", "pip");
+            string pipPath = Path.Combine(venvPath, "bin", "pip3");
             
             // 首先尝试使用项目目录的requirements.txt
             string projectPath = Path.GetDirectoryName(Application.dataPath);
@@ -621,7 +621,7 @@ namespace UnityAIAgent.Editor
         /// </summary>
         public static void InstallPythonPackage(string packageName)
         {
-            string pipPath = Path.Combine(venvPath, "bin", "pip");
+            string pipPath = Path.Combine(venvPath, "bin", "pip3");
             
             var process = new Process
             {
@@ -674,7 +674,7 @@ namespace UnityAIAgent.Editor
             
             EnsureInitialized();
             
-            string pipPath = Path.Combine(venvPath, "bin", "pip");
+            string pipPath = Path.Combine(venvPath, "bin", "pip3");
             if (!File.Exists(pipPath))
             {
                 throw new InvalidOperationException($"无法找到pip可执行文件: {pipPath}");
