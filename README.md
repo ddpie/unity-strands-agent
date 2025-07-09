@@ -85,7 +85,7 @@ graph TD
     UA ==>|依赖| SDK
     SDK ==>|调用| AWS
     SDK -.->|支持但未集成| OtherAI
-    UA -->|扩展| MCP
+    SDK -->|调用| MCP
     
     %% Subgraph styles
     style Unity fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
@@ -302,7 +302,7 @@ graph TD
     UA ==>|Depends on| SDK
     SDK ==>|Calls| AWS
     SDK -.->|Supports but not integrated| OtherAI
-    UA -->|Extends| MCP
+    SDK -->|Calls| MCP
     
     %% Subgraph styles
     style Unity fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
