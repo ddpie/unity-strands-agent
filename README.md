@@ -146,7 +146,7 @@ graph TD
 
 3. **开始使用**
    ```
-   点击 "Open AI Assistant" 即可开始与 AI 对话
+   点击 `Open AI Assistant` 即可开始与 AI 对话
    ```
 
 **系统要求**：Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
@@ -166,7 +166,7 @@ graph TD
 
 **重要**：
 - 本插件目前仅适配 Python 3.11，暂不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
-- 环境初始化将在点击 Environment Setup 的 Start Setup 按钮时进行，请耐心等待安装过程完成。
+- 环境初始化将在点击 `Environment Setup` 的 `Start Setup` 按钮时进行，请耐心等待安装过程完成。
 
 ### 安装步骤
 
@@ -180,11 +180,11 @@ graph TD
 
 ### 配置步骤
 
-1. 在 Unity 中选择菜单：Window → Unity Strands Agent
-2. 点击 "Settings" 标签页，然后点击 "Environment Setup"
-3. 点击 "Start Setup" 按钮开始自动安装
+1. 在 Unity 中选择菜单：`Window → Unity Strands Agent`
+2. 点击 `Settings` 标签页，然后点击 `Environment Setup`
+3. 点击 `Start Setup` 按钮开始自动安装
 4. 系统将自动完成环境检测、虚拟环境创建、依赖安装等步骤
-5. 配置完成后，点击 "Open AI Assistant" 开始使用
+5. 配置完成后，点击 `Open AI Assistant` 开始使用
 
 ### 环境配置
 
@@ -224,14 +224,14 @@ graph TD
 **Python 3.11 环境问题**
 - 确认系统已安装 Python 3.11：`python3.11 --version`
 - 在 macOS 上安装：`brew install python@3.11`
-- 重新运行"Environment Setup"进行自动配置
+- 重新运行 `Environment Setup` 进行自动配置
 
 **找不到agent_core模块**
-- 运行"Environment Setup"重新安装Python依赖
+- 运行 `Environment Setup` 重新安装Python依赖
 - 检查Library/PackageCache中是否有com.ddpie.unity-strands-agent包
 - 确认虚拟环境在项目Python目录中正确创建
 
-如有问题，请检查Unity控制台的错误日志，并在设置页面点击"验证配置"查看当前配置状态。
+如有问题，请检查Unity控制台的错误日志，并在设置页面点击 `验证配置` 查看当前配置状态。
 
 ### 支持和反馈
 
@@ -398,7 +398,7 @@ graph TD
 
 3. **Start Using**
    ```
-   Click "Open AI Assistant" to start chatting with AI
+   Click `Open AI Assistant` to start chatting with AI
    ```
 
 **Requirements**: Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
@@ -418,7 +418,7 @@ graph TD
 
 **Important**:
 - This plugin currently only supports Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
-- Environment initialization will occur when you click the Start Setup button in Environment Setup, please wait for the installation process to complete.
+- Environment initialization will occur when you click the `Start Setup` button in `Environment Setup`, please wait for the installation process to complete.
 
 ### Installation Steps
 
@@ -432,11 +432,11 @@ Through Unity Package Manager:
 
 ### Configuration Steps
 
-1. In Unity, select menu: Window → Unity Strands Agent
-2. Click "Settings" tab, then click "Environment Setup"
-3. Click "Start Setup" button to begin automatic installation
+1. In Unity, select menu: `Window → Unity Strands Agent`
+2. Click `Settings` tab, then click `Environment Setup`
+3. Click `Start Setup` button to begin automatic installation
 4. The system will automatically complete environment detection, virtual environment creation, dependency installation
-5. After configuration completes, click "Open AI Assistant" to start using
+5. After configuration completes, click `Open AI Assistant` to start using
 
 Main capabilities include:
 - Smart code analysis and suggestions that match your project's style
@@ -482,14 +482,14 @@ For detailed installation and usage instructions for the mcp-unity plugin, pleas
 **Python 3.11 Environment Issues**
 - Confirm Python 3.11 is installed on system: `python3.11 --version`
 - Install on macOS: `brew install python@3.11`
-- Re-run "Environment Setup" for automatic configuration
+- Re-run `Environment Setup` for automatic configuration
 
 **Cannot Find agent_core Module**
-- Run "Environment Setup" to reinstall Python dependencies
+- Run `Environment Setup` to reinstall Python dependencies
 - Check if com.ddpie.unity-strands-agent package exists in Library/PackageCache
 - Confirm virtual environment is correctly created in project Python directory
 
-If you encounter issues, check Unity console for error logs and click "Validate Configuration" in settings page to view current configuration status.
+If you encounter issues, check Unity console for error logs and click `Validate Configuration` in settings page to view current configuration status.
 
 ### Support and Feedback
 
