@@ -8,7 +8,31 @@
 
 ## 中文版本
 
-Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，通过深度理解 Unity 开发流程，为开发者提供智能化的开发辅助。该插件基于模块化架构设计，支持多种 AI 模型，并提供丰富的工具生态系统。
+Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，通过深度理解 Unity 开发流程，为开发者提供智能化的开发辅助。
+
+基于 [Strands Agents SDK](https://strandsagents.com/latest/) 开发智能助手极其简单，核心代码展示了其优雅的设计：
+
+```python
+from strands import Agent
+from unity_tools import get_unity_tools
+
+class UnityAgent:
+    def __init__(self):
+        # 获取 Unity 开发工具集
+        unity_tools = get_unity_tools()
+        
+        # 一行代码创建强大的 AI Agent
+        self.agent = Agent(
+            system_prompt=UNITY_SYSTEM_PROMPT, 
+            tools=unity_tools
+        )
+    
+    def process_message(self, message: str):
+        # 直接调用 Agent 处理消息
+        return self.agent(message)
+```
+
+仅需这几行代码，即可创建一个理解 Unity 开发上下文、配备 21+ 专业工具的智能助手。该插件基于模块化架构设计，轻松扩展工具集，并提供丰富的工具生态系统。
 
 ### 系统架构
 
@@ -31,10 +55,13 @@ graph TD
         MM[MCPManager<br/>MCP管理器]
     end
     
+    subgraph "Core Framework"
+        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>核心AI框架]
+    end
+    
     subgraph "External Services"
-        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>Strands代理SDK]
-        AWS[Amazon Bedrock<br/>Amazon AI服务]
-        MCP[MCP Servers<br/>MCP服务器]
+        AWS[Amazon Bedrock<br/>AI模型服务]
+        MCP[MCP Servers<br/>扩展服务]
     end
     
     UI -->|用户输入| SH
@@ -45,20 +72,24 @@ graph TD
     PM -->|配置| PATH
     PB -->|Python.NET| AC
     AC -->|创建实例| UA
+    UA ==>|核心依赖| SDK
     UA -->|流式响应| SP
     UA -->|加载工具| UT
     UA -->|管理MCP| MM
-    UA -->|调用SDK| SDK
-    SDK -->|AI推理| AWS
+    SDK ==>|AI推理| AWS
     MM -->|连接| MCP
     
-    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
-    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
-    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef agentStyle fill:#4a90e2,stroke:#2e5ea8,stroke-width:3px,color:#fff,font-weight:bold
+    classDef sdkStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px,color:#fff,font-weight:bold
+    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     
     class UI,SH,SM,PB,PM,PATH unityStyle
-    class AC,UA,SP,UT,MM pythonStyle
-    class SDK,AWS,MCP externalStyle
+    class AC,SP,UT,MM pythonStyle
+    class UA agentStyle
+    class SDK sdkStyle
+    class AWS,MCP externalStyle
 ```
 
 ### 主要特性
@@ -171,7 +202,29 @@ graph TD
 
 Unity Strands Agent is a powerful AI-powered development assistant that brings the capabilities of AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) directly into the Unity Editor. This plugin transforms your Unity development workflow by providing intelligent code generation, automated problem-solving, and context-aware development suggestions.
 
-Unity Strands Agent seamlessly integrates cutting-edge AI capabilities into your Unity development environment. Built on the robust [Strands Agents SDK](https://strandsagents.com/latest/) framework, this plugin understands Unity's unique development patterns, component systems, and best practices to deliver contextually relevant assistance.
+Building intelligent assistants with the [Strands Agents SDK](https://strandsagents.com/latest/) is remarkably simple. The core implementation showcases its elegant design:
+
+```python
+from strands import Agent
+from unity_tools import get_unity_tools
+
+class UnityAgent:
+    def __init__(self):
+        # Load Unity-specific development tools
+        unity_tools = get_unity_tools()
+        
+        # Create a powerful AI Agent with just one line
+        self.agent = Agent(
+            system_prompt=UNITY_SYSTEM_PROMPT, 
+            tools=unity_tools
+        )
+    
+    def process_message(self, message: str):
+        # Simply call the Agent to process messages
+        return self.agent(message)
+```
+
+With just these few lines of code, you can create an intelligent assistant that understands Unity development context and comes equipped with 21+ professional tools. Built on a modular architecture, this plugin makes it easy to extend the toolset while providing a rich ecosystem of development utilities.
 
 ### System Architecture
 
@@ -194,10 +247,13 @@ graph TD
         MM[MCPManager<br/>MCP Manager]
     end
     
+    subgraph "Core Framework"
+        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>Core AI Framework]
+    end
+    
     subgraph "External Services"
-        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>Strands SDK]
-        AWS[Amazon Bedrock<br/>Amazon AI Service]
-        MCP[MCP Servers<br/>MCP Servers]
+        AWS[Amazon Bedrock<br/>AI Model Service]
+        MCP[MCP Servers<br/>Extension Services]
     end
     
     UI -->|User Input| SH
@@ -208,20 +264,24 @@ graph TD
     PM -->|Configure| PATH
     PB -->|Python.NET| AC
     AC -->|Create Instance| UA
+    UA ==>|Core Dependency| SDK
     UA -->|Stream Response| SP
     UA -->|Load Tools| UT
     UA -->|Manage MCP| MM
-    UA -->|Call SDK| SDK
-    SDK -->|AI Inference| AWS
+    SDK ==>|AI Inference| AWS
     MM -->|Connect| MCP
     
-    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#000
-    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
-    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef agentStyle fill:#4a90e2,stroke:#2e5ea8,stroke-width:3px,color:#fff,font-weight:bold
+    classDef sdkStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px,color:#fff,font-weight:bold
+    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     
     class UI,SH,SM,PB,PM,PATH unityStyle
-    class AC,UA,SP,UT,MM pythonStyle
-    class SDK,AWS,MCP externalStyle
+    class AC,SP,UT,MM pythonStyle
+    class UA agentStyle
+    class SDK sdkStyle
+    class AWS,MCP externalStyle
 ```
 
 ### Key Features
