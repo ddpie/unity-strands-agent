@@ -24,22 +24,22 @@ class UnityAgent:
         from mcp_manager import MCPManager
         self.mcp_manager = MCPManager()
         
-        # 获取 Unity 开发工具集（包含 MCP 工具）
+        # 获取 Unity 开发工具集（自动包含 MCP 工具）
         unity_tools = get_unity_tools(include_mcp=True, agent_instance=self)
         
-        # 一行代码创建强大的 AI Agent
+        # 创建强大的 AI Agent，配备完整工具集
         self.agent = Agent(
             system_prompt=UNITY_SYSTEM_PROMPT, 
-            tools=unity_tools  # 包含21+内置工具 + mcp-unity工具
+            tools=unity_tools  # 21+内置工具 + mcp-unity Unity操作工具
         )
     
-    def _load_mcp_tools(self):
-        # 加载 mcp-unity 插件提供的 Unity 操作工具
-        return self.mcp_manager.load_mcp_tools()
-    
     def process_message(self, message: str):
-        # 直接调用 Agent 处理消息，支持 Unity 原生操作
+        # 处理用户消息，支持 Unity 原生操作
         return self.agent(message)
+    
+    def get_available_tools(self):
+        # 获取可用工具列表（包括 mcp-unity 提供的工具）
+        return [tool.__name__ for tool in self.agent.tools]
 ```
 
 仅需这几行代码，即可创建一个理解 Unity 开发上下文、配备 21+ 专业工具 + mcp-unity Unity 操作工具的智能助手。该插件基于模块化架构设计，轻松扩展工具集，并提供丰富的工具生态系统。
@@ -276,22 +276,22 @@ class UnityAgent:
         from mcp_manager import MCPManager
         self.mcp_manager = MCPManager()
         
-        # Load Unity development toolset (including MCP tools)
+        # Load Unity development toolset (automatically includes MCP tools)
         unity_tools = get_unity_tools(include_mcp=True, agent_instance=self)
         
-        # Create a powerful AI Agent with just one line
+        # Create a powerful AI Agent with complete toolset
         self.agent = Agent(
             system_prompt=UNITY_SYSTEM_PROMPT, 
-            tools=unity_tools  # Includes 21+ built-in tools + mcp-unity tools
+            tools=unity_tools  # 21+ built-in tools + mcp-unity Unity operation tools
         )
     
-    def _load_mcp_tools(self):
-        # Load Unity operation tools provided by mcp-unity plugin
-        return self.mcp_manager.load_mcp_tools()
-    
     def process_message(self, message: str):
-        # Simply call the Agent to process messages with Unity native operations
+        # Process user messages with Unity native operations support
         return self.agent(message)
+    
+    def get_available_tools(self):
+        # Get available tools list (including mcp-unity provided tools)
+        return [tool.__name__ for tool in self.agent.tools]
 ```
 
 With just these few lines of code, you can create an intelligent assistant that understands Unity development context and comes equipped with 21+ professional tools + mcp-unity Unity operation tools. Built on a modular architecture, this plugin makes it easy to extend the toolset while providing a rich ecosystem of development utilities.
