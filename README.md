@@ -2,7 +2,7 @@
 
 基于 AWS [Strands Agents SDK](https://strandsagents.com/latest/) 的 Unity 编辑器 AI 插件，在 Unity 编辑器中直接与 AI 对话，获得智能代码生成、问题解答和开发建议。
 
-**Language / 语言**: [中文](#中文版本) | [English](#english-version)
+**Language / 语言**：[中文](#中文版本) | [English](#english-version)
 
 ---
 
@@ -149,9 +149,9 @@ graph TD
    点击 "Open AI Assistant" 即可开始与 AI 对话
    ```
 
-**系统要求**: Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
+**系统要求**：Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
 
-**视频教程**: [Unity Strands Agent 功能演示](https://www.bilibili.com/video/BV1jgGJzhEZs/)
+**视频教程**：[Unity Strands Agent 功能演示](https://www.bilibili.com/video/BV1jgGJzhEZs/)
 
 ![Unity Strands Agent 中文界面](Assets/Resources/unity_strands_agent_demo.png)
 
@@ -235,26 +235,26 @@ graph TD
 
 ### 支持和反馈
 
-- **文档**: [Strands Agents SDK 官方文档](https://strandsagents.com/latest/)
-- **问题反馈**: [GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
+- **文档**：[Strands Agents SDK 官方文档](https://strandsagents.com/latest/)
+- **问题反馈**：[GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
 
 ### 参考资料
 
 #### Strands Agents SDK
-- **官方文档**: https://strandsagents.com/latest/
-- **Python SDK**: https://github.com/strands-agents/sdk-python
-- **示例代码**: https://github.com/strands-agents/samples
-- **工具包**: https://github.com/strands-agents/tools
-- **Agent Builder**: https://github.com/strands-agents/agent-builder
+- **官方文档**：https://strandsagents.com/latest/
+- **Python SDK**：https://github.com/strands-agents/sdk-python
+- **示例代码**：https://github.com/strands-agents/samples
+- **工具包**：https://github.com/strands-agents/tools
+- **Agent Builder**：https://github.com/strands-agents/agent-builder
 
 #### 技术实现
-- **Python.NET**: https://github.com/pythonnet/pythonnet
-- **Model Context Protocol (MCP)**: https://modelcontextprotocol.io/
-- **Unity Editor 扩展**: https://docs.unity3d.com/Manual/ExtendingTheEditor.html
+- **Python.NET**：https://github.com/pythonnet/pythonnet
+- **Model Context Protocol (MCP)**：https://modelcontextprotocol.io/
+- **Unity Editor 扩展**：https://docs.unity3d.com/Manual/ExtendingTheEditor.html
 
 #### 相关项目
-- **mcp-unity 插件**: https://github.com/CoderGamester/mcp-unity
-- **PythonForUnity**: https://github.com/Maesla/PythonForUnity
+- **mcp-unity 插件**：https://github.com/CoderGamester/mcp-unity
+- **PythonForUnity**：https://github.com/Maesla/PythonForUnity
 
 ---
 
