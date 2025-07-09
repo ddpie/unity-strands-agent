@@ -69,7 +69,7 @@ graph TD
 - **丰富的内置工具**: 提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
 - **MCP 协议支持**: 通过 Model Context Protocol 扩展第三方工具和服务集成能力
 - **一键式环境配置**: 自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
-- **多 AI 模型支持**: 基于 Amazon Bedrock，支持 Claude、GPT、Llama 等主流 AI 模型
+- **多 AI 模型支持**: [Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型，但本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet，计划将来支持其他模型
 - **智能上下文记忆**: 自动记住项目偏好和代码风格，提供个性化开发建议
 - **简化的用户界面**: 隐藏复杂配置，专注核心功能，提升开发效率
 
@@ -232,7 +232,7 @@ graph TD
 - **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
 - **MCP Protocol Support**: Seamlessly integrate external tools and services through the Model Context Protocol for unlimited extensibility
 - **One-Click Environment Setup**: Automatically detects Python 3.11, creates virtual environments, installs dependencies without manual configuration
-- **Multiple AI Model Support**: Powered by Amazon Bedrock with support for Claude, GPT, Llama, and other leading AI models
+- **Multiple AI Model Support**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models, but the current version of this plugin only supports Claude 3.7 Sonnet in Bedrock US Oregon (us-west-2) region, with plans to support other models in the future
 - **Intelligent Context Memory**: Automatically remembers your project patterns, coding style, and preferences across sessions
 - **Simplified User Interface**: Hides complex configurations, focuses on core functionality to boost development efficiency
 
