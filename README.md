@@ -155,8 +155,8 @@ graph TD
 - AWS credentials 配置（默认使用 Amazon Bedrock 服务，默认模型为 US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet）
 - **仅支持 macOS 系统**
 
-**重要**: 
-- 本插件专门针对 Python 3.11 进行了优化，不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
+**重要**：
+- 本插件目前仅适配 Python 3.11，暂不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
 - 环境初始化将在点击 Environment Setup 的 Start Setup 按钮时进行，请耐心等待安装过程完成。
 
 ### 安装步骤
@@ -398,8 +398,8 @@ graph TD
 - AWS credentials configuration (default model provider is Amazon Bedrock with Claude 3.7 Sonnet in the US Oregon (us-west-2) region)
 - **macOS only**
 
-**Important**: 
-- This plugin is specifically optimized for Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
+**Important**:
+- This plugin currently only supports Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
 - Environment initialization will occur when you click the Start Setup button in Environment Setup, please wait for the installation process to complete.
 
 ### Installation Steps
