@@ -37,59 +37,65 @@ class UnityAgent:
 ### 系统架构
 
 ```mermaid
-graph TB
-    subgraph "Unity Editor"
-        UI[AIAgentWindow<br/>主界面]
-        SH[StreamingHandler<br/>流式处理器]
-        SM[StreamingManager<br/>流式管理器]
-        PB[PythonBridge<br/>Python桥接]
-        PM[PythonManager<br/>Python管理器]
-        PATH[PathManager<br/>路径管理器]
+%%{init: {'theme':'neutral'}}%%
+graph TD
+    subgraph Unity["Unity 编辑器"]
+        UI[Unity AI Agent Window<br/>用户界面]
+        PB[Python Bridge<br/>Python桥接层]
     end
     
-    subgraph "Python Backend"
-        AC[agent_core<br/>代理核心]
-        UA[UnityAgent<br/>Unity代理]
-        SP[StreamingProcessor<br/>流式处理器]
-        UT[unity_tools<br/>Unity工具集]
-        MM[MCPManager<br/>MCP管理器]
+    subgraph AgentPython["智能 Agent 系统"]
+        AC[Agent Core<br/>Agent 核心]
+        UA[Unity Agent<br/>Unity 专用 Agent]
+        SDK[Strands Agents SDK<br/>核心AI框架]
     end
     
-    subgraph "Core Framework"
-        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>核心AI框架]
+    subgraph ModelServices["AI 模型服务"]
+        AWS[Amazon Bedrock<br/>✓ 已支持]
+        subgraph OtherAI[SDK支持但插件暂不支持]
+            ANTHROPIC[Anthropic Claude]
+            OPENAI[OpenAI GPT]
+            OLLAMA[Ollama 本地模型]
+            OTHERS[LiteLLM / Llama 等]
+        end
     end
     
-    subgraph "External Services"
-        AWS[Amazon Bedrock<br/>AI模型服务]
+    subgraph MCPServices["扩展服务生态"]
         MCP[MCP Servers<br/>扩展服务]
     end
     
-    UI -->|用户输入| SH
-    UI -->|调用Python| PB
-    SH -->|管理| SM
-    SM -.->|异步数据| SP
-    PM -->|初始化| PB
-    PM -->|配置| PATH
+    %% Connections
+    UI -->|用户交互| PB
     PB -->|Python.NET| AC
-    AC -->|创建实例| UA
-    UA ==>|核心依赖| SDK
-    UA -->|流式响应| SP
-    UA -->|加载工具| UT
-    UA -->|管理MCP| MM
-    SDK ==>|AI推理| AWS
-    MM -->|连接| MCP
+    AC -->|创建| UA
+    UA ==>|依赖| SDK
+    SDK ==>|调用| AWS
+    SDK -.->|支持但未集成| OtherAI
+    UA -->|扩展| MCP
     
-    classDef unityStyle fill:#b3d9ff,stroke:#0066cc,stroke-width:2px
-    classDef pythonStyle fill:#b3ffb3,stroke:#009900,stroke-width:2px
-    classDef agentStyle fill:#3399ff,stroke:#0066cc,stroke-width:3px,font-weight:bold
-    classDef sdkStyle fill:#ff5050,stroke:#cc0000,stroke-width:4px,font-weight:bold
-    classDef externalStyle fill:#ffcc99,stroke:#ff6600,stroke-width:2px
+    %% Subgraph styles
+    style Unity fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style AgentPython fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style ModelServices fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style MCPServices fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
     
-    class UI,SH,SM,PB,PM,PATH unityStyle
-    class AC,SP,UT,MM pythonStyle
-    class UA agentStyle
-    class SDK sdkStyle
-    class AWS,MCP externalStyle
+    %% Node styles - Blue for supported features
+    style UI fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style PB fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style AC fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style UA fill:#1976D2,stroke:#0D47A1,stroke-width:3px,color:#FFF
+    style AWS fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style MCP fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    
+    %% Core SDK - Red for emphasis
+    style SDK fill:#D32F2F,stroke:#B71C1C,stroke-width:4px,color:#FFF
+    
+    %% Unsupported services - Gray
+    style OtherAI fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5
+    style ANTHROPIC fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OPENAI fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OLLAMA fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OTHERS fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
 ```
 
 ### 主要特性
@@ -229,59 +235,65 @@ With just these few lines of code, you can create an intelligent assistant that 
 ### System Architecture
 
 ```mermaid
-graph TB
-    subgraph "Unity Editor"
-        UI[AIAgentWindow<br/>Main Interface]
-        SH[StreamingHandler<br/>Stream Handler]
-        SM[StreamingManager<br/>Stream Manager]
-        PB[PythonBridge<br/>Python Bridge]
-        PM[PythonManager<br/>Python Manager]
-        PATH[PathManager<br/>Path Manager]
+%%{init: {'theme':'neutral'}}%%
+graph TD
+    subgraph Unity["Unity Editor"]
+        UI[Unity AI Agent Window<br/>User Interface]
+        PB[Python Bridge<br/>Integration Bridge]
     end
     
-    subgraph "Python Backend"
-        AC[agent_core<br/>Agent Core]
-        UA[UnityAgent<br/>Unity Agent]
-        SP[StreamingProcessor<br/>Stream Processor]
-        UT[unity_tools<br/>Unity Tools]
-        MM[MCPManager<br/>MCP Manager]
+    subgraph AgentPython["AI Agent System"]
+        AC[Agent Core<br/>Core Agent System]
+        UA[Unity Agent<br/>Unity Specialized Agent]
+        SDK[Strands Agents SDK<br/>Core AI Framework]
     end
     
-    subgraph "Core Framework"
-        SDK[<a href="https://strandsagents.com/latest/">Strands Agents SDK</a><br/>Core AI Framework]
+    subgraph ModelServices["AI Model Services"]
+        AWS[Amazon Bedrock<br/>✓ Supported]
+        subgraph OtherAI[SDK Only]
+            ANTHROPIC[Anthropic Claude]
+            OPENAI[OpenAI GPT]
+            OLLAMA[Ollama Local Models]
+            OTHERS[LiteLLM / Llama etc]
+        end
     end
     
-    subgraph "External Services"
-        AWS[Amazon Bedrock<br/>AI Model Service]
+    subgraph MCPServices["Extension Ecosystem"]
         MCP[MCP Servers<br/>Extension Services]
     end
     
-    UI -->|User Input| SH
-    UI -->|Invoke Python| PB
-    SH -->|Manage| SM
-    SM -.->|Async Data| SP
-    PM -->|Initialize| PB
-    PM -->|Configure| PATH
+    %% Connections
+    UI -->|User Interaction| PB
     PB -->|Python.NET| AC
-    AC -->|Create Instance| UA
-    UA ==>|Core Dependency| SDK
-    UA -->|Stream Response| SP
-    UA -->|Load Tools| UT
-    UA -->|Manage MCP| MM
-    SDK ==>|AI Inference| AWS
-    MM -->|Connect| MCP
+    AC -->|Creates| UA
+    UA ==>|Depends on| SDK
+    SDK ==>|Calls| AWS
+    SDK -.->|Supports but not integrated| OtherAI
+    UA -->|Extends| MCP
     
-    classDef unityStyle fill:#b3d9ff,stroke:#0066cc,stroke-width:2px
-    classDef pythonStyle fill:#b3ffb3,stroke:#009900,stroke-width:2px
-    classDef agentStyle fill:#3399ff,stroke:#0066cc,stroke-width:3px,font-weight:bold
-    classDef sdkStyle fill:#ff5050,stroke:#cc0000,stroke-width:4px,font-weight:bold
-    classDef externalStyle fill:#ffcc99,stroke:#ff6600,stroke-width:2px
+    %% Subgraph styles
+    style Unity fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style AgentPython fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style ModelServices fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    style MCPServices fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
     
-    class UI,SH,SM,PB,PM,PATH unityStyle
-    class AC,SP,UT,MM pythonStyle
-    class UA agentStyle
-    class SDK sdkStyle
-    class AWS,MCP externalStyle
+    %% Node styles - Blue for supported features
+    style UI fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style PB fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style AC fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style UA fill:#1976D2,stroke:#0D47A1,stroke-width:3px,color:#FFF
+    style AWS fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    style MCP fill:#BBDEFB,stroke:#1976D2,stroke-width:2px
+    
+    %% Core SDK - Red for emphasis
+    style SDK fill:#D32F2F,stroke:#B71C1C,stroke-width:4px,color:#FFF
+    
+    %% Unsupported services - Gray
+    style OtherAI fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5
+    style ANTHROPIC fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OPENAI fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OLLAMA fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
+    style OTHERS fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
 ```
 
 ### Key Features
