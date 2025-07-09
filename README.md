@@ -8,7 +8,9 @@
 
 ## 中文版本
 
-Unity Strands Agent 将先进的 AI 能力直接集成到 Unity 编辑器中，通过深度理解 Unity 开发流程，为开发者提供智能化的开发辅助。
+Unity Strands Agent 是一个强大的 AI 开发助手，将 AWS 开源的 [Strands Agents SDK](https://strandsagents.com/latest/) 无缝集成到 Unity 编辑器中。该插件能够理解 Unity 项目结构和开发模式，为开发者提供智能代码生成、问题解答和开发建议，显著提升 Unity 开发效率。
+
+## 核心实现
 
 基于 [Strands Agents SDK](https://strandsagents.com/latest/) 开发智能助手极其简单，核心代码展示了其优雅的设计：
 
@@ -34,7 +36,19 @@ class UnityAgent:
 
 仅需这几行代码，即可创建一个理解 Unity 开发上下文、配备 21+ 专业工具的智能助手。该插件基于模块化架构设计，轻松扩展工具集，并提供丰富的工具生态系统。
 
-### 系统架构
+## 主要特性
+
+- **项目结构理解**: 智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
+- **组件管理**: 自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
+- **性能优化**: 基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
+- **丰富的内置工具**: 提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
+- **MCP 协议支持**: 通过 Model Context Protocol 扩展第三方工具和服务集成能力，支持 [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README_zh-CN.md) 等插件
+- **一键式环境配置**: 自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
+- **多 AI 模型支持**: [Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型，但本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet，计划将来支持其他模型
+- **智能上下文记忆**: 自动记住项目偏好和代码风格，提供个性化开发建议
+- **简化的用户界面**: 隐藏复杂配置，专注核心功能，提升开发效率
+
+## 系统架构
 
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
@@ -98,21 +112,35 @@ graph TD
     style OTHERS fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
 ```
 
-### 主要特性
+## 快速开始
 
-- **项目结构理解**: 智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
-- **组件管理**: 自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
-- **性能优化**: 基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
-- **丰富的内置工具**: 提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
-- **MCP 协议支持**: 通过 Model Context Protocol 扩展第三方工具和服务集成能力
-- **一键式环境配置**: 自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
-- **多 AI 模型支持**: [Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型，但本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet，计划将来支持其他模型
-- **智能上下文记忆**: 自动记住项目偏好和代码风格，提供个性化开发建议
-- **简化的用户界面**: 隐藏复杂配置，专注核心功能，提升开发效率
+### 5分钟快速体验
 
-### 快速开始
+1. **安装插件**
+   ```
+   Unity Package Manager → Add package from git URL
+   输入：https://github.com/ddpie/unity-strands-agent.git
+   ```
 
-#### 系统要求
+2. **一键配置**
+   ```
+   Window → Unity Strands Agent → Settings → Environment Setup → Start Setup
+   ```
+
+3. **开始使用**
+   ```
+   点击 "Open AI Assistant" 即可开始与 AI 对话
+   ```
+
+**系统要求**: Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
+
+**视频教程**: [Unity Strands Agent 功能演示](https://www.bilibili.com/video/BV1jgGJzhEZs/)
+
+![Unity Strands Agent 中文界面](Assets/Resources/unity_strands_agent_demo.png)
+
+## 详细配置
+
+### 系统要求
 
 - Unity 2022.3 LTS 或更高版本
 - Python 3.11（插件会自动检测和配置）
@@ -123,7 +151,7 @@ graph TD
 - 本插件专门针对 Python 3.11 进行了优化，不支持其他 Python 版本。在 macOS 上可通过 `brew install python@3.11` 安装。
 - 环境初始化将在点击 Environment Setup 的 Start Setup 按钮时进行，请耐心等待安装过程完成。
 
-#### 安装方法
+### 安装步骤
 
 通过 Unity Package Manager 安装：
 
@@ -133,29 +161,13 @@ graph TD
 4. 输入：`https://github.com/ddpie/unity-strands-agent.git`
 5. 点击 "Add" 并等待 Unity 自动下载和导入
 
-#### 配置步骤
+### 配置步骤
 
 1. 在 Unity 中选择菜单：Window → Unity Strands Agent
 2. 点击 "Settings" 标签页，然后点击 "Environment Setup"
 3. 点击 "Start Setup" 按钮开始自动安装
 4. 系统将自动完成环境检测、虚拟环境创建、依赖安装等步骤
 5. 配置完成后，点击 "Open AI Assistant" 开始使用
-
-### 使用指南
-
-1. 在 Unity 中选择菜单 Window → Unity Strands Agent
-2. 在聊天界面输入问题或需求
-3. Unity Strands Agent 将提供代码生成、优化建议和问题解决方案
-
-**视频教程**: [Unity Strands Agent 功能演示](https://www.bilibili.com/video/BV1jgGJzhEZs/)
-
-![Unity Strands Agent 中文界面](Assets/Resources/unity_strands_agent_demo.png)
-
-主要功能包括：
-- 项目结构分析和组件关系理解
-- 根据需求生成符合项目风格的 C# 脚本
-- 提供针对性的性能优化建议
-- 帮助诊断和解决常见的 Unity 开发问题
 
 ### 环境配置
 
@@ -166,17 +178,24 @@ graph TD
 
 配置文件保存在 `Assets/UnityAIAgent/PathConfiguration.asset` 中，会自动加载。插件使用 AWS credentials 配置文件访问 Bedrock 服务。
 
-**MCP 服务器配置**：在 `Assets/UnityAIAgent/mcp_config.json` 中配置 MCP 服务器时，建议使用绝对路径配置 `command` 字段，例如：
+**MCP 服务器配置**：通过 Unity 编辑器界面配置 MCP 服务器，在 Settings → MCP Configuration 中以 JSON 格式添加服务器配置。建议使用绝对路径配置 `command` 字段，例如配置 mcp-unity 插件：
 ```json
 {
   "mcpServers": {
     "mcp-unity": {
       "command": "/usr/local/bin/node",
-      "args": ["/path/to/your/mcp-server/index.js"]
+      "env": {
+        "UNITY_PORT": "8090"
+      },
+      "args": [
+        "/path/to/your/unity-project/Library/PackageCache/com.gamelovers.mcp-unity@latest/Server/build/index.js"
+      ]
     }
   }
 }
 ```
+
+关于 mcp-unity 插件的详细安装和使用说明，请参考：[mcp-unity 插件文档](https://github.com/CoderGamester/mcp-unity/blob/main/README_zh-CN.md)
 
 ### 故障排除
 
@@ -206,7 +225,9 @@ graph TD
 
 ## English Version
 
-Unity Strands Agent is a powerful AI-powered development assistant that brings the capabilities of AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) directly into the Unity Editor. This plugin transforms your Unity development workflow by providing intelligent code generation, automated problem-solving, and context-aware development suggestions.
+Unity Strands Agent is a powerful AI development assistant that seamlessly integrates AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) into the Unity Editor. This plugin understands Unity project structures and development patterns, providing intelligent code generation, problem-solving, and development suggestions to significantly boost Unity development efficiency.
+
+## Core Implementation
 
 Building intelligent assistants with the [Strands Agents SDK](https://strandsagents.com/latest/) is remarkably simple. The core implementation showcases its elegant design:
 
@@ -232,7 +253,19 @@ class UnityAgent:
 
 With just these few lines of code, you can create an intelligent assistant that understands Unity development context and comes equipped with 21+ professional tools. Built on a modular architecture, this plugin makes it easy to extend the toolset while providing a rich ecosystem of development utilities.
 
-### System Architecture
+## Key Features
+
+- **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
+- **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
+- **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
+- **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
+- **MCP Protocol Support**: Seamlessly integrate external tools and services through the Model Context Protocol for unlimited extensibility, supports plugins like [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README.md)
+- **One-Click Environment Setup**: Automatically detects Python 3.11, creates virtual environments, installs dependencies without manual configuration
+- **Multiple AI Model Support**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models, but the current version of this plugin only supports Claude 3.7 Sonnet in Bedrock US Oregon (us-west-2) region, with plans to support other models in the future
+- **Intelligent Context Memory**: Automatically remembers your project patterns, coding style, and preferences across sessions
+- **Simplified User Interface**: Hides complex configurations, focuses on core functionality to boost development efficiency
+
+## System Architecture
 
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
@@ -296,21 +329,35 @@ graph TD
     style OTHERS fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
 ```
 
-### Key Features
+## Quick Start
 
-- **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
-- **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
-- **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
-- **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
-- **MCP Protocol Support**: Seamlessly integrate external tools and services through the Model Context Protocol for unlimited extensibility
-- **One-Click Environment Setup**: Automatically detects Python 3.11, creates virtual environments, installs dependencies without manual configuration
-- **Multiple AI Model Support**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models, but the current version of this plugin only supports Claude 3.7 Sonnet in Bedrock US Oregon (us-west-2) region, with plans to support other models in the future
-- **Intelligent Context Memory**: Automatically remembers your project patterns, coding style, and preferences across sessions
-- **Simplified User Interface**: Hides complex configurations, focuses on core functionality to boost development efficiency
+### 5-Minute Quick Setup
 
-### Quick Start
+1. **Install Plugin**
+   ```
+   Unity Package Manager → Add package from git URL
+   Enter: https://github.com/ddpie/unity-strands-agent.git
+   ```
 
-#### System Requirements
+2. **One-Click Configuration**
+   ```
+   Window → Unity Strands Agent → Settings → Environment Setup → Start Setup
+   ```
+
+3. **Start Using**
+   ```
+   Click "Open AI Assistant" to start chatting with AI
+   ```
+
+**Requirements**: Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
+
+**Video Demo**: [Unity Strands Agent Demo](https://www.bilibili.com/video/BV1jgGJzhEZs/)
+
+![Unity Strands Agent English Interface](Assets/Resources/unity_strands_agent_demo_en.png)
+
+## Detailed Configuration
+
+### System Requirements
 
 - Unity 2022.3 LTS or higher
 - Python 3.11 (plugin automatically detects and configures)
@@ -321,7 +368,7 @@ graph TD
 - This plugin is specifically optimized for Python 3.11 and does not support other Python versions. On macOS, install with `brew install python@3.11`.
 - Environment initialization will occur when you click the Start Setup button in Environment Setup, please wait for the installation process to complete.
 
-#### Installation
+### Installation Steps
 
 Through Unity Package Manager:
 
@@ -331,23 +378,13 @@ Through Unity Package Manager:
 4. Enter: `https://github.com/ddpie/unity-strands-agent.git`
 5. Click "Add" and wait for Unity to automatically download and import
 
-#### Configuration
+### Configuration Steps
 
 1. In Unity, select menu: Window → Unity Strands Agent
 2. Click "Settings" tab, then click "Environment Setup"
 3. Click "Start Setup" button to begin automatic installation
 4. The system will automatically complete environment detection, virtual environment creation, dependency installation
 5. After configuration completes, click "Open AI Assistant" to start using
-
-### Getting Started
-
-1. Navigate to `Window → Unity Strands Agent` in Unity Editor
-2. Type your development questions or describe what you want to build
-3. Receive contextual code suggestions, explanations, and step-by-step solutions
-
-**Video Demo**: [Unity Strands Agent Demo](https://www.bilibili.com/video/BV1jgGJzhEZs/)
-
-![Unity Strands Agent English Interface](Assets/Resources/unity_strands_agent_demo_en.png)
 
 Main capabilities include:
 - Smart code analysis and suggestions that match your project's style
@@ -364,17 +401,24 @@ The plugin automatically sets the following environment variables:
 
 Configuration is saved in `Assets/UnityAIAgent/PathConfiguration.asset` and will be automatically loaded. The plugin uses AWS credentials configuration files to access Bedrock services.
 
-**MCP Server Configuration**: When configuring MCP servers in `Assets/UnityAIAgent/mcp_config.json`, it's recommended to use absolute paths for the `command` field, for example:
+**MCP Server Configuration**: Configure MCP servers through the Unity editor interface at Settings → MCP Configuration in JSON format. It's recommended to use absolute paths for the `command` field, for example configuring the mcp-unity plugin:
 ```json
 {
   "mcpServers": {
     "mcp-unity": {
       "command": "/usr/local/bin/node",
-      "args": ["/path/to/your/mcp-server/index.js"]
+      "env": {
+        "UNITY_PORT": "8090"
+      },
+      "args": [
+        "/path/to/your/unity-project/Library/PackageCache/com.gamelovers.mcp-unity@latest/Server/build/index.js"
+      ]
     }
   }
 }
 ```
+
+For detailed installation and usage instructions for the mcp-unity plugin, please refer to: [mcp-unity Plugin Documentation](https://github.com/CoderGamester/mcp-unity/blob/main/README.md)
 
 ### Troubleshooting
 
