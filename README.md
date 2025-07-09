@@ -65,13 +65,11 @@ graph TD
     end
     
     subgraph ModelServices["AI 模型服务"]
-        AWS[Amazon Bedrock<br/>✓ 已支持]
-        subgraph OtherAI[SDK支持但插件暂不支持]
-            ANTHROPIC[Anthropic Claude]
-            OPENAI[OpenAI GPT]
-            OLLAMA[Ollama 本地模型]
-            OTHERS[LiteLLM / Llama 等]
-        end
+        AWS[Amazon Bedrock<br/>✓ 插件已支持]
+        ANTHROPIC[Anthropic Claude<br/>SDK支持]
+        OPENAI[OpenAI GPT<br/>SDK支持]
+        OLLAMA[Ollama 本地模型<br/>SDK支持]
+        OTHERS[LiteLLM / Llama 等<br/>SDK支持]
     end
     
     subgraph MCPServices["扩展服务生态"]
@@ -84,7 +82,10 @@ graph TD
     AC -->|创建| UA
     UA ==>|依赖| SDK
     SDK ==>|调用| AWS
-    SDK -.->|支持但未集成| OtherAI
+    SDK -.->|支持但未集成| ANTHROPIC
+    SDK -.->|支持但未集成| OPENAI
+    SDK -.->|支持但未集成| OLLAMA
+    SDK -.->|支持但未集成| OTHERS
     SDK -->|调用| MCP
     
     %% Subgraph styles
@@ -104,8 +105,7 @@ graph TD
     %% Core SDK - Red for emphasis
     style SDK fill:#D32F2F,stroke:#B71C1C,stroke-width:4px,color:#FFF
     
-    %% Unsupported services - Gray
-    style OtherAI fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5
+    %% SDK Only services - Gray
     style ANTHROPIC fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
     style OPENAI fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
     style OLLAMA fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
@@ -282,13 +282,11 @@ graph TD
     end
     
     subgraph ModelServices["AI Model Services"]
-        AWS[Amazon Bedrock<br/>✓ Supported]
-        subgraph OtherAI[SDK Only]
-            ANTHROPIC[Anthropic Claude]
-            OPENAI[OpenAI GPT]
-            OLLAMA[Ollama Local Models]
-            OTHERS[LiteLLM / Llama etc]
-        end
+        AWS[Amazon Bedrock<br/>✓ Plugin Ready]
+        ANTHROPIC[Anthropic Claude<br/>SDK Only]
+        OPENAI[OpenAI GPT<br/>SDK Only]
+        OLLAMA[Ollama Local Models<br/>SDK Only]
+        OTHERS[LiteLLM / Llama etc<br/>SDK Only]
     end
     
     subgraph MCPServices["Extension Ecosystem"]
@@ -301,7 +299,10 @@ graph TD
     AC -->|Creates| UA
     UA ==>|Depends on| SDK
     SDK ==>|Calls| AWS
-    SDK -.->|Supports but not integrated| OtherAI
+    SDK -.->|Supports but not integrated| ANTHROPIC
+    SDK -.->|Supports but not integrated| OPENAI
+    SDK -.->|Supports but not integrated| OLLAMA
+    SDK -.->|Supports but not integrated| OTHERS
     SDK -->|Calls| MCP
     
     %% Subgraph styles
@@ -321,8 +322,7 @@ graph TD
     %% Core SDK - Red for emphasis
     style SDK fill:#D32F2F,stroke:#B71C1C,stroke-width:4px,color:#FFF
     
-    %% Unsupported services - Gray
-    style OtherAI fill:#F5F5F5,stroke:#9E9E9E,stroke-width:1px,stroke-dasharray: 5 5
+    %% SDK Only services - Gray
     style ANTHROPIC fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
     style OPENAI fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
     style OLLAMA fill:#EEEEEE,stroke:#9E9E9E,stroke-width:1px
