@@ -37,7 +37,7 @@ class UnityAgent:
 ### 系统架构
 
 ```mermaid
-graph TD
+graph TB
     subgraph "Unity Editor"
         UI[AIAgentWindow<br/>主界面]
         SH[StreamingHandler<br/>流式处理器]
@@ -79,11 +79,11 @@ graph TD
     SDK ==>|AI推理| AWS
     MM -->|连接| MCP
     
-    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef agentStyle fill:#4a90e2,stroke:#2e5ea8,stroke-width:3px,color:#fff,font-weight:bold
-    classDef sdkStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px,color:#fff,font-weight:bold
-    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef unityStyle fill:#b3d9ff,stroke:#0066cc,stroke-width:2px
+    classDef pythonStyle fill:#b3ffb3,stroke:#009900,stroke-width:2px
+    classDef agentStyle fill:#3399ff,stroke:#0066cc,stroke-width:3px,font-weight:bold
+    classDef sdkStyle fill:#ff5050,stroke:#cc0000,stroke-width:4px,font-weight:bold
+    classDef externalStyle fill:#ffcc99,stroke:#ff6600,stroke-width:2px
     
     class UI,SH,SM,PB,PM,PATH unityStyle
     class AC,SP,UT,MM pythonStyle
@@ -229,7 +229,7 @@ With just these few lines of code, you can create an intelligent assistant that 
 ### System Architecture
 
 ```mermaid
-graph TD
+graph TB
     subgraph "Unity Editor"
         UI[AIAgentWindow<br/>Main Interface]
         SH[StreamingHandler<br/>Stream Handler]
@@ -271,11 +271,11 @@ graph TD
     SDK ==>|AI Inference| AWS
     MM -->|Connect| MCP
     
-    classDef unityStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
-    classDef pythonStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef agentStyle fill:#4a90e2,stroke:#2e5ea8,stroke-width:3px,color:#fff,font-weight:bold
-    classDef sdkStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:4px,color:#fff,font-weight:bold
-    classDef externalStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef unityStyle fill:#b3d9ff,stroke:#0066cc,stroke-width:2px
+    classDef pythonStyle fill:#b3ffb3,stroke:#009900,stroke-width:2px
+    classDef agentStyle fill:#3399ff,stroke:#0066cc,stroke-width:3px,font-weight:bold
+    classDef sdkStyle fill:#ff5050,stroke:#cc0000,stroke-width:4px,font-weight:bold
+    classDef externalStyle fill:#ffcc99,stroke:#ff6600,stroke-width:2px
     
     class UI,SH,SM,PB,PM,PATH unityStyle
     class AC,SP,UT,MM pythonStyle
