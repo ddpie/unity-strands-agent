@@ -8,7 +8,7 @@
 
 ## 中文版本
 
-Unity Strands Agent 是一个强大的 AI 开发助手，将 AWS 开源的 [Strands Agents SDK](https://strandsagents.com/latest/) 无缝集成到 Unity 编辑器中。该插件能够理解 Unity 项目结构和开发模式，为开发者提供智能代码生成、问题解答和开发建议，显著提升 Unity 开发效率。
+Unity Strands Agent 是一个强大的 AI 开发助手，将 AWS 开源的 [Strands Agents SDK](https://strandsagents.com/latest/) 无缝集成到 Unity 编辑器中。**该插件通过集成 [mcp-unity](https://github.com/CoderGamester/mcp-unity) 插件来实现与 Unity 的深度交互**，能够理解 Unity 项目结构和开发模式，为开发者提供智能代码生成、问题解答和开发建议，显著提升 Unity 开发效率。
 
 ## 核心实现
 
@@ -20,25 +20,34 @@ from unity_tools import get_unity_tools
 
 class UnityAgent:
     def __init__(self):
-        # 获取 Unity 开发工具集
-        unity_tools = get_unity_tools()
+        # 初始化 MCP 管理器，集成 mcp-unity 插件
+        from mcp_manager import MCPManager
+        self.mcp_manager = MCPManager()
+        
+        # 获取 Unity 开发工具集（包含 MCP 工具）
+        unity_tools = get_unity_tools(include_mcp=True, agent_instance=self)
         
         # 一行代码创建强大的 AI Agent
         self.agent = Agent(
             system_prompt=UNITY_SYSTEM_PROMPT, 
-            tools=unity_tools
+            tools=unity_tools  # 包含21+内置工具 + mcp-unity工具
         )
     
+    def _load_mcp_tools(self):
+        # 加载 mcp-unity 插件提供的 Unity 操作工具
+        return self.mcp_manager.load_mcp_tools()
+    
     def process_message(self, message: str):
-        # 直接调用 Agent 处理消息
+        # 直接调用 Agent 处理消息，支持 Unity 原生操作
         return self.agent(message)
 ```
 
-仅需这几行代码，即可创建一个理解 Unity 开发上下文、配备 21+ 专业工具的智能助手。该插件基于模块化架构设计，轻松扩展工具集，并提供丰富的工具生态系统。
+仅需这几行代码，即可创建一个理解 Unity 开发上下文、配备 21+ 专业工具 + mcp-unity Unity 操作工具的智能助手。该插件基于模块化架构设计，轻松扩展工具集，并提供丰富的工具生态系统。
 
 ## 主要特性
 
 ### Unity 专业化
+- **深度 Unity 集成**：通过 mcp-unity 插件实现与 Unity 编辑器的原生级交互，支持场景操作、资源管理等
 - **项目结构理解**：智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
 - **组件管理**：自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
 - **性能优化**：基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
@@ -186,7 +195,7 @@ graph TD
 
 配置文件保存在 `Assets/UnityAIAgent/PathConfiguration.asset` 中，会自动加载。插件使用 AWS credentials 配置文件访问 Bedrock 服务。
 
-**MCP 服务器配置**：通过 Unity 编辑器界面配置 MCP 服务器，在 Settings → MCP Configuration 中以 JSON 格式添加服务器配置。建议使用绝对路径配置 `command` 字段，例如配置 mcp-unity 插件：
+**MCP 服务器配置**：**本项目的核心功能依赖 mcp-unity 插件来实现 Unity 操作能力**。通过 Unity 编辑器界面配置 MCP 服务器，在 Settings → MCP Configuration 中以 JSON 格式添加服务器配置。建议使用绝对路径配置 `command` 字段，例如配置 mcp-unity 插件：
 ```json
 {
   "mcpServers": {
@@ -251,7 +260,7 @@ graph TD
 
 ## English Version
 
-Unity Strands Agent is a powerful AI development assistant that seamlessly integrates AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) into the Unity Editor. This plugin understands Unity project structures and development patterns, providing intelligent code generation, problem-solving, and development suggestions to significantly boost Unity development efficiency.
+Unity Strands Agent is a powerful AI development assistant that seamlessly integrates AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) into the Unity Editor. **This plugin achieves deep Unity integration through the [mcp-unity](https://github.com/CoderGamester/mcp-unity) plugin, enabling native-level interaction with the Unity Editor**. It understands Unity project structures and development patterns, providing intelligent code generation, problem-solving, and development suggestions to significantly boost Unity development efficiency.
 
 ## Core Implementation
 
@@ -263,25 +272,34 @@ from unity_tools import get_unity_tools
 
 class UnityAgent:
     def __init__(self):
-        # Load Unity-specific development tools
-        unity_tools = get_unity_tools()
+        # Initialize MCP manager to integrate mcp-unity plugin
+        from mcp_manager import MCPManager
+        self.mcp_manager = MCPManager()
+        
+        # Load Unity development toolset (including MCP tools)
+        unity_tools = get_unity_tools(include_mcp=True, agent_instance=self)
         
         # Create a powerful AI Agent with just one line
         self.agent = Agent(
             system_prompt=UNITY_SYSTEM_PROMPT, 
-            tools=unity_tools
+            tools=unity_tools  # Includes 21+ built-in tools + mcp-unity tools
         )
     
+    def _load_mcp_tools(self):
+        # Load Unity operation tools provided by mcp-unity plugin
+        return self.mcp_manager.load_mcp_tools()
+    
     def process_message(self, message: str):
-        # Simply call the Agent to process messages
+        # Simply call the Agent to process messages with Unity native operations
         return self.agent(message)
 ```
 
-With just these few lines of code, you can create an intelligent assistant that understands Unity development context and comes equipped with 21+ professional tools. Built on a modular architecture, this plugin makes it easy to extend the toolset while providing a rich ecosystem of development utilities.
+With just these few lines of code, you can create an intelligent assistant that understands Unity development context and comes equipped with 21+ professional tools + mcp-unity Unity operation tools. Built on a modular architecture, this plugin makes it easy to extend the toolset while providing a rich ecosystem of development utilities.
 
 ## Key Features
 
 ### Unity Specialization
+- **Deep Unity Integration**: Achieves native-level interaction with Unity Editor through mcp-unity plugin, supporting scene operations, asset management, and more
 - **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
 - **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
 - **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
@@ -435,7 +453,7 @@ The plugin automatically sets the following environment variables:
 
 Configuration is saved in `Assets/UnityAIAgent/PathConfiguration.asset` and will be automatically loaded. The plugin uses AWS credentials configuration files to access Bedrock services.
 
-**MCP Server Configuration**: Configure MCP servers through the Unity editor interface at Settings → MCP Configuration in JSON format. It's recommended to use absolute paths for the `command` field, for example configuring the mcp-unity plugin:
+**MCP Server Configuration**: **This project's core Unity operation capabilities depend on the mcp-unity plugin**. Configure MCP servers through the Unity editor interface at Settings → MCP Configuration in JSON format. It's recommended to use absolute paths for the `command` field, for example configuring the mcp-unity plugin:
 ```json
 {
   "mcpServers": {
