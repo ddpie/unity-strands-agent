@@ -221,6 +221,24 @@ graph TD
 - **文档**: [Strands Agents SDK 官方文档](https://strandsagents.com/latest/)
 - **问题反馈**: [GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
 
+### 参考资料
+
+#### Strands Agents SDK
+- **官方文档**: https://strandsagents.com/latest/
+- **Python SDK**: https://github.com/strands-agents/sdk-python
+- **示例代码**: https://github.com/strands-agents/samples
+- **工具包**: https://github.com/strands-agents/tools
+- **Agent Builder**: https://github.com/strands-agents/agent-builder
+
+#### 技术实现
+- **Python.NET**: https://github.com/pythonnet/pythonnet
+- **Model Context Protocol (MCP)**: https://modelcontextprotocol.io/
+- **Unity Editor 扩展**: https://docs.unity3d.com/Manual/ExtendingTheEditor.html
+
+#### 相关项目
+- **mcp-unity 插件**: https://github.com/CoderGamester/mcp-unity
+- **PythonForUnity**: https://github.com/Maesla/PythonForUnity
+
 ---
 
 ## English Version
@@ -443,3 +461,21 @@ If you encounter issues, check Unity console for error logs and click "Validate 
 
 - **Documentation**: [Strands Agents SDK Official Documentation](https://strandsagents.com/latest/)
 - **Issue Reporting**: [GitHub Issues](https://github.com/ddpie/unity-strands-agent/issues)
+
+### References
+
+#### Strands Agents SDK
+- **Official Documentation**: https://strandsagents.com/latest/
+- **Python SDK**: https://github.com/strands-agents/sdk-python
+- **Sample Code**: https://github.com/strands-agents/samples
+- **Tools Package**: https://github.com/strands-agents/tools
+- **Agent Builder**: https://github.com/strands-agents/agent-builder
+
+#### Technical Implementation
+- **Python.NET**: https://github.com/pythonnet/pythonnet
+- **Model Context Protocol (MCP)**: https://modelcontextprotocol.io/
+- **Unity Editor Extensions**: https://docs.unity3d.com/Manual/ExtendingTheEditor.html
+
+#### Related Projects
+- **mcp-unity Plugin**: https://github.com/CoderGamester/mcp-unity
+- **PythonForUnity**: https://github.com/Maesla/PythonForUnity
