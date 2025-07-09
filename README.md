@@ -38,15 +38,23 @@ class UnityAgent:
 
 ## 主要特性
 
-- **项目结构理解**: 智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
-- **组件管理**: 自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
-- **性能优化**: 基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
-- **丰富的内置工具**: 提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
-- **MCP 协议支持**: 通过 Model Context Protocol 扩展第三方工具和服务集成能力，支持 [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README_zh-CN.md) 等插件
-- **一键式环境配置**: 自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
-- **多 AI 模型支持**: [Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型，但本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet，计划将来支持其他模型
-- **智能上下文记忆**: 自动记住项目偏好和代码风格，提供个性化开发建议
-- **简化的用户界面**: 隐藏复杂配置，专注核心功能，提升开发效率
+### Unity 专业化
+- **项目结构理解**：智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
+- **组件管理**：自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
+- **性能优化**：基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
+
+### 强大工具生态
+- **丰富的内置工具**：提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
+- **MCP 协议支持**：通过 Model Context Protocol 扩展第三方工具和服务集成能力，支持 [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README_zh-CN.md) 等插件
+
+### 极简部署
+- **一键式环境配置**：自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
+- **简化的用户界面**：隐藏复杂配置，专注核心功能，提升开发效率
+
+### AI 模型支持
+- **多模型兼容**：[Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型
+- **当前支持**：本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet
+- **智能记忆**：自动记住项目偏好和代码风格，提供个性化开发建议
 
 ## 系统架构
 
@@ -273,15 +281,23 @@ With just these few lines of code, you can create an intelligent assistant that 
 
 ## Key Features
 
+### Unity Specialization
 - **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
 - **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
 - **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
+
+### Powerful Tool Ecosystem
 - **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
 - **MCP Protocol Support**: Seamlessly integrate external tools and services through the Model Context Protocol for unlimited extensibility, supports plugins like [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README.md)
+
+### Effortless Deployment
 - **One-Click Environment Setup**: Automatically detects Python 3.11, creates virtual environments, installs dependencies without manual configuration
-- **Multiple AI Model Support**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models, but the current version of this plugin only supports Claude 3.7 Sonnet in Bedrock US Oregon (us-west-2) region, with plans to support other models in the future
-- **Intelligent Context Memory**: Automatically remembers your project patterns, coding style, and preferences across sessions
 - **Simplified User Interface**: Hides complex configurations, focuses on core functionality to boost development efficiency
+
+### AI Model Support
+- **Multi-Model Compatibility**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models
+- **Current Support**: This plugin currently only supports Claude 3.7 Sonnet in Bedrock US Oregon (us-west-2) region
+- **Intelligent Memory**: Automatically remembers your project patterns, coding style, and preferences across sessions
 
 ## System Architecture
 
