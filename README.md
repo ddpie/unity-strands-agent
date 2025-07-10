@@ -8,7 +8,7 @@
 
 ## 中文版本
 
-Unity Strands Agent 是一个强大的 AI 开发助手，将 AWS 开源的 [Strands Agents SDK](https://strandsagents.com/latest/) 无缝集成到 Unity 编辑器中。该插件内置了对 Unity 项目结构和开发模式的深度理解，能够为开发者提供智能代码生成、问题解答和开发建议。**通过支持 Model Context Protocol (MCP)，本插件可以与 [mcp-unity](https://github.com/CoderGamester/mcp-unity) 或其他 Unity MCP 插件灵活搭配**，实现对 Unity 编辑器的直接操作，显著提升开发效率。
+Unity Strands Agent 是一个友好易用的 AI 助手，将 AWS 开源的 [Strands Agents SDK](https://strandsagents.com/latest/) 无缝集成到 Unity 编辑器中。该插件内置了对 Unity 项目的深度理解，能够通过自然语言对话帮助您学习 Unity、解决问题、理解项目结构。**通过支持 Model Context Protocol (MCP)，本插件可以与 [mcp-unity](https://github.com/CoderGamester/mcp-unity) 或其他 Unity MCP 插件灵活搭配**，让您轻松上手 Unity 开发，大幅降低学习门槛。
 
 ## 核心实现
 
@@ -70,18 +70,21 @@ class UnityAgent:
 ## 主要特性
 
 ### Unity 专业化
-- **项目结构理解**：智能识别 Unity 项目结构，提供针对性的代码生成和问题解决方案
-- **组件管理**：自动处理 GameObject 和组件依赖关系，确保代码符合 Unity 最佳实践
-- **性能优化**：基于 Unity 特定的性能瓶颈分析，提供针对性的优化建议
-- **编辑器操作**：通过 MCP 协议与 Unity MCP 插件（如 mcp-unity）搭配，实现场景操作、资源管理等原生级交互
+- **项目结构理解**：智能识别 Unity 项目结构，提供清晰易懂的解释和指导
+- **学习助手**：耐心解答 Unity 概念、工作流程和最佳实践，适合各种经验水平
+- **问题解决**：快速诊断常见问题，提供详细的解决步骤和方案
+- **编辑器操作**：通过 MCP 协议与 Unity MCP 插件（如 mcp-unity）搭配，实现场景操作、资源管理等直观交互
 
-### 强大工具生态
-- **丰富的内置工具**：提供 21+ 个预构建工具，涵盖文件操作、API 调用、数学计算、AI 服务、工作流管理等
+### 简单易用
+- **自然语言交互**：用日常语言描述您的需求，无需学习复杂的技术术语
+- **一键安装配置**：自动检测环境、安装依赖，几分钟即可开始使用
+- **智能引导**：根据您的问题提供循序渐进的学习建议和操作指导
 - **MCP 协议支持**：通过 Model Context Protocol 灵活扩展能力，可与 [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README_zh-CN.md) 或其他 Unity MCP 插件无缝集成
 
-### 极简部署
-- **一键式环境配置**：自动检测 Python 3.11，创建虚拟环境，安装依赖，无需手动配置
-- **简化的用户界面**：隐藏复杂配置，专注核心功能，提升开发效率
+### 智能助手
+- **24/7 在线支持**：随时为您解答 Unity 相关问题，从基础概念到高级技巧
+- **个性化学习**：根据您的项目和需求，提供定制化的学习路径和建议
+- **持续改进**：通过与您的对话不断学习，提供越来越精准的帮助
 
 ### AI 模型支持
 - **多模型兼容**：[Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型
@@ -154,7 +157,7 @@ graph TD
 
 ## 快速开始
 
-### 5分钟快速体验
+### 3分钟快速上手
 
 1. **安装插件**
    ```
@@ -162,14 +165,16 @@ graph TD
    输入：https://github.com/ddpie/unity-strands-agent.git
    ```
 
-2. **一键配置**
+2. **自动配置**
    ```
    Window → Unity Strands Agent → Settings → Environment Setup → Start Setup
+   等待自动安装完成（无需任何手动配置）
    ```
 
-3. **开始使用**
+3. **开始聊天**
    ```
-   点击 `Open AI Assistant` 即可开始与 AI 对话
+   点击 `Open AI Assistant`，像聊天一样问问题即可
+   例如："Unity中的GameObject是什么？"
    ```
 
 **系统要求**：Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
@@ -283,7 +288,7 @@ graph TD
 
 ## English Version
 
-Unity Strands Agent is a powerful AI development assistant that seamlessly integrates AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) into the Unity Editor. Built with deep understanding of Unity project structures and development patterns, this plugin provides intelligent code generation, problem-solving, and development suggestions. **Through support for the Model Context Protocol (MCP), it can be flexibly paired with [mcp-unity](https://github.com/CoderGamester/mcp-unity) or other Unity MCP plugins** to enable direct Unity Editor operations, significantly boosting development efficiency.
+Unity Strands Agent is a friendly and accessible AI assistant that seamlessly integrates AWS's open-source [Strands Agents SDK](https://strandsagents.com/latest/) into the Unity Editor. Built with deep understanding of Unity project structures and workflows, this plugin helps you learn Unity, solve problems, and understand project organization through natural language conversations. **Through support for the Model Context Protocol (MCP), it can be flexibly paired with [mcp-unity](https://github.com/CoderGamester/mcp-unity) or other Unity MCP plugins** to make Unity development approachable and significantly lower the learning curve.
 
 ## Core Implementation
 
@@ -345,18 +350,21 @@ Built on a modular architecture, this plugin leverages the MCP protocol to exten
 ## Key Features
 
 ### Unity Specialization
-- **Intelligent Project Analysis**: Automatically scans and understands your Unity project structure, scene hierarchies, and asset dependencies
-- **Component-Aware Development**: Generates code that properly handles Unity's component lifecycle, serialization, and GameObject relationships
-- **Performance-First Approach**: Identifies Unity-specific performance bottlenecks and suggests optimizations for draw calls, batching, and memory usage
-- **Editor Operations**: Through MCP protocol integration with Unity MCP plugins (such as mcp-unity), enables native-level scene operations, asset management, and more
+- **Project Understanding**: Intelligently analyzes your Unity project structure and provides clear, easy-to-understand explanations
+- **Learning Companion**: Patiently explains Unity concepts, workflows, and best practices suitable for all experience levels
+- **Problem Solver**: Quickly diagnoses common issues and provides detailed step-by-step solutions
+- **Editor Operations**: Through MCP protocol integration with Unity MCP plugins (such as mcp-unity), enables intuitive scene operations, asset management, and more
 
-### Powerful Tool Ecosystem
-- **21+ Built-in Tools**: Complete toolkit for file operations, code analysis, API integration, mathematical computations, and workflow automation
+### Simple and Accessible
+- **Natural Language Interaction**: Describe your needs in everyday language without learning complex technical terminology
+- **One-Click Setup**: Automatically detects environment, installs dependencies, ready to use in minutes
+- **Intelligent Guidance**: Provides step-by-step learning suggestions and operation guidance based on your questions
 - **MCP Protocol Support**: Flexibly extend capabilities through the Model Context Protocol, seamlessly integrating with [mcp-unity](https://github.com/CoderGamester/mcp-unity/blob/main/README.md) or other Unity MCP plugins
 
-### Effortless Deployment
-- **One-Click Environment Setup**: Automatically detects Python 3.11, creates virtual environments, installs dependencies without manual configuration
-- **Simplified User Interface**: Hides complex configurations, focuses on core functionality to boost development efficiency
+### Intelligent Assistant
+- **24/7 Support**: Always available to answer your Unity questions, from basic concepts to advanced techniques
+- **Personalized Learning**: Provides customized learning paths and suggestions based on your projects and needs
+- **Continuous Improvement**: Learns from your conversations to provide increasingly accurate and helpful assistance
 
 ### AI Model Support
 - **Multi-Model Compatibility**: The [Strands Agents SDK](https://strandsagents.com/latest/) supports Claude, GPT, Llama, and other leading AI models
@@ -429,7 +437,7 @@ graph TD
 
 ## Quick Start
 
-### 5-Minute Quick Setup
+### 3-Minute Quick Start
 
 1. **Install Plugin**
    ```
@@ -437,14 +445,16 @@ graph TD
    Enter: https://github.com/ddpie/unity-strands-agent.git
    ```
 
-2. **One-Click Configuration**
+2. **Auto Setup**
    ```
    Window → Unity Strands Agent → Settings → Environment Setup → Start Setup
+   Wait for automatic installation (no manual configuration needed)
    ```
 
-3. **Start Using**
+3. **Start Chatting**
    ```
-   Click `Open AI Assistant` to start chatting with AI
+   Click `Open AI Assistant` and ask questions like chatting
+   Example: "What is a GameObject in Unity?"
    ```
 
 **Requirements**: Unity 2022.3+ | Python 3.11 | macOS | AWS credentials
