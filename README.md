@@ -1,6 +1,6 @@
 # Unity Strands Agent
 
-基于 AWS [Strands Agents SDK](https://strandsagents.com/latest/) 的 Unity 编辑器 AI 插件，在 Unity 编辑器中直接与 AI 对话，获得智能代码生成、问题解答和开发建议。
+基于 AWS [Strands Agents SDK](https://strandsagents.com/latest/) 的 Unity 编辑器 AI 插件，在 Unity 编辑器中直接与 AI 对话，获得问题解答、学习指导和开发建议。
 
 **Language / 语言**：[中文](#中文版本) | [English](#english-version)
 
@@ -89,7 +89,7 @@ class UnityAgent:
 ### AI 模型支持
 - **多模型兼容**：[Strands Agents SDK](https://strandsagents.com/latest/) 支持 Claude、GPT、Llama 等主流 AI 模型
 - **当前支持**：本插件当前版本仅支持 Bedrock US Oregon (us-west-2) 区域的 Claude 3.7 Sonnet
-- **智能记忆**：自动记住项目偏好和代码风格，提供个性化开发建议
+- **智能记忆**：记住您的学习进度和项目偏好，提供个性化学习建议
 
 ## 系统架构
 
@@ -495,10 +495,10 @@ Through Unity Package Manager:
 5. After configuration completes, click `Open AI Assistant` to start using
 
 Main capabilities include:
-- Smart code analysis and suggestions that match your project's style
-- Instant generation of production-ready C# scripts with proper Unity patterns
-- Intelligent debugging and targeted solutions for Unity-specific issues
-- Performance insights and optimization strategies for Unity projects
+- Clear explanations of Unity concepts and project structure
+- Step-by-step guidance for common Unity tasks and workflows
+- Helpful suggestions for learning Unity development
+- Friendly assistance with Unity-specific questions and challenges
 
 ### Environment Configuration
 
